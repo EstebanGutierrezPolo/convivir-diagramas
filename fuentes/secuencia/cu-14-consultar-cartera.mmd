@@ -1,0 +1,52 @@
+%% titulo: CU-14 Consultar cartera e información financiera
+sequenceDiagram
+    autonumber
+    actor U as Administrador / Miembro del consejo
+    participant UI as Pantalla Cartera (React)
+    participant Ctl as CarteraControlador
+    participant Srv as CarteraServicio
+    participant RM as InmuebleRepositorio
+    participant I as Inmueble
+    participant O as Obligacion
+    participant RPg as PagoRepositorio
+    participant G as Gasto
+
+    Note over U,G: Consultar cartera (RF-083 a RF-085, RF-087)
+    U->>UI: abre la cartera y filtra por días de mora
+    UI->>Ctl: GET /api/cartera?minDias&maxDias
+    Ctl->>Srv: consultarCartera(minDias, maxDias)
+    Srv->>RM: inmuebles con obligaciones pendientes
+    loop por cada inmueble (RN-25)
+        Srv->>I: calcularSaldoPendienteDelInmueble()
+        Srv->>O: calcularDiasDeMora()
+    end
+    Ctl-->>UI: inmuebles con saldo, deuda por periodo y concepto, y días de mora
+
+    Note over U,G: Exportar informe de cartera (RF-086, solo administrador)
+    U->>UI: elige exportar
+    UI->>Ctl: GET /api/cartera/informe?minDias&maxDias
+    Ctl->>Srv: exportarCartera(minDias, maxDias)
+    Srv->>O: generarInformeDeCartera(minDias, maxDias)
+    O-->>Srv: archivo
+    Ctl-->>UI: descarga del informe
+
+    Note over U,G: Recaudo y gastos del periodo (RF-088, RF-089)
+    UI->>Ctl: GET /api/finanzas/periodo
+    Ctl->>Srv: consultarRecaudoYGastos(periodo)
+    Srv->>RPg: pagos CONFIRMADOS del periodo agrupados por canalRecaudo
+    Srv->>G: consultarGastosDelPeriodo(periodo)
+    Ctl-->>UI: total recaudado por canal y gastos del periodo
+
+    Note over U,G: Expedir paz y salvo (RF-120, solo administrador)
+    U->>UI: elige inmueble y fecha de corte
+    UI->>Ctl: GET /api/inmuebles/id/paz-y-salvo?fechaCorte
+    Ctl->>Srv: expedirPazYSalvo(inmuebleId, fechaCorte)
+    Srv->>RM: findById(inmuebleId)
+    Srv->>I: expedirPazYSalvoAFechaDeCorte(fechaCorte)
+    alt el inmueble tiene obligaciones pendientes a la fecha
+        I-->>Srv: no se puede expedir, con el detalle de lo pendiente
+        Ctl-->>UI: 409 el inmueble tiene expensas pendientes
+    else sin pendientes
+        I-->>Srv: paz y salvo
+        Ctl-->>UI: 200 documento de paz y salvo (RN-34)
+    end

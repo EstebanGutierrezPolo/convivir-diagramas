@@ -1,0 +1,48 @@
+%% titulo: CU-03 Gestionar integrantes
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Integrantes (React)
+    participant Ctl as IntegranteControlador
+    participant Srv as IntegranteServicio
+    participant Repo as IntegranteRepositorio
+    participant Fab as FabricaIntegrante
+    participant E as Empleado (administrador en sesión)
+    participant In as Integrante
+
+    Note over A,In: Registrar integrante (RF-014)
+    A->>UI: diligencia rol, documento, nombres, apellidos y datos de contacto
+    UI->>Ctl: POST /api/integrantes
+    Ctl->>Srv: registrarIntegrante(datos)
+    Srv->>Repo: existsByDocumento(documento)
+    alt el documento ya está registrado
+        Srv-->>Ctl: dato repetido
+        Ctl-->>UI: 409 ya existe un integrante con ese documento
+    else documento nuevo
+        Srv->>Fab: crearIntegrante(rol, documento, nombres, apellidos)
+        Fab-->>Srv: integrante (Propietario, Arrendatario, ResidenteAutorizado, MiembroConsejo o Empleado)
+        Srv->>E: registrarIntegranteEnLaCopropiedad(integrante)
+        E->>E: validarQueElCargoSeaAdministrador()
+        Srv->>Repo: save(integrante)
+        Srv-->>Ctl: integrante registrado
+        Ctl-->>UI: 201
+        UI-->>A: muestra el integrante en el listado
+    end
+
+    Note over A,In: Modificar datos de contacto (RF-018)
+    A->>UI: cambia teléfono y correo
+    UI->>Ctl: PUT /api/integrantes/id/contacto
+    Ctl->>Srv: modificarContacto(id, telefono, correo)
+    Srv->>Repo: findById(id)
+    Srv->>In: modificarDatosDeContacto()
+    Srv->>Repo: save(integrante)
+    Ctl-->>UI: 200
+
+    Note over A,In: Desactivar integrante (RF-019)
+    A->>UI: elige desactivar e indica el motivo
+    UI->>Ctl: PATCH /api/integrantes/id/desactivar
+    Ctl->>Srv: desactivarIntegrante(id, motivo)
+    Srv->>Repo: findById(id)
+    Srv->>E: desactivarIntegrantePorMotivo(integrante, motivo)
+    Srv->>Repo: save(integrante)
+    Ctl-->>UI: 200 la información del inmueble no se pierde (RN-05)

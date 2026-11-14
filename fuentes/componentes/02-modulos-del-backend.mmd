@@ -1,0 +1,41 @@
+%% titulo: Módulos del backend (paquetes)
+%% Un paquete por módulo del diagrama de clases. Las flechas salen de las relaciones entre clases.
+flowchart TB
+    subgraph capas["Dentro de cada módulo"]
+        direction LR
+        c1["Controlador"] --> c2["Servicio"] --> c3["Clases del dominio"]
+        c2 --> c4["Repositorio"]
+    end
+
+    subgraph paquetes["com.convivir"]
+        direction TB
+        m1["«package» inmuebles<br/>PropiedadHorizontal, TipoInmueble, Inmueble"]
+        m2["«package» integrantes<br/>Integrante y sus tipos, Vinculacion, Cuenta"]
+        m3["«package» reservas<br/>Reserva, AsignacionInmueble, tarifas y estados"]
+        m4["«package» cesiones<br/>CesionUso, Vehiculo"]
+        m5["«package» accesos<br/>AutorizacionAcceso, MovimientoAcceso"]
+        m6["«package» finanzas<br/>PeriodoFacturacion, Obligacion, Pago, Gasto"]
+        m7["«package» reportes<br/>Reporte, CategoriaReporte, SeguimientoReporte"]
+        m8["«package» eventos<br/>PublicadorEventos, Auditoria, Notificacion"]
+    end
+
+    m2 --> m1
+    m3 --> m1
+    m3 --> m2
+    m3 -->|genera obligaciones| m6
+    m4 --> m1
+    m4 --> m2
+    m5 --> m1
+    m5 --> m2
+    m5 --> m4
+    m6 --> m1
+    m6 -->|lee la reserva| m3
+    m7 --> m1
+    m7 --> m2
+    m8 --> m1
+    m8 --> m2
+
+    m1 -.->|publica eventos| m8
+    m2 -.->|publica eventos| m8
+    m6 -.->|publica eventos| m8
+    m7 -.->|publica eventos| m8

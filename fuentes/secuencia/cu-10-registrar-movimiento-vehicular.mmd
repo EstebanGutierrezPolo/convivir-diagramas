@@ -1,0 +1,46 @@
+%% titulo: CU-10 Registrar movimiento vehicular
+sequenceDiagram
+    autonumber
+    actor V as Vigilante
+    participant UI as Pantalla Portería (React)
+    participant Ctl as MovimientoControlador
+    participant Srv as MovimientoServicio
+    participant RVe as VehiculoRepositorio
+    participant RM as InmuebleRepositorio
+    participant I as Inmueble (parqueadero)
+    participant M as MovimientoAcceso
+    participant Repo as MovimientoAccesoRepositorio
+
+    Note over V,Repo: Consultar vehículo por placa (RF-051)
+    V->>UI: escribe la placa
+    UI->>Ctl: GET /api/vehiculos/placa
+    Ctl->>Srv: consultarVehiculoPorPlaca(placa)
+    Srv->>RVe: findByPlaca(placa)
+    RVe-->>Srv: vehiculo con su inmueble
+    Ctl-->>UI: vehículo e inmueble asociado
+
+    Note over V,Repo: Consultar uso vigente del parqueadero (RF-063)
+    UI->>Ctl: GET /api/inmuebles/id/uso-vigente
+    Ctl->>Srv: consultarUsoVigente(parqueaderoId)
+    Srv->>RM: findById(parqueaderoId)
+    Srv->>I: obtenerInmuebleConUsoVigente()
+    I-->>Srv: inmueble usuario (no el titular, RN-19)
+    Ctl-->>UI: inmueble que tiene el uso vigente
+
+    Note over V,Repo: Registrar ingreso (RF-052)
+    V->>UI: registra el ingreso y el parqueadero que ocupa
+    UI->>Ctl: POST /api/movimientos
+    Ctl->>Srv: registrarIngresoDeVehiculo(placa, parqueaderoId)
+    Srv->>M: new MovimientoAcceso(INGRESO)
+    Srv->>M: registrarIngresoAlConjunto()
+    Srv->>Repo: save(movimiento)
+    Ctl-->>UI: 201 ingreso registrado
+
+    Note over V,Repo: Registrar salida (RF-053)
+    V->>UI: elige el vehículo que sale
+    UI->>Ctl: POST /api/movimientos
+    Ctl->>Srv: registrarSalidaDeVehiculo(placa)
+    Srv->>M: new MovimientoAcceso(SALIDA)
+    Srv->>M: registrarSalidaDelConjunto()
+    Srv->>Repo: save(movimiento)
+    Ctl-->>UI: 201 salida registrada

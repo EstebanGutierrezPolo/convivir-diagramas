@@ -1,0 +1,87 @@
+%% titulo: Módulo 1 · Inmuebles y propiedad horizontal
+classDiagram
+direction TB
+
+class PropiedadHorizontal {
+    +id : int
+    +nit : String
+    +nombre : String
+    +direccion : String
+    +correoContacto : String
+    +telefonoContacto : String
+    +estado : EstadoRegistro
+    +PropiedadHorizontal(nit : String, nombre : String, direccion : String)
+    +configurarDatosGeneralesDeLaCopropiedad(nit : String, nombre : String, direccion : String, correoContacto : String, telefonoContacto : String)
+}
+
+class TipoInmueble {
+    +id : int
+    +nombre : String
+    +descripcion : String
+    +esBienComun : boolean
+    +permiteCesion : boolean
+    +permiteReserva : boolean
+    +generaCuota : boolean
+    +valorTarifa : double
+    +unidadTarifa : UnidadTarifa
+    +valorMulta : double
+    +estado : EstadoRegistro
+    +TipoInmueble(nombre : String, esBienComun : boolean)
+    +registrarTipoDeInmueble()
+    +modificarParametrosDelTipoDeInmueble()
+    +desactivarTipoDeInmueble()
+}
+
+class Inmueble {
+    +identificacion : String
+    +coeficiente : double
+    +areaM2 : double
+    +naturalezaInmueble : NaturalezaInmueble
+    +estado : EstadoRegistro
+    +motivoDesactivacion : String
+    +Inmueble(identificacion : String, coeficiente : double, areaM2 : double)
+    +Inmueble(identificacion : String, coeficiente : double, areaM2 : double, inmuebleContenedor : Inmueble)
+    +registrarInmueble()
+    +modificarDatosDelInmueble()
+    +desactivarInmueblePorMotivo(motivo : String)
+    +reactivarInmuebleDesactivado()
+    +consultarHistorialDeVinculacionesDelInmueble() : List~Vinculacion~
+    +consultarHistorialDeObligacionesDelInmueble() : List~Obligacion~
+    +consultarHistorialDePagosDelInmueble() : List~Pago~
+    +consultarHistorialDeReportesDelInmueble() : List~Reporte~
+    +consultarHistorialDeMovimientosDelInmueble() : List~MovimientoAcceso~
+    +calcularSaldoPendienteDelInmueble() : double
+    +calcularCuotaDelInmueble(valorBaseCuota : double) : double
+    +expedirPazYSalvoAFechaDeCorte(fechaCorte : Date) : String
+    +obtenerInmuebleConUsoVigente() : Inmueble
+    +obtenerDisponibilidadEnPeriodo(fechaInicio : Date, fechaFin : Date, horaInicio : Time, horaFin : Time) : boolean
+}
+
+class EstadoRegistro {
+    <<enumeration>>
+    ACTIVO
+    INACTIVO
+}
+
+class UnidadTarifa {
+    <<enumeration>>
+    POR_HORA
+    POR_DIA
+    POR_EVENTO
+}
+
+class NaturalezaInmueble {
+    <<enumeration>>
+    BIEN_PRIVADO
+    USO_EXCLUSIVO
+    USO_GENERAL
+}
+
+%% ===== Relaciones =====
+PropiedadHorizontal "1" o-- "*" Inmueble : administra
+PropiedadHorizontal "0..1" --> "*" Inmueble : es propietaria de
+TipoInmueble "1" <-- "*" Inmueble : es de tipo
+Inmueble "0..1" o-- "*" Inmueble : contiene
+Inmueble ..> EstadoRegistro
+Inmueble ..> NaturalezaInmueble
+TipoInmueble ..> UnidadTarifa

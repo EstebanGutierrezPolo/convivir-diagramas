@@ -1,0 +1,55 @@
+%% titulo: CU-04 Gestionar vinculación integrante–inmueble
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Vinculaciones (React)
+    participant Ctl as VinculacionControlador
+    participant Srv as VinculacionServicio
+    participant RI as IntegranteRepositorio
+    participant RM as InmuebleRepositorio
+    participant Repo as VinculacionRepositorio
+    participant V as Vinculacion
+    participant Pub as PublicadorEventos
+
+    Note over A,Pub: Vincular integrante a inmueble (RF-020)
+    A->>UI: elige integrante e inmueble, indica si reside, porcentaje y fecha de inicio
+    UI->>Ctl: POST /api/vinculaciones
+    Ctl->>Srv: vincularIntegrante(datos)
+    Srv->>RI: findById(integranteId)
+    RI-->>Srv: integrante
+    Srv->>RM: findById(inmuebleId)
+    RM-->>Srv: inmueble
+    Srv->>Repo: existeVinculacionDePropiedadVigente(inmueble)
+    alt es propietario y el inmueble ya tiene una vinculación de propiedad vigente (RN-03)
+        Srv-->>Ctl: regla incumplida
+        Ctl-->>UI: 422 el inmueble ya tiene propietario vigente
+    else se puede vincular
+        Srv->>V: new Vinculacion(esResidente, porcentajePropiedad, fechaInicio)
+        Srv->>V: vincularIntegranteAlInmueble()
+        opt el integrante podrá autorizar visitas
+            Srv->>V: asignarPermisoParaAutorizarAccesos(true)
+        end
+        V->>Pub: publicar(EventoSistema VINCULACION_CREADA)
+        Srv->>Repo: save(vinculacion)
+        Srv-->>Ctl: vinculación registrada
+        Ctl-->>UI: 201
+        UI-->>A: muestra la vinculación vigente del inmueble
+    end
+
+    Note over A,Pub: Finalizar vinculación (RF-021)
+    A->>UI: indica la fecha de fin
+    UI->>Ctl: PATCH /api/vinculaciones/id/finalizar
+    Ctl->>Srv: finalizarVinculacion(id, fechaFin)
+    Srv->>Repo: findById(id)
+    Srv->>V: finalizarVinculacion(fechaFin)
+    V->>Pub: publicar(EventoSistema VINCULACION_FINALIZADA)
+    Srv->>Repo: save(vinculacion)
+    Ctl-->>UI: 200 queda como historial del inmueble (RN-04)
+
+    Note over A,Pub: Corregir vínculo (RF-025)
+    A->>UI: corrige los datos e indica el motivo
+    UI->>Ctl: PUT /api/vinculaciones/id
+    Ctl->>Srv: corregirVinculacion(id, datos, motivo)
+    Srv->>V: corregirDatosDeLaVinculacion(esResidente, porcentajePropiedad, motivo)
+    Srv->>Repo: save(vinculacion)
+    Ctl-->>UI: 200

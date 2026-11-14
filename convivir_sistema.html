@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CONVIVIR · Sistema de diseño</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   TEMA CLARO — valor por defecto
+   ============================================================ */
+:root{
+  color-scheme: light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+
+  --convivir:#1A4A7A; --convivir-o:#123757; --convivir-c:#E8EFF6;
+  --boton-f:#1A4A7A; --boton-t:#FFFFFF; --boton-h:#123757;
+
+  --tinta:#1A1F26; --acero:#626C78; --borde:#DCE0E4; --borde-f:#EDEFF1;
+  --concreto:#F2F4F5; --papel:#FFFFFF; --fondo:#FAFBFC;
+
+  --ok:#146C43; --ok-f:#E7F2EC; --ok-b:#A8D5BE;
+  --al:#8A5000; --al-f:#FAF0E2; --al-b:#E3C089;
+  --no:#8C1D24; --no-f:#FAE8E9; --no-b:#E3A8AC;
+
+  --texto:"Archivo",system-ui,-apple-system,sans-serif;
+  --dato:"IBM Plex Mono",ui-monospace,monospace;
+
+  --t-xs:.75rem; --t-sm:.875rem; --t-base:1rem;
+  --t-md:1.25rem; --t-lg:1.5625rem; --t-xl:1.953rem; --t-2xl:2.441rem;
+
+  --e1:4px; --e2:8px; --e3:12px; --e4:16px;
+  --e5:24px; --e6:32px; --e7:48px; --e8:72px;
+
+  --r-control:4px; --r-superficie:6px; --r-pildora:999px;
+}
+
+/* ============================================================
+   TEMA OSCURO — mismos nombres, otros valores
+   ============================================================ */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --convivir:#7CB2E8; --convivir-o:#9CC8F2; --convivir-c:#16293B;
+    --boton-f:#5B9BD5; --boton-t:#0D1620; --boton-h:#79B0E2;
+    --tinta:#E8EBEE; --acero:#9AA4B0; --borde:#2C3640; --borde-f:#232B34;
+    --concreto:#1E262F; --papel:#171E26; --fondo:#10151B;
+    --ok:#5CC08E; --ok-f:#10281E; --ok-b:#2E6A4D;
+    --al:#D99F52; --al-f:#2A2013; --al-b:#7A5A24;
+    --no:#E8808A; --no-f:#2B1619; --no-b:#7E3840;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --convivir:#7CB2E8; --convivir-o:#9CC8F2; --convivir-c:#16293B;
+  --boton-f:#5B9BD5; --boton-t:#0D1620; --boton-h:#79B0E2;
+  --tinta:#E8EBEE; --acero:#9AA4B0; --borde:#2C3640; --borde-f:#232B34;
+  --concreto:#1E262F; --papel:#171E26; --fondo:#10151B;
+  --ok:#5CC08E; --ok-f:#10281E; --ok-b:#2E6A4D;
+  --al:#D99F52; --al-f:#2A2013; --al-b:#7A5A24;
+  --no:#E8808A; --no-f:#2B1619; --no-b:#7E3840;
+}
+
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--fondo);color:var(--tinta);font-family:var(--texto);
+  font-size:var(--t-base);line-height:1.6;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--fondo);z-index:20}
+.pagina{max-width:60rem;margin:0 auto;padding:var(--e7) var(--e5) var(--e8)}
+
+h1,h2,h3{margin:0;font-weight:700;letter-spacing:-.015em}
+h1{font-size:var(--t-2xl);line-height:1.12}
+h2{font-size:var(--t-lg);line-height:1.25;margin-top:var(--e8);padding-bottom:var(--e3);border-bottom:1px solid var(--borde)}
+h3{font-size:var(--t-base);font-weight:600;margin-top:var(--e6);letter-spacing:0}
+p{max-width:66ch;margin:var(--e3) 0}
+.guia{color:var(--acero);font-size:var(--t-sm);max-width:66ch}
+.dato{font-family:var(--dato);font-variant-numeric:tabular-nums}
+code{font-family:var(--dato);font-size:.82em;background:var(--concreto);padding:2px 6px;border-radius:var(--r-control);color:var(--convivir)}
+
+.marca{display:inline-flex;align-items:center;gap:var(--e3)}
+.marca .nombre{font-weight:700;letter-spacing:.14em;font-size:var(--t-md);color:var(--convivir)}
+.cabecera{margin-bottom:var(--e7)}
+.cabecera h1{margin-top:var(--e5)}
+
+/* interruptor de tema */
+.tema{position:sticky;top:env(safe-area-inset-top,0px);z-index:15;display:flex;justify-content:flex-end;
+  padding:var(--e3) 0;background:var(--fondo)}
+.conmutador{display:inline-flex;border:1px solid var(--borde);border-radius:var(--r-pildora);
+  background:var(--papel);padding:3px;gap:2px}
+.conmutador button{font-family:var(--texto);font-size:var(--t-xs);font-weight:600;color:var(--acero);
+  background:none;border:0;padding:6px 14px;border-radius:var(--r-pildora);cursor:pointer}
+.conmutador button[aria-pressed="true"]{background:var(--convivir-c);color:var(--convivir)}
+.conmutador button:focus-visible{outline:2px solid var(--convivir);outline-offset:1px}
+
+.rejilla{display:grid;gap:var(--e3);margin:var(--e4) 0}
+.c2{grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))}
+.c3{grid-template-columns:repeat(auto-fit,minmax(11rem,1fr))}
+.c4{grid-template-columns:repeat(auto-fit,minmax(8.5rem,1fr))}
+
+.tono{border:1px solid var(--borde);border-radius:var(--r-superficie);overflow:hidden;background:var(--papel)}
+.tono .mancha{height:3.5rem}
+.tono .pie{padding:var(--e3);font-size:var(--t-xs);line-height:1.5}
+.tono .pie b{display:block;font-size:var(--t-sm);font-weight:600}
+.tono .pie .hex{font-family:var(--dato);color:var(--acero);display:block;margin:1px 0 var(--e1)}
+
+table{width:100%;border-collapse:collapse;font-size:var(--t-sm);margin:var(--e4) 0}
+caption{text-align:left;color:var(--acero);font-size:var(--t-xs);padding-bottom:var(--e2)}
+th{text-align:left;font-weight:600;color:var(--acero);border-bottom:1px solid var(--borde);padding:var(--e2) var(--e3)}
+td{border-bottom:1px solid var(--borde-f);padding:var(--e3);vertical-align:top}
+td.num{font-family:var(--dato);font-variant-numeric:tabular-nums;text-align:right}
+td.mono{font-family:var(--dato);font-size:var(--t-xs)}
+
+.lienzo{border:1px solid var(--borde);border-radius:var(--r-superficie);background:var(--papel);padding:var(--e5);margin:var(--e4) 0}
+.fila{display:flex;gap:var(--e3);flex-wrap:wrap;align-items:center}
+
+button{font:inherit}
+.btn{font-size:var(--t-sm);font-weight:600;padding:10px var(--e4);border-radius:var(--r-control);
+  cursor:pointer;border:1px solid transparent;background:var(--boton-f);color:var(--boton-t);transition:background .12s}
+.btn:hover{background:var(--boton-h)}
+.btn:focus-visible{outline:2px solid var(--convivir);outline-offset:2px}
+.btn.segundo{background:var(--papel);color:var(--tinta);border-color:var(--borde)}
+.btn.segundo:hover{background:var(--concreto)}
+.btn.riesgo{background:var(--papel);color:var(--no);border-color:var(--no-b)}
+.btn.riesgo:hover{background:var(--no-f)}
+.btn.grande{font-size:var(--t-md);padding:var(--e4) var(--e6);min-height:4rem}
+.btn.exito{background:var(--ok);color:var(--papel)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+.campo{display:block;margin-bottom:var(--e4);max-width:24rem}
+.campo span{display:block;font-size:var(--t-sm);font-weight:500;margin-bottom:var(--e1)}
+.campo input{width:100%;font:inherit;padding:10px var(--e3);border:1px solid var(--borde);
+  border-radius:var(--r-control);background:var(--papel);color:var(--tinta)}
+.campo input:focus{outline:2px solid var(--convivir);outline-offset:-1px;border-color:var(--convivir)}
+.campo input.identificador{font-family:var(--dato);letter-spacing:.07em}
+.campo .ayuda{font-size:var(--t-xs);color:var(--acero);margin-top:var(--e1)}
+.campo .error{font-size:var(--t-xs);color:var(--no);margin-top:var(--e1);font-weight:500}
+.campo input[aria-invalid="true"]{border-color:var(--no)}
+
+.pildora{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);font-weight:600;
+  padding:3px 10px;border-radius:var(--r-pildora);border:1px solid}
+.pildora::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:none}
+.p-ok{color:var(--ok);background:var(--ok-f);border-color:var(--ok-b)}
+.p-al{color:var(--al);background:var(--al-f);border-color:var(--al-b)}
+.p-no{color:var(--no);background:var(--no-f);border-color:var(--no-b)}
+.p-ne{color:var(--acero);background:var(--concreto);border-color:var(--borde)}
+
+.ficha{border:1px solid var(--borde);border-left:4px solid var(--acero);background:var(--papel);
+  padding:var(--e4) var(--e5);border-radius:var(--r-superficie)}
+.ficha.ok{border-left-color:var(--ok)}
+.ficha.al{border-left-color:var(--al)}
+.ficha.no{border-left-color:var(--no)}
+.ficha .titular{font-size:var(--t-md);font-weight:600;letter-spacing:-.01em}
+.ficha .meta{color:var(--acero);font-size:var(--t-sm);margin-top:2px}
+
+.veredicto{padding:var(--e6) var(--e5);border:1px solid;border-radius:var(--r-superficie)}
+.v-ok{border-color:var(--ok-b);background:var(--ok-f)}
+.v-no{border-color:var(--no-b);background:var(--no-f)}
+.veredicto .palabra{font-size:var(--t-xl);font-weight:700;line-height:1.05;letter-spacing:-.02em}
+.v-ok .palabra{color:var(--ok)} .v-no .palabra{color:var(--no)}
+.veredicto .quien{font-size:var(--t-md);font-weight:600;margin-top:var(--e3)}
+.veredicto .donde{font-family:var(--dato);font-size:var(--t-base);margin-top:var(--e1);color:var(--acero)}
+.veredicto .porque{color:var(--acero);margin-top:var(--e3);font-size:var(--t-sm);max-width:52ch}
+
+.aviso{border:1px solid var(--borde);border-left:3px solid var(--convivir);background:var(--convivir-c);
+  padding:var(--e3) var(--e4);margin:var(--e4) 0;font-size:var(--t-sm);max-width:66ch;border-radius:var(--r-control)}
+
+.app{border:1px solid var(--borde);border-radius:var(--r-superficie);overflow:hidden;background:var(--papel)}
+.app .barra{display:flex;align-items:center;justify-content:space-between;gap:var(--e4);
+  padding:var(--e3) var(--e4);border-bottom:1px solid var(--borde)}
+.app nav{display:flex;gap:2px;flex-wrap:wrap}
+.app nav a{font-size:var(--t-sm);font-weight:500;color:var(--acero);text-decoration:none;padding:6px var(--e3);border-radius:var(--r-control)}
+.app nav a.activo{color:var(--convivir);background:var(--convivir-c);font-weight:600}
+.app .cuerpo{padding:var(--e5);background:var(--fondo)}
+.app .usuario{display:flex;align-items:center;gap:var(--e2);font-size:var(--t-sm);color:var(--acero)}
+.app .avatar{width:28px;height:28px;border-radius:50%;background:var(--boton-f);color:var(--boton-t);
+  display:grid;place-items:center;font-size:var(--t-xs);font-weight:600}
+.app .luna{width:30px;height:30px;border-radius:var(--r-control);border:1px solid var(--borde);
+  background:var(--papel);color:var(--acero);display:grid;place-items:center;cursor:pointer;font-size:14px}
+
+.escala li{margin-bottom:var(--e3);list-style:none}
+.escala .m{display:block;line-height:1.15;letter-spacing:-.015em}
+
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:40rem){.pagina{padding:var(--e5) var(--e4) var(--e7)}h1{font-size:var(--t-xl)}}
+</style>
+</head>
+<body>
+<div class="pagina">
+
+<div class="tema">
+  <div class="conmutador" role="group" aria-label="Tema de la página">
+    <button type="button" data-t="light" aria-pressed="false">Claro</button>
+    <button type="button" data-t="dark" aria-pressed="false">Oscuro</button>
+    <button type="button" data-t="auto" aria-pressed="true">Sistema</button>
+  </div>
+</div>
+
+<header class="cabecera">
+  <div class="marca">
+    <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+      <rect x="1" y="1" width="32" height="32" rx="5" fill="none" stroke="currentColor" stroke-width="2" style="color:var(--convivir)"/>
+      <rect x="8" y="8" width="7" height="7" fill="var(--convivir)"/>
+      <rect x="19" y="8" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+      <rect x="8" y="19" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+      <rect x="19" y="19" width="7" height="7" fill="var(--convivir)"/>
+    </svg>
+    <span class="nombre">CONVIVIR</span>
+  </div>
+  <h1>Sistema de diseño</h1>
+  <p>Plataforma para la gestión y control de propiedades horizontales. Define la identidad, las dos paletas, la tipografía y los componentes de los que dependen todas las pantallas.</p>
+  <p class="guia">Universidad Simón Bolívar · Ingeniería de Software II · Grupo T02</p>
+</header>
+
+<h2>1. Los dos temas</h2>
+<p>CONVIVIR tiene tema claro y tema oscuro, y el usuario elige. No depende del rol ni de la hora: es una preferencia que se guarda en su cuenta y lo acompaña en cualquier equipo.</p>
+<p><b>El claro es el valor por defecto.</b> Es el tema para trabajar con datos: cuadrar cartera, revisar obligaciones, comparar filas. Sobre fondo blanco una columna de cifras se lee más rápido y el papel impreso coincide con lo que se ve en pantalla.</p>
+<p><b>El oscuro existe porque portería trabaja de noche.</b> Una pantalla blanca en una garita a oscuras encandila y deja al vigilante varios segundos sin visión del exterior. También lo prefiere quien pasa muchas horas frente al monitor.</p>
+<div class="aviso">Prueba el interruptor de arriba. Todo lo que sigue cambia con él: paleta, componentes, tablas y estados. Es el mismo sistema, no dos diseños distintos.</div>
+
+<h3>Cómo está construido</h3>
+<p class="guia">Un solo juego de nombres de variable, dos juegos de valores. Ningún componente conoce un color literal: todos leen la variable. Agregar un tema nuevo sería redefinir el bloque de valores, sin tocar una sola regla de componente.</p>
+<table>
+  <thead><tr><th>Opción</th><th>Comportamiento</th></tr></thead>
+  <tbody>
+    <tr><td><b>Claro</b></td><td>Fuerza el tema claro con <code>data-theme="light"</code> en la raíz.</td></tr>
+    <tr><td><b>Oscuro</b></td><td>Fuerza el tema oscuro con <code>data-theme="dark"</code>.</td></tr>
+    <tr><td><b>Sistema</b></td><td>Sin atributo. Sigue a <code>prefers-color-scheme</code> del equipo y cambia solo si el usuario cambia su sistema.</td></tr>
+  </tbody>
+</table>
+
+<h2>2. La marca</h2>
+<p>El nombre no habla de vigilancia ni de control. Habla de vivir juntos, que es lo que ocurre en una propiedad horizontal: gente que comparte muros, zonas y gastos. El producto administra esa convivencia. Por eso la interfaz informa en vez de advertir.</p>
+<div class="lienzo">
+  <div class="fila" style="gap:var(--e8);align-items:flex-end">
+    <div class="marca">
+      <svg width="40" height="40" viewBox="0 0 34 34" aria-label="CONVIVIR">
+        <rect x="1" y="1" width="32" height="32" rx="5" fill="none" stroke="var(--convivir)" stroke-width="2"/>
+        <rect x="8" y="8" width="7" height="7" fill="var(--convivir)"/>
+        <rect x="19" y="8" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="8" y="19" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="19" y="19" width="7" height="7" fill="var(--convivir)"/>
+      </svg>
+      <span class="nombre" style="font-size:var(--t-lg)">CONVIVIR</span>
+    </div>
+    <div class="marca">
+      <svg width="22" height="22" viewBox="0 0 34 34" aria-hidden="true">
+        <rect x="1" y="1" width="32" height="32" rx="5" fill="none" stroke="var(--convivir)" stroke-width="2.4"/>
+        <rect x="8" y="8" width="7" height="7" fill="var(--convivir)"/>
+        <rect x="19" y="8" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="8" y="19" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="19" y="19" width="7" height="7" fill="var(--convivir)"/>
+      </svg>
+      <span class="nombre" style="font-size:var(--t-base)">CONVIVIR</span>
+    </div>
+  </div>
+  <p class="guia" style="margin-top:var(--e5)">El símbolo es una retícula de cuatro unidades dentro de un perímetro: la planta de un conjunto vista desde arriba. Dos llenas y dos atenuadas, porque nunca están todas ocupadas igual. El azul se toma de la variable, así que el logotipo se aclara solo en tema oscuro.</p>
+</div>
+<table>
+  <thead><tr><th>Regla</th><th>Detalle</th></tr></thead>
+  <tbody>
+    <tr><td>Mayúsculas sostenidas</td><td>Solo el logotipo. En texto corrido se escribe Convivir.</td></tr>
+    <tr><td>Interletraje</td><td><code>letter-spacing: .14em</code>. El nombre es corto y la apertura le da presencia sin tamaño.</td></tr>
+    <tr><td>Peso</td><td>Archivo 700, la misma familia del resto de la interfaz.</td></tr>
+    <tr><td>Color</td><td>Azul Convivir del tema activo. Nunca sobre un color de señal.</td></tr>
+    <tr><td>Espacio libre</td><td>Al menos la altura del símbolo alrededor.</td></tr>
+  </tbody>
+</table>
+
+<h2>3. Principios</h2>
+<h3>El azul es la marca. El verde y el rojo son el estado.</h3>
+<p>En un producto que decide quién entra y quién debe, el verde significa autorizado y al día, y el rojo significa negado y en mora. Ningún color de señal se usa como identidad ni como jerarquía. El azul ocupa ese lugar: botón principal, navegación activa, enlaces y foco.</p>
+<h3>Un identificador se compara carácter por carácter</h3>
+<p>Placas, cédulas y números de unidad van en monoespaciada con espaciado abierto, porque se contrastan contra un documento físico y la O no puede parecerse al 0. El texto corriente nunca la usa.</p>
+<h3>Sin sombras</h3>
+<p>La jerarquía se construye con borde, peso y espacio. Las sombras además obligan a reinventarlas en tema oscuro, donde dejan de funcionar porque no hay luz que bloquear.</p>
+<h3>Ningún componente conoce un color literal</h3>
+<p>Todo lee variables. Es lo que permite que exista un segundo tema sin duplicar el CSS de componentes, y lo que haría barato un tercero si alguna copropiedad quisiera su propio color.</p>
+
+<h2>4. Paleta</h2>
+<p class="guia">Las muestras de abajo corresponden al tema activo. Cambia el interruptor para ver el otro juego.</p>
+
+<h3>Marca</h3>
+<div class="rejilla c3">
+  <div class="tono"><div class="mancha" style="background:var(--convivir)"></div><div class="pie"><b>Azul Convivir</b><span class="hex">claro #1A4A7A · oscuro #7CB2E8</span>Logotipo, enlaces, navegación activa, anillo de foco.</div></div>
+  <div class="tono"><div class="mancha" style="background:var(--boton-f)"></div><div class="pie"><b>Azul de acción</b><span class="hex">claro #1A4A7A · oscuro #5B9BD5</span>Fondo del botón principal. En oscuro se aclara y lleva texto oscuro.</div></div>
+  <div class="tono"><div class="mancha" style="background:var(--convivir-c)"></div><div class="pie"><b>Azul suave</b><span class="hex">claro #E8EFF6 · oscuro #16293B</span>Fondo de pestaña activa y de avisos.</div></div>
+</div>
+
+<h3>Neutros</h3>
+<div class="rejilla c4">
+  <div class="tono"><div class="mancha" style="background:var(--tinta)"></div><div class="pie"><b>Tinta</b><span class="hex">#1A1F26 · #E8EBEE</span>Texto principal.</div></div>
+  <div class="tono"><div class="mancha" style="background:var(--acero)"></div><div class="pie"><b>Acero</b><span class="hex">#626C78 · #9AA4B0</span>Texto secundario.</div></div>
+  <div class="tono"><div class="mancha" style="background:var(--borde)"></div><div class="pie"><b>Borde</b><span class="hex">#DCE0E4 · #2C3640</span>Contornos.</div></div>
+  <div class="tono"><div class="mancha" style="background:var(--concreto)"></div><div class="pie"><b>Concreto</b><span class="hex">#F2F4F5 · #1E262F</span>Fila al pasar.</div></div>
+  <div class="tono"><div class="mancha" style="background:var(--papel)"></div><div class="pie"><b>Papel</b><span class="hex">#FFFFFF · #171E26</span>Superficies.</div></div>
+  <div class="tono"><div class="mancha" style="background:var(--fondo)"></div><div class="pie"><b>Fondo</b><span class="hex">#FAFBFC · #10151B</span>Lienzo.</div></div>
+</div>
+<p class="guia">En oscuro el fondo es más profundo que las superficies, al revés que en claro. Así la jerarquía se conserva: lo que está encima es siempre lo más claro en tema oscuro y lo más blanco en tema claro.</p>
+
+<h3>Señal</h3>
+<div class="rejilla c3">
+  <div class="tono"><div class="mancha" style="background:var(--ok)"></div><div class="pie"><b>Al día</b><span class="hex">#146C43 · #5CC08E</span>Autorización vigente, obligación pagada, paz y salvo.</div></div>
+  <div class="tono"><div class="mancha" style="background:var(--al)"></div><div class="pie"><b>Por vencer</b><span class="hex">#8A5000 · #D99F52</span>Vigencia próxima a terminar, reporte sin asignar.</div></div>
+  <div class="tono"><div class="mancha" style="background:var(--no)"></div><div class="pie"><b>En mora</b><span class="hex">#8C1D24 · #E8808A</span>Sin autorización, obligación vencida, anulado.</div></div>
+</div>
+<div class="aviso"><b>Regla dura.</b> Ningún color de señal se usa para identidad, jerarquía, fondo de sección ni gráfico decorativo. Para distinguir categorías sin estado de por medio se usa posición, peso o borde.</div>
+
+<h3>Contraste en los dos temas</h3>
+<table>
+  <caption>Medido sobre el fondo previsto en cada tema</caption>
+  <thead><tr><th>Par</th><th style="text-align:right">Claro</th><th style="text-align:right">Oscuro</th><th>Nivel</th></tr></thead>
+  <tbody>
+    <tr><td>Tinta sobre Fondo</td><td class="num">14.1:1</td><td class="num">13.2:1</td><td><span class="pildora p-ok">AAA</span></td></tr>
+    <tr><td>Acero sobre Fondo</td><td class="num">5.2:1</td><td class="num">6.4:1</td><td><span class="pildora p-ok">AA</span></td></tr>
+    <tr><td>Texto del botón sobre su fondo</td><td class="num">8.4:1</td><td class="num">9.1:1</td><td><span class="pildora p-ok">AAA</span></td></tr>
+    <tr><td>Al día sobre su fondo</td><td class="num">5.6:1</td><td class="num">7.3:1</td><td><span class="pildora p-ok">AA</span></td></tr>
+    <tr><td>En mora sobre su fondo</td><td class="num">7.1:1</td><td class="num">7.9:1</td><td><span class="pildora p-ok">AAA</span></td></tr>
+    <tr><td>Azul Convivir sobre Fondo</td><td class="num">7.6:1</td><td class="num">7.4:1</td><td><span class="pildora p-ok">AAA</span></td></tr>
+  </tbody>
+</table>
+<p class="guia">El estado nunca se comunica solo con color: toda píldora lleva punto y palabra, y toda ficha lleva una regla izquierda. Quien no distinga los tonos lee el texto.</p>
+
+<h2>5. Tipografía</h2>
+<table>
+  <thead><tr><th>Familia</th><th>Dónde</th><th>Por qué</th></tr></thead>
+  <tbody>
+    <tr><td><b>Archivo</b><br><span class="guia">400 · 500 · 600 · 700</span></td><td>Logotipo, títulos, interfaz, tablas, párrafos.</td><td>Una sola familia evita que dos personalidades compitan. Aguanta tamaños pequeños sin cerrarse y tiene los pesos para construir jerarquía sin cambiar de tipo.</td></tr>
+    <tr><td><b>IBM Plex Mono</b><br><span class="guia">400 · 500</span></td><td>Solo identificadores: placa, cédula, unidad, referencia, comprobante.</td><td>Distingue cero de O y uno de ele, que es lo que se compara contra un documento físico.</td></tr>
+  </tbody>
+</table>
+<h3>Escala</h3>
+<ul class="escala" style="padding:0">
+  <li><span class="m" style="font-size:2.441rem;font-weight:700">Cifra principal</span><code>--t-2xl · 2.441rem · 700</code></li>
+  <li><span class="m" style="font-size:1.953rem;font-weight:700">Título de pantalla</span><code>--t-xl · 1.953rem · 700</code></li>
+  <li><span class="m" style="font-size:1.5625rem;font-weight:700">Sección</span><code>--t-lg · 1.5625rem · 700</code></li>
+  <li><span class="m" style="font-size:1.25rem;font-weight:600">Dato destacado</span><code>--t-md · 1.25rem · 600</code></li>
+  <li><span style="font-size:1rem">Interfaz y celdas</span> <code>--t-base · 1rem · 400</code></li>
+  <li><span style="font-size:.875rem">Etiquetas y metadatos</span> <code>--t-sm · .875rem · 500</code></li>
+  <li><span style="font-size:.75rem">Píldoras y ayudas</span> <code>--t-xs · .75rem · 600</code></li>
+</ul>
+<p class="guia">Razón 1.25. Texto corrido por debajo de 66 caracteres por línea. Cifras siempre con <code>tabular-nums</code>. En tema oscuro el texto largo baja a peso 400 estricto, porque sobre fondo oscuro los pesos medios se ven más gruesos de lo que son.</p>
+
+<h2>6. Espaciado y forma</h2>
+<div class="rejilla c2">
+  <div><h3>Espaciado</h3><p class="guia">Base 4, ocho valores para todo el producto.</p>
+    <p><code>4</code> <code>8</code> <code>12</code> <code>16</code> <code>24</code> <code>32</code> <code>48</code> <code>72</code></p></div>
+  <div><h3>Radio</h3><p class="guia">Tres valores con significado.</p>
+    <p><code>4px</code> controles<br><code>6px</code> superficies<br><code>999px</code> estado</p></div>
+</div>
+
+<h2>7. Componentes</h2>
+
+<h3>La aplicación</h3>
+<div class="app">
+  <div class="barra">
+    <div class="marca">
+      <svg width="22" height="22" viewBox="0 0 34 34" aria-hidden="true">
+        <rect x="1" y="1" width="32" height="32" rx="5" fill="none" stroke="var(--convivir)" stroke-width="2.4"/>
+        <rect x="8" y="8" width="7" height="7" fill="var(--convivir)"/>
+        <rect x="19" y="8" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="8" y="19" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="19" y="19" width="7" height="7" fill="var(--convivir)"/>
+      </svg>
+      <span class="nombre" style="font-size:var(--t-sm)">CONVIVIR</span>
+    </div>
+    <nav>
+      <a href="#" class="activo">Inmuebles</a><a href="#">Residentes</a>
+      <a href="#">Portería</a><a href="#">Cartera</a><a href="#">Reportes</a>
+    </nav>
+    <div class="usuario">
+      <button class="luna" id="luna" type="button" aria-label="Cambiar tema">◐</button>
+      <span class="avatar">EG</span>Villa Campestre
+    </div>
+  </div>
+  <div class="cuerpo">
+    <div class="fila" style="justify-content:space-between;margin-bottom:var(--e4)">
+      <div><div style="font-size:var(--t-xl);font-weight:700;letter-spacing:-.02em">Inmuebles</div>
+        <div class="guia">184 unidades · 12 con saldo pendiente</div></div>
+      <button class="btn">Registrar inmueble</button>
+    </div>
+    <div class="lienzo" style="margin:0;padding:0">
+      <table style="margin:0">
+        <thead><tr><th style="padding-left:var(--e4)">Unidad</th><th>Ocupa</th><th>Vínculo</th><th style="text-align:right">Saldo</th><th style="padding-right:var(--e4)">Estado</th></tr></thead>
+        <tbody>
+          <tr><td class="mono" style="padding-left:var(--e4)">B-0302</td><td>Lucía Mendoza</td><td>Arrendataria</td><td class="num">0</td><td style="padding-right:var(--e4)"><span class="pildora p-ok">Al día</span></td></tr>
+          <tr><td class="mono" style="padding-left:var(--e4)">A-1104</td><td>Sin ocupante</td><td>Propietario no residente</td><td class="num">1 340 000</td><td style="padding-right:var(--e4)"><span class="pildora p-no">45 días</span></td></tr>
+          <tr><td class="mono" style="padding-left:var(--e4)">A-0902</td><td>Marta Oviedo</td><td>Propietaria residente</td><td class="num">620 000</td><td style="padding-right:var(--e4)"><span class="pildora p-al">12 días</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<p class="guia">El cambio de tema vive en la barra, junto a la cuenta. Es preferencia del usuario, no configuración de la copropiedad.</p>
+
+<h3>Botones</h3>
+<div class="lienzo">
+  <div class="fila">
+    <button class="btn">Registrar visita</button>
+    <button class="btn segundo">Cancelar</button>
+    <button class="btn riesgo">Anular pago</button>
+    <button class="btn" disabled>Generar obligaciones</button>
+  </div>
+  <p class="guia" style="margin-top:var(--e4)">El botón dice qué pasa al pulsarlo y conserva el verbo en la confirmación: el que dice Registrar produce un aviso que dice Registrada. Nunca aparece Enviar ni Aceptar. La acción destructiva es de contorno, no de fondo rojo, para que no compita con los estados de la tabla.</p>
+</div>
+
+<h3>Portería</h3>
+<p class="guia">Misma paleta, mismos componentes. Lo que cambia es la escala: el veredicto en tamaño de título y botones de 4 rem, porque el vigilante decide de pie y a un metro de la pantalla.</p>
+<div class="lienzo" style="display:grid;gap:var(--e5)">
+  <div class="veredicto v-ok">
+    <div class="palabra">Puede entrar</div>
+    <div class="quien">Camila Restrepo Ariza</div>
+    <div class="donde">CC 1 045 887 332 · Torre B · Apto 302</div>
+    <div class="porque">Visita autorizada por Lucía Mendoza, vigente hasta hoy a las 11:59 p. m. Parqueadero V-04 reservado.</div>
+  </div>
+  <div class="veredicto v-no">
+    <div class="palabra">No tiene autorización</div>
+    <div class="quien">Andrés Mejía Caro</div>
+    <div class="donde">CC 8 772 104 · sin registro para hoy</div>
+    <div class="porque">Puedes registrar el ingreso como excepción indicando el motivo y la unidad de destino. Queda en auditoría.</div>
+  </div>
+  <div class="fila">
+    <button class="btn grande exito">Registrar ingreso</button>
+    <button class="btn grande segundo">Registrar como excepción</button>
+  </div>
+</div>
+
+<h3>Campos</h3>
+<div class="lienzo">
+  <div class="rejilla c2">
+    <div>
+      <label class="campo"><span>Número de documento</span>
+        <input class="identificador" value="1045887332" inputmode="numeric">
+        <span class="ayuda">Sin puntos ni espacios.</span></label>
+      <label class="campo"><span>Placa del vehículo</span>
+        <input class="identificador" value="BQA 47F" style="text-transform:uppercase"></label>
+    </div>
+    <div>
+      <label class="campo"><span>Coeficiente de copropiedad</span>
+        <input aria-invalid="true" value="1,42">
+        <span class="error">El coeficiente va entre 0 y 1. Para 1,42 por ciento escribe 0,0142.</span></label>
+      <p class="guia">El error dice qué pasó y cómo arreglarlo. No pide disculpas ni dice que algo salió mal.</p>
+    </div>
+  </div>
+</div>
+
+<h3>Estados y fichas</h3>
+<div class="lienzo" style="display:grid;gap:var(--e4)">
+  <div class="fila">
+    <span class="pildora p-ok">Vigente</span><span class="pildora p-ok">Al día</span>
+    <span class="pildora p-al">Vence en 3 días</span><span class="pildora p-al">Sin asignar</span>
+    <span class="pildora p-no">Sin autorización</span><span class="pildora p-no">45 días en mora</span>
+    <span class="pildora p-ne">Finalizada</span>
+  </div>
+  <div class="ficha ok"><div class="titular">Torre B · Apto 302</div>
+    <div class="meta">Lucía Mendoza, arrendataria desde marzo de 2026 · sin saldo pendiente</div></div>
+  <div class="ficha no"><div class="titular">Torre A · Apto 1104</div>
+    <div class="meta">Jorge Peñaranda, propietario no residente · <span class="dato">$ 1 340 000</span> · 45 días en mora</div></div>
+  <div class="ficha al"><div class="titular">Parqueadero P-22</div>
+    <div class="meta">Cedido a Torre B · Apto 302 · la cesión vence el 30 de noviembre</div></div>
+</div>
+
+<h2>8. Cómo se escriben las palabras</h2>
+<table>
+  <thead><tr><th>Regla</th><th>Así no</th><th>Así sí</th></tr></thead>
+  <tbody>
+    <tr><td>Nombrar por lo que el usuario entiende</td><td>Gestionar vinculación persona-inmueble</td><td>Quién vive en cada apartamento</td></tr>
+    <tr><td>El botón dice qué pasa</td><td>Enviar</td><td>Registrar visita</td></tr>
+    <tr><td>El error explica y dirige</td><td>Error al guardar</td><td>Esa placa ya está registrada en Torre A · Apto 0902</td></tr>
+    <tr><td>El vacío invita</td><td>No hay datos</td><td>Todavía no has registrado visitas. Registra una para que portería la vea.</td></tr>
+    <tr><td>Decir cuánto, no solo qué</td><td>Vencido</td><td>45 días en mora</td></tr>
+    <tr><td>Sin mayúsculas sostenidas</td><td>DATOS DEL VISITANTE</td><td>Datos del visitante</td></tr>
+  </tbody>
+</table>
+
+<h2>9. Decisiones descartadas</h2>
+<table>
+  <thead><tr><th>Se descartó</th><th>Por qué</th></tr></thead>
+  <tbody>
+    <tr><td>Tema oscuro asignado por rol</td><td>Obligaba a mantener dos diseños en paralelo y le quitaba la decisión al usuario. Un administrador que trabaja de noche también lo quiere, y un vigilante de turno diurno prefiere el claro.</td></tr>
+    <tr><td>Verde como color de marca</td><td>El verde ya significa autorizado y al día. Usarlo como identidad obliga a interpretar en vez de leer.</td></tr>
+    <tr><td>Fondo crema con serif y acento terracota</td><td>Es el aspecto que hoy tiene casi todo lo generado con herramientas asistidas, y resta seriedad a una pantalla de cartera.</td></tr>
+    <tr><td>Sombras bajo cada superficie</td><td>No aportan jerarquía que el borde no aporte, y en tema oscuro dejan de funcionar porque no hay luz que bloquear.</td></tr>
+    <tr><td>Botón destructivo de fondo rojo</td><td>Competiría con las píldoras de mora en la misma pantalla. Va de contorno.</td></tr>
+    <tr><td>Dos familias tipográficas</td><td>Con una familia de cuatro pesos alcanza. Dos voces en un producto administrativo añaden ruido sin añadir claridad.</td></tr>
+  </tbody>
+</table>
+
+<h2>10. Tokens</h2>
+<div class="lienzo">
+<pre style="margin:0;overflow-x:auto;font-family:var(--dato);font-size:var(--t-xs);line-height:1.75"><code>/* Claro — por defecto */
+:root{
+  --convivir:#1A4A7A; --convivir-o:#123757; --convivir-c:#E8EFF6;
+  --boton-f:#1A4A7A;  --boton-t:#FFFFFF;    --boton-h:#123757;
+  --tinta:#1A1F26; --acero:#626C78; --borde:#DCE0E4; --borde-f:#EDEFF1;
+  --concreto:#F2F4F5; --papel:#FFFFFF; --fondo:#FAFBFC;
+  --ok:#146C43; --ok-f:#E7F2EC; --ok-b:#A8D5BE;
+  --al:#8A5000; --al-f:#FAF0E2; --al-b:#E3C089;
+  --no:#8C1D24; --no-f:#FAE8E9; --no-b:#E3A8AC;
+}
+
+/* Oscuro — mismos nombres, otros valores */
+:root[data-theme="dark"]{
+  --convivir:#7CB2E8; --convivir-o:#9CC8F2; --convivir-c:#16293B;
+  --boton-f:#5B9BD5;  --boton-t:#0D1620;    --boton-h:#79B0E2;
+  --tinta:#E8EBEE; --acero:#9AA4B0; --borde:#2C3640; --borde-f:#232B34;
+  --concreto:#1E262F; --papel:#171E26; --fondo:#10151B;
+  --ok:#5CC08E; --ok-f:#10281E; --ok-b:#2E6A4D;
+  --al:#D99F52; --al-f:#2A2013; --al-b:#7A5A24;
+  --no:#E8808A; --no-f:#2B1619; --no-b:#7E3840;
+}
+
+/* Comunes a los dos temas */
+:root{
+  --texto:"Archivo",system-ui,sans-serif;
+  --dato:"IBM Plex Mono",ui-monospace,monospace;
+  --t-xs:.75rem; --t-sm:.875rem; --t-base:1rem; --t-md:1.25rem;
+  --t-lg:1.5625rem; --t-xl:1.953rem; --t-2xl:2.441rem;
+  --e1:4px; --e2:8px; --e3:12px; --e4:16px;
+  --e5:24px; --e6:32px; --e7:48px; --e8:72px;
+  --r-control:4px; --r-superficie:6px; --r-pildora:999px;
+}</code></pre>
+</div>
+
+</div>
+
+<script>
+(function(){
+  var raiz = document.documentElement;
+  var botones = Array.prototype.slice.call(document.querySelectorAll('.conmutador button'));
+
+  function leer(){
+    try { return localStorage.getItem('convivir-tema') || 'auto'; }
+    catch(e){ return 'auto'; }
+  }
+  function guardar(v){
+    try { localStorage.setItem('convivir-tema', v); } catch(e){}
+  }
+  function aplicar(v){
+    if (v === 'auto') raiz.removeAttribute('data-theme');
+    else raiz.setAttribute('data-theme', v);
+    botones.forEach(function(b){
+      b.setAttribute('aria-pressed', String(b.dataset.t === v));
+    });
+  }
+
+  aplicar(leer());
+
+  botones.forEach(function(b){
+    b.addEventListener('click', function(){
+      guardar(b.dataset.t);
+      aplicar(b.dataset.t);
+    });
+  });
+
+  var luna = document.getElementById('luna');
+  if (luna) luna.addEventListener('click', function(){
+    var oscuro = raiz.getAttribute('data-theme') === 'dark'
+      || (!raiz.hasAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches);
+    var nuevo = oscuro ? 'light' : 'dark';
+    guardar(nuevo);
+    aplicar(nuevo);
+  });
+})();
+</script>
+</body>
+</html>

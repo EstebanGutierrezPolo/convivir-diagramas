@@ -1,0 +1,136 @@
+%% titulo: Módulo 3 · Reservas y asignaciones
+classDiagram
+direction TB
+
+class Reserva {
+    +id : int
+    +valorTarifa : double
+    +valorMulta : double
+    +motivoMulta : String
+    +estado : EstadoReserva
+    +motivoCancelacion : String
+    -comportamiento : ComportamientoReserva
+    -estrategiaTarifa : EstrategiaTarifa
+    +Reserva(asignacionInmueble : AsignacionInmueble, inmuebleQuePaga : Inmueble)
+    +registrarReservaDeZonaComun()
+    +confirmarReserva()
+    +finalizarReserva()
+    +cancelarReservaPorMotivo(motivo : String)
+    +aplicarMultaPorIncumplimiento(motivo : String)
+    +calcularTarifaDeLaReserva() : double
+    +cambiarComportamiento(nuevoComportamiento : ComportamientoReserva)
+    #validarQueElIntegranteSeaResidente() : boolean
+    #validarDisponibilidadDeLaZona() : boolean
+}
+
+class ComportamientoReserva {
+    <<interface>>
+    +confirmar(reserva : Reserva)
+    +cancelar(reserva : Reserva, motivo : String)
+    +finalizar(reserva : Reserva)
+    +marcarIncumplida(reserva : Reserva, motivo : String)
+}
+
+class ReservaSolicitada {
+    +confirmar(reserva : Reserva)
+    +cancelar(reserva : Reserva, motivo : String)
+    +finalizar(reserva : Reserva)
+    +marcarIncumplida(reserva : Reserva, motivo : String)
+}
+
+class ReservaConfirmada {
+    +confirmar(reserva : Reserva)
+    +cancelar(reserva : Reserva, motivo : String)
+    +finalizar(reserva : Reserva)
+    +marcarIncumplida(reserva : Reserva, motivo : String)
+}
+
+class ReservaCerrada {
+    +confirmar(reserva : Reserva)
+    +cancelar(reserva : Reserva, motivo : String)
+    +finalizar(reserva : Reserva)
+    +marcarIncumplida(reserva : Reserva, motivo : String)
+}
+
+class EstrategiaTarifa {
+    <<interface>>
+    +calcular(valorTarifa : double, asignacionInmueble : AsignacionInmueble) : double
+}
+
+class TarifaPorHora {
+    +calcular(valorTarifa : double, asignacionInmueble : AsignacionInmueble) : double
+}
+
+class TarifaPorDia {
+    +calcular(valorTarifa : double, asignacionInmueble : AsignacionInmueble) : double
+}
+
+class TarifaPorEvento {
+    +calcular(valorTarifa : double, asignacionInmueble : AsignacionInmueble) : double
+}
+
+class FabricaEstrategiaTarifa {
+    +obtenerEstrategia(unidadTarifa : UnidadTarifa) : EstrategiaTarifa
+}
+
+class AsignacionInmueble {
+    +id : int
+    +fechaInicio : Date
+    +fechaFin : Date
+    +AsignacionInmueble(fechaInicio : Date, fechaFin : Date)
+    +registrarAsignacionDelInmueble()
+    +consultarPeriodosOcupadosDelInmueble(inmueble : Inmueble) : List~AsignacionInmueble~
+    #validarQueFechasYHorariosNoSeSuperpongan() : boolean
+}
+
+class ProgramacionAsignacion {
+    +id : int
+    +diaSemana : DiaSemana
+    +horaInicio : Time
+    +horaFin : Time
+    +ProgramacionAsignacion(diaSemana : DiaSemana, horaInicio : Time, horaFin : Time)
+    +registrarProgramacionDeLaAsignacion()
+    #validarQueLaFranjaHorariaSeaValida() : boolean
+}
+
+class EstadoReserva {
+    <<enumeration>>
+    SOLICITADA
+    CONFIRMADA
+    CANCELADA
+    FINALIZADA
+    INCUMPLIDA
+}
+
+class DiaSemana {
+    <<enumeration>>
+    LUNES
+    MARTES
+    MIERCOLES
+    JUEVES
+    VIERNES
+    SABADO
+    DOMINGO
+}
+
+%% ===== Relaciones =====
+Inmueble "1" <-- "*" Reserva : se cobra a
+Inmueble "1" --> "*" AsignacionInmueble : se asigna en
+Integrante "1" --> "*" Reserva : realiza
+Reserva "1" -- "1" AsignacionInmueble : ocupa el periodo de
+AsignacionInmueble "1" *-- "1..*" ProgramacionAsignacion : se programa en
+Reserva ..> Inmueble : consulta disponibilidad
+Reserva ..> Vinculacion : valida residente
+Reserva ..> TipoInmueble : consulta tarifa
+Reserva "1" --> "0..*" Obligacion : genera
+ComportamientoReserva <|.. ReservaSolicitada
+ComportamientoReserva <|.. ReservaConfirmada
+ComportamientoReserva <|.. ReservaCerrada
+Reserva "1" --> "1" ComportamientoReserva : delega su estado en
+EstrategiaTarifa <|.. TarifaPorHora
+EstrategiaTarifa <|.. TarifaPorDia
+EstrategiaTarifa <|.. TarifaPorEvento
+Reserva "1" --> "1" EstrategiaTarifa : calcula tarifa con
+FabricaEstrategiaTarifa ..> EstrategiaTarifa : crea
+Reserva ..> EstadoReserva
+ProgramacionAsignacion ..> DiaSemana

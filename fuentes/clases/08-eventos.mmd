@@ -1,0 +1,89 @@
+%% titulo: Módulo 8 · Eventos, auditoría y notificaciones
+classDiagram
+direction TB
+
+class EventoSistema {
+    +tipoEvento : String
+    +elementoAfectado : String
+    +fechaHora : DateTime
+    +documentoActor : String
+    +EventoSistema(tipoEvento : String, elementoAfectado : String, documentoActor : String)
+}
+
+class Observador {
+    <<interface>>
+    +actualizar(evento : EventoSistema)
+}
+
+class PublicadorEventos {
+    -observadores : List~Observador~
+    +suscribir(observador : Observador)
+    +desuscribir(observador : Observador)
+    +publicar(evento : EventoSistema)
+}
+
+class ObservadorAuditoria {
+    +actualizar(evento : EventoSistema)
+}
+
+class ObservadorNotificaciones {
+    +actualizar(evento : EventoSistema)
+}
+
+class Auditoria {
+    +id : int
+    +fechaHora : DateTime
+    +accion : String
+    +elementoAfectado : String
+    +Auditoria(accion : String, elementoAfectado : String)
+    +registrarOperacionEnAuditoria()
+    +exportarRegistroDeAuditoria(fechaDesde : Date, fechaHasta : Date) : File
+}
+
+class Notificacion {
+    +id : int
+    +fechaHora : DateTime
+    +contenido : String
+    +resultadoEnvio : ResultadoEnvio
+    +Notificacion(contenido : String)
+    +enviarNotificacionAlDestinatario()
+    +registrarResultadoDelEnvio(resultadoEnvio : ResultadoEnvio)
+}
+
+class ConfiguracionNotificacion {
+    +id : int
+    +evento : String
+    +destinatario : String
+    +estaHabilitada : boolean
+    +ConfiguracionNotificacion(evento : String, destinatario : String)
+    +configurarEventoDeNotificacion()
+}
+
+class ResultadoEnvio {
+    <<enumeration>>
+    ENVIADA
+    FALLIDA
+    SIN_CONFIRMACION
+}
+
+%% ===== Relaciones =====
+Inmueble ..> PublicadorEventos : publica
+Obligacion ..> PublicadorEventos : publica
+Pago ..> PublicadorEventos : publica
+Vinculacion ..> PublicadorEventos : publica
+Cuenta ..> PublicadorEventos : publica
+Reporte ..> PublicadorEventos : publica
+PublicadorEventos "1" o-- "*" Observador : notifica a
+PublicadorEventos ..> EventoSistema : emite
+Observador ..> EventoSistema : recibe
+Observador <|.. ObservadorAuditoria
+Observador <|.. ObservadorNotificaciones
+ObservadorAuditoria ..> Auditoria : registra
+ObservadorNotificaciones ..> ConfiguracionNotificacion : consulta
+ObservadorNotificaciones ..> Notificacion : crea
+PropiedadHorizontal "1" *-- "*" ConfiguracionNotificacion : establece
+ConfiguracionNotificacion "1" --> "*" Notificacion : origina
+Integrante "1" --> "*" Notificacion : recibe
+PropiedadHorizontal "1" --> "*" Auditoria : conserva
+Integrante "1" --> "*" Auditoria : realiza
+Notificacion ..> ResultadoEnvio

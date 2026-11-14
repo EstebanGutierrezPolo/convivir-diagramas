@@ -1,0 +1,32 @@
+%% titulo: Transversal · Eventos, auditoría y notificaciones
+%% Lo que ocurre cada vez que una clase del dominio publica un evento (RN-30, RN-32).
+sequenceDiagram
+    autonumber
+    participant D as Clase del dominio<br/>(Inmueble, Obligacion, Pago,<br/>Vinculacion, Cuenta, Reporte)
+    participant Pub as PublicadorEventos
+    participant OA as ObservadorAuditoria
+    participant Aud as Auditoria
+    participant RA as AuditoriaRepositorio
+    participant ON as ObservadorNotificaciones
+    participant RC as ConfiguracionNotificacionRepositorio
+    participant N as Notificacion
+    participant SN as Servicio de notificaciones
+
+    D->>Pub: publicar(EventoSistema)
+    loop por cada Observador suscrito
+        Pub->>OA: actualizar(evento)
+        OA->>Aud: new Auditoria(accion, elementoAfectado)
+        OA->>Aud: registrarOperacionEnAuditoria()
+        OA->>RA: save(auditoria)
+
+        Pub->>ON: actualizar(evento)
+        ON->>RC: findByEvento(evento.tipoEvento)
+        RC-->>ON: configuracionNotificacion
+        opt la configuración está habilitada
+            ON->>N: new Notificacion(contenido)
+            ON->>N: enviarNotificacionAlDestinatario()
+            N->>SN: enviar al destinatario configurado
+            SN-->>N: resultado
+            N->>N: registrarResultadoDelEnvio(resultadoEnvio)
+        end
+    end

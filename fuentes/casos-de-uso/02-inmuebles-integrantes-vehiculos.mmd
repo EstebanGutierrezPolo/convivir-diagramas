@@ -1,0 +1,36 @@
+%% titulo: Inmuebles, integrantes y vehículos (CU-02, 03, 04, 08, 09, 19)
+flowchart LR
+    adm["👤<br/>Administrador"]:::actor
+    pres["👤<br/>Propietario residente"]:::actor
+    arr["👤<br/>Arrendatario"]:::actor
+
+    subgraph sistema["Convivir · Inmuebles, integrantes y vehículos"]
+        direction TB
+        cu19(["CU-19 Gestionar tipos de inmueble"])
+        cu02(["CU-02 Gestionar inmuebles"])
+        cu03(["CU-03 Gestionar integrantes"])
+        cu04(["CU-04 Gestionar vinculación integrante–inmueble"])
+        cu08(["CU-08 Gestionar vehículos"])
+        cu09(["CU-09 Gestionar parqueaderos y cesiones de uso"])
+
+        hist(["Consultar historial del inmueble (RF-013)"])
+        propio(["Registrar vehículo del propio inmueble (RF-046)"])
+        cesion(["Registrar cesión de uso entre inmuebles (RF-060)"])
+    end
+
+    adm --- cu19
+    adm --- cu02
+    adm --- cu03
+    adm --- cu04
+    adm --- cu08
+    adm --- cu09
+    pres --- cu08
+    arr --- cu08
+
+    hist -.->|«extend»| cu02
+    propio -.->|«extend»| cu08
+    cu09 -.->|«include»| cesion
+    cu02 -.->|usa el tipo definido en| cu19
+    cu04 -.->|requiere integrante de| cu03
+
+    classDef actor fill:none,stroke:none

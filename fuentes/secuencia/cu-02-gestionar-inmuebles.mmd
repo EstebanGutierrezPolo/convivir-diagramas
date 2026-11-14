@@ -1,0 +1,46 @@
+%% titulo: CU-02 Gestionar inmuebles
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Inmuebles (React)
+    participant Ctl as InmuebleControlador
+    participant Srv as InmuebleServicio
+    participant RT as TipoInmuebleRepositorio
+    participant Repo as InmuebleRepositorio
+    participant I as Inmueble
+    participant Pub as PublicadorEventos
+
+    Note over A,Pub: Registrar inmueble (RF-006)
+    A->>UI: diligencia identificación, coeficiente, área, naturaleza, tipo y contenedor
+    UI->>Ctl: POST /api/inmuebles
+    Ctl->>Srv: registrarInmueble(datos)
+    Srv->>RT: findById(tipoId)
+    RT-->>Srv: tipoInmueble
+    opt tiene inmueble contenedor
+        Srv->>Repo: findById(contenedorId)
+        Repo-->>Srv: inmuebleContenedor
+    end
+    Srv->>Repo: existsByIdentificacion(identificacion)
+    alt la identificación ya existe
+        Srv-->>Ctl: dato repetido
+        Ctl-->>UI: 409 ya existe un inmueble con esa identificación
+    else datos válidos
+        Srv->>I: new Inmueble(identificacion, coeficiente, areaM2, inmuebleContenedor)
+        Srv->>I: registrarInmueble()
+        I->>Pub: publicar(EventoSistema INMUEBLE_REGISTRADO)
+        Srv->>Repo: save(inmueble)
+        Srv-->>Ctl: inmueble registrado
+        Ctl-->>UI: 201
+        UI-->>A: muestra el inmueble en el listado
+    end
+
+    Note over A,Pub: Desactivar inmueble (RF-011)
+    A->>UI: elige desactivar e indica el motivo
+    UI->>Ctl: PATCH /api/inmuebles/id/desactivar
+    Ctl->>Srv: desactivarInmueble(id, motivo)
+    Srv->>Repo: findById(id)
+    Repo-->>Srv: inmueble
+    Srv->>I: desactivarInmueblePorMotivo(motivo)
+    I->>Pub: publicar(EventoSistema INMUEBLE_DESACTIVADO)
+    Srv->>Repo: save(inmueble)
+    Ctl-->>UI: 200 el historial se conserva (RN-04)

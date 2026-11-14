@@ -1,0 +1,60 @@
+%% titulo: CU-21 Gestionar reservas
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Reservas (React)
+    participant Ctl as ReservaControlador
+    participant Srv as ReservaServicio
+    participant Repo as ReservaRepositorio
+    participant Re as Reserva
+    participant Co as ComportamientoReserva
+    participant Et as EstrategiaTarifa
+    participant Fab as FabricaObligacion
+    participant RO as ObligacionRepositorio
+
+    Note over A,RO: Confirmar reserva (RF-119)
+    A->>UI: abre una reserva SOLICITADA y la confirma
+    UI->>Ctl: PATCH /api/reservas/id/confirmar
+    Ctl->>Srv: confirmarReserva(id)
+    Srv->>Repo: findById(id)
+    Srv->>Re: confirmarReserva()
+    Re->>Re: validarDisponibilidadDeLaZona()
+    alt otra reserva confirmada ocupa el periodo (RN-38)
+        Srv-->>Ctl: regla incumplida
+        Ctl-->>UI: 422 la zona ya está reservada en ese periodo
+    else disponible
+        Re->>Co: confirmar(reserva)
+        Note right of Co: ReservaSolicitada cambia el comportamiento a ReservaConfirmada
+        Co->>Re: cambiarComportamiento(reservaConfirmada)
+        Srv->>Re: calcularTarifaDeLaReserva()
+        Re->>Et: calcular(valorTarifa, asignacionInmueble)
+        Et-->>Re: valor por hora, por día o por evento
+        Srv->>Fab: crearObligacionPorReserva(reserva)
+        Fab-->>Srv: obligacion ALQUILER_ZONA a cargo del inmueble que paga (RN-39)
+        Srv->>RO: save(obligacion)
+        Srv->>Repo: save(reserva)
+        Ctl-->>UI: 200 estado CONFIRMADA
+    end
+
+    Note over A,RO: Finalizar reserva (RF-121)
+    A->>UI: indica que la reserva terminó
+    UI->>Ctl: PATCH /api/reservas/id/finalizar
+    Ctl->>Srv: finalizarReserva(id)
+    Srv->>Re: finalizarReserva()
+    Re->>Co: finalizar(reserva)
+    Co->>Re: cambiarComportamiento(reservaCerrada)
+    Srv->>Repo: save(reserva)
+    Ctl-->>UI: 200 estado FINALIZADA
+
+    Note over A,RO: Registrar multa por incumplimiento (RF-122)
+    A->>UI: indica el motivo de la multa
+    UI->>Ctl: POST /api/reservas/id/multa
+    Ctl->>Srv: aplicarMulta(id, motivo)
+    Srv->>Re: aplicarMultaPorIncumplimiento(motivo)
+    Re->>Co: marcarIncumplida(reserva, motivo)
+    Co->>Re: cambiarComportamiento(reservaCerrada)
+    Srv->>Fab: crearObligacionIndividual(MULTA, valorMulta, fechaVencimiento)
+    Fab-->>Srv: obligacion MULTA a cargo del propietario del inmueble (RN-40)
+    Srv->>RO: save(obligacion)
+    Srv->>Repo: save(reserva)
+    Ctl-->>UI: 201 estado INCUMPLIDA

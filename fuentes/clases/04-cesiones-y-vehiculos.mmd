@@ -1,0 +1,37 @@
+%% titulo: Módulo 4 · Cesiones y vehículos
+classDiagram
+direction TB
+
+class CesionUso {
+    +id : int
+    +fechaInicio : Date
+    +fechaFin : Date
+    +estado : EstadoVigencia
+    +CesionUso(fechaInicio : Date, fechaFin : Date)
+    +registrarCesionDeUso()
+    +finalizarCesionDeUso(fechaFin : Date)
+    #validarQueElTipoDeInmueblePermitaCesion() : boolean
+    #validarQueNoSeSuperpongaConOtraCesion() : boolean
+}
+
+class Vehiculo {
+    +placa : String
+    +tipoVehiculo : String
+    +marca : String
+    +color : String
+    +estado : EstadoRegistro
+    +motivoBaja : String
+    +Vehiculo(placa : String, tipoVehiculo : String, marca : String, color : String)
+    +registrarVehiculo()
+    +modificarDatosDelVehiculo()
+    +darDeBajaVehiculoPorMotivo(motivo : String)
+}
+
+%% ===== Relaciones =====
+Inmueble "1" --> "*" CesionUso : cede
+Inmueble "1" --> "*" CesionUso : usa
+Inmueble "1" o-- "*" Vehiculo : posee
+CesionUso "*" --> "0..1" Vehiculo : ampara
+CesionUso ..> TipoInmueble : valida
+Integrante "0..1" --> "*" Vehiculo : responde por
+CesionUso ..> EstadoVigencia

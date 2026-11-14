@@ -1,0 +1,14 @@
+{
+  "name": "convivir-diagramas",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Visor y editor de los diagramas UML de Convivir",
+  "scripts": {
+    "start": "node servidor.mjs"
+  },
+  "dependencies": {
+    "marked": "^18.2.0",
+    "mermaid": "^12.3.0"
+  }
+}

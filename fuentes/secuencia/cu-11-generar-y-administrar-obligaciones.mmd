@@ -1,0 +1,61 @@
+%% titulo: CU-11 Generar y administrar obligaciones
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Obligaciones (React)
+    participant Ctl as ObligacionControlador
+    participant Srv as ObligacionServicio
+    participant RP as PeriodoFacturacionRepositorio
+    participant P as PeriodoFacturacion
+    participant I as Inmueble
+    participant T as TipoInmueble
+    participant Fab as FabricaObligacion
+    participant O as Obligacion
+    participant Repo as ObligacionRepositorio
+    participant Pub as PublicadorEventos
+
+    Note over A,Pub: Configurar el valor base de la cuota (RF-065)
+    A->>UI: escribe el periodo y el valor base
+    UI->>Ctl: PUT /api/periodos/periodo
+    Ctl->>Srv: configurarValorBase(periodo, valorBaseCuota)
+    Srv->>RP: findByPeriodo(periodo)
+    Srv->>P: configurarValorBaseDeLaCuotaDelPeriodo(valorBaseCuota)
+    Srv->>RP: save(periodoFacturacion)
+    Ctl-->>UI: 200
+
+    Note over A,Pub: Generar las obligaciones del periodo (RF-066)
+    A->>UI: elige generar las cuotas del periodo
+    UI->>Ctl: POST /api/periodos/periodo/obligaciones
+    Ctl->>Srv: generarObligacionesDelPeriodo(periodo)
+    Srv->>RP: findByPeriodo(periodo)
+    Srv->>P: generarObligacionesDelPeriodoParaInmueblesActivos()
+    loop por cada inmueble ACTIVO de la propiedad horizontal
+        P->>T: generaCuota
+        opt el tipo genera cuota (RN-41)
+            P->>I: calcularCuotaDelInmueble(valorBaseCuota)
+            I-->>P: valor base por coeficiente
+            P->>Fab: crearCuotaOrdinaria(valor, fechaVencimiento)
+            Fab-->>P: obligacion CUOTA_ORDINARIA en estado PENDIENTE
+            O->>Pub: publicar(EventoSistema OBLIGACION_GENERADA)
+        end
+    end
+    Srv->>Repo: saveAll(obligaciones)
+    Ctl-->>UI: 201 cantidad de obligaciones generadas
+
+    Note over A,Pub: Registrar obligación individual (RF-067)
+    A->>UI: elige inmueble, concepto, valor y fecha de vencimiento
+    UI->>Ctl: POST /api/obligaciones
+    Ctl->>Srv: registrarObligacionIndividual(datos)
+    Srv->>Fab: crearObligacionIndividual(concepto, valor, fechaVencimiento)
+    Srv->>Repo: save(obligacion)
+    Ctl-->>UI: 201
+
+    Note over A,Pub: Anular obligación (RF-069)
+    A->>UI: elige anular e indica el motivo
+    UI->>Ctl: PATCH /api/obligaciones/id/anular
+    Ctl->>Srv: anularObligacion(id, motivo)
+    Srv->>Repo: findById(id)
+    Srv->>O: anularObligacionPorMotivo(motivo)
+    O->>Pub: publicar(EventoSistema OBLIGACION_ANULADA)
+    Srv->>Repo: save(obligacion)
+    Ctl-->>UI: 200 estado ANULADA (RN-27)

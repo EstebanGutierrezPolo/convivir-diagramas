@@ -1,0 +1,37 @@
+%% titulo: Acceso y portería (CU-01, 05, 06, 07, 10)
+flowchart LR
+    ur["👤<br/>Usuario registrado"]:::actor
+    pres["👤<br/>Propietario residente"]:::actor
+    arr["👤<br/>Arrendatario"]:::actor
+    vig["👤<br/>Vigilante"]:::actor
+
+    subgraph sistema["Convivir · Acceso y portería"]
+        direction TB
+        cu01(["CU-01 Iniciar sesión"])
+        cu05(["CU-05 Registrar visita ocasional"])
+        cu06(["CU-06 Registrar autorización recurrente"])
+        cu07(["CU-07 Registrar ingreso y salida de visitantes y autorizados"])
+        cu10(["CU-10 Registrar movimiento vehicular"])
+
+        rest(["Restablecer contraseña (RF-002)"])
+        parq(["Consultar parqueaderos de visitantes disponibles (RF-064)"])
+        valida(["Validar vigencia, día y franja horaria (RF-043)"])
+        sinaut(["Registrar ingreso sin autorización previa (RF-035)"])
+        uso(["Consultar uso vigente del parqueadero (RF-063)"])
+    end
+
+    ur --- cu01
+    pres --- cu05
+    pres --- cu06
+    arr --- cu05
+    arr --- cu06
+    vig --- cu07
+    vig --- cu10
+
+    rest -.->|«extend»| cu01
+    parq -.->|«extend»| cu05
+    cu07 -.->|«include»| valida
+    sinaut -.->|«extend»| cu07
+    cu10 -.->|«include»| uso
+
+    classDef actor fill:none,stroke:none

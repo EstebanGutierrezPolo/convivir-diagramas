@@ -1,0 +1,58 @@
+%% titulo: CU-07 Registrar ingreso y salida de visitantes y autorizados
+sequenceDiagram
+    autonumber
+    actor V as Vigilante
+    participant UI as Pantalla Portería (React)
+    participant Ctl as MovimientoControlador
+    participant Srv as MovimientoServicio
+    participant RA as AutorizacionAccesoRepositorio
+    participant Au as AutorizacionAcceso
+    participant M as MovimientoAcceso
+    participant Repo as MovimientoAccesoRepositorio
+
+    Note over V,Repo: Buscar autorización (RF-031, RF-043)
+    V->>UI: escribe el documento del visitante
+    UI->>Ctl: GET /api/autorizaciones?documento
+    Ctl->>Srv: buscarAutorizacionesPorDocumento(documento)
+    Srv->>RA: findByDocumentoVisitante(documento)
+    RA-->>Srv: autorizaciones
+    loop por cada autorización
+        Srv->>Au: validarVigenciaDeLaAutorizacion()
+        opt es RECURRENTE
+            Au->>Au: validarDiaYHorarioPermitido()
+        end
+    end
+    Ctl-->>UI: autorizaciones vigentes con su inmueble
+
+    alt tiene autorización vigente (RF-033, RF-044)
+        V->>UI: registra el ingreso y la placa si llega en vehículo
+        UI->>Ctl: POST /api/movimientos
+        Ctl->>Srv: registrarIngreso(autorizacionId, placaVisitante)
+        Srv->>M: new MovimientoAcceso(INGRESO)
+        Srv->>M: registrarIngresoAlConjunto()
+        Srv->>Repo: save(movimiento)
+        Ctl-->>UI: 201 ingreso registrado
+    else no tiene autorización (RF-035)
+        V->>UI: indica motivo, inmueble de destino y placa si aplica
+        UI->>Ctl: POST /api/movimientos
+        Ctl->>Srv: registrarIngresoSinAutorizacion(inmuebleId, motivoExcepcion, placaVisitante)
+        Srv->>M: new MovimientoAcceso(INGRESO)
+        Srv->>M: registrarIngresoAlConjunto()
+        Srv->>Repo: save(movimiento)
+        Ctl-->>UI: 201 ingreso registrado con motivo (RN-12)
+    end
+
+    Note over V,Repo: Registrar salida (RF-034)
+    V->>UI: elige a la persona que sale
+    UI->>Ctl: POST /api/movimientos
+    Ctl->>Srv: registrarSalida(movimientoDeIngresoId)
+    Srv->>M: new MovimientoAcceso(SALIDA)
+    Srv->>M: registrarSalidaDelConjunto()
+    Srv->>Repo: save(movimiento)
+    Ctl-->>UI: 201 salida registrada
+
+    Note over V,Repo: Quiénes están dentro (RF-036)
+    UI->>Ctl: GET /api/movimientos/presentes
+    Ctl->>Srv: consultarPresentes()
+    Srv->>M: consultarPersonasPresentesEnElConjunto()
+    Ctl-->>UI: listado de personas dentro del conjunto

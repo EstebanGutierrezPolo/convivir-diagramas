@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Convivir · Diagramas</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/estilos.css" />
+    <script>
+      // Aplica el tema guardado antes de pintar, para que no parpadee.
+      try {
+        var tema = localStorage.getItem('convivir-tema')
+        if (tema === 'light' || tema === 'dark') document.documentElement.setAttribute('data-theme', tema)
+      } catch (e) { /* sin almacenamiento */ }
+    </script>
+  </head>
+  <body>
+    <header class="barra">
+      <div class="marca">
+        <svg width="22" height="22" viewBox="0 0 34 34" aria-hidden="true">
+          <rect x="1" y="1" width="32" height="32" rx="5" fill="none" stroke="var(--convivir)" stroke-width="2.4" />
+          <rect x="8" y="8" width="7" height="7" fill="var(--convivir)" />
+          <rect x="19" y="8" width="7" height="7" fill="var(--convivir)" opacity=".35" />
+          <rect x="8" y="19" width="7" height="7" fill="var(--convivir)" opacity=".35" />
+          <rect x="19" y="19" width="7" height="7" fill="var(--convivir)" />
+        </svg>
+        <span class="nombre">CONVIVIR</span>
+        <span class="seccion">Diagramas</span>
+      </div>
+      <nav id="pestanas" class="pestanas" aria-label="Tipos de diagrama"></nav>
+      <div class="barra-derecha">
+        <a class="enlace" href="/sistema" target="_blank" rel="noopener">Sistema de diseño</a>
+        <div class="conmutador" role="group" aria-label="Tema de la página">
+          <button type="button" data-t="light" aria-pressed="false">Claro</button>
+          <button type="button" data-t="dark" aria-pressed="false">Oscuro</button>
+          <button type="button" data-t="auto" aria-pressed="true">Sistema</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="cuerpo">
+      <aside class="lista">
+        <ul id="lista-diagramas"></ul>
+        <button id="boton-nuevo" class="btn segundo ancho">Nuevo diagrama</button>
+      </aside>
+
+      <main class="lienzo-zona">
+        <div class="herramientas">
+          <h1 id="titulo-diagrama"></h1>
+          <div class="grupo">
+            <button id="boton-alejar" class="btn segundo" aria-label="Alejar" title="Alejar">−</button>
+            <button id="boton-ajustar" class="btn segundo">Ajustar a la pantalla</button>
+            <button id="boton-acercar" class="btn segundo" aria-label="Acercar" title="Acercar">+</button>
+            <button id="boton-svg" class="btn segundo" title="Imagen en tema claro, lista para insertar en Word">Descargar SVG</button>
+            <button id="boton-editar" class="btn">Editar diagrama</button>
+          </div>
+        </div>
+        <div id="aviso-error" class="aviso-error" hidden></div>
+        <div id="lienzo" class="lienzo">
+          <div id="dibujo" class="dibujo"></div>
+        </div>
+      </main>
+
+      <section id="panel-editor" class="editor" hidden>
+        <div class="editor-cabecera">
+          <strong>Editor</strong>
+          <span id="estado-guardado" class="pildora p-ne"></span>
+          <span class="hueco"></span>
+          <button id="boton-guardar" class="btn" title="Ctrl + S">Guardar diagrama</button>
+        </div>
+        <p id="nota-solo-lectura" class="nota" hidden></p>
+        <div id="atajos" class="atajos"></div>
+        <textarea id="texto" spellcheck="false" wrap="off" aria-label="Texto del diagrama"></textarea>
+      </section>
+    </div>
+
+    <script src="/vendor/mermaid.js"></script>
+    <script src="/vendor/marked.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

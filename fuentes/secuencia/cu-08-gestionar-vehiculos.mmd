@@ -1,0 +1,55 @@
+%% titulo: CU-08 Gestionar vehículos
+sequenceDiagram
+    autonumber
+    actor U as Administrador / Propietario residente / Arrendatario
+    participant UI as Pantalla Vehículos (React)
+    participant Ctl as VehiculoControlador
+    participant Srv as VehiculoServicio
+    participant RV as VinculacionRepositorio
+    participant RM as InmuebleRepositorio
+    participant Repo as VehiculoRepositorio
+    participant Ve as Vehiculo
+
+    Note over U,Ve: Registrar vehículo (RF-045, RF-046, RF-047)
+    U->>UI: escribe placa, tipo, marca, color e inmueble
+    UI->>Ctl: POST /api/vehiculos
+    Ctl->>Srv: registrarVehiculo(datos)
+    opt quien registra no es administrador
+        Srv->>RV: vinculaciones vigentes del usuario en el inmueble
+        RV-->>Srv: vinculacion
+    end
+    Srv->>RM: findById(inmuebleId)
+    RM-->>Srv: inmueble
+    Srv->>Repo: existsByPlaca(placa)
+    alt la placa ya está registrada (RN-14)
+        Srv-->>Ctl: dato repetido
+        Ctl-->>UI: 409 ya existe un vehículo con esa placa
+    else placa nueva
+        Srv->>Ve: new Vehiculo(placa, tipoVehiculo, marca, color)
+        Srv->>Ve: registrarVehiculo()
+        opt se indica el integrante responsable
+            Srv->>Ve: asigna el responsable entre los vinculados al inmueble
+        end
+        Srv->>Repo: save(vehiculo)
+        Srv-->>Ctl: vehículo registrado
+        Ctl-->>UI: 201
+        UI-->>U: muestra el vehículo del inmueble
+    end
+
+    Note over U,Ve: Modificar datos (RF-049, solo administrador)
+    U->>UI: cambia tipo, marca o color
+    UI->>Ctl: PUT /api/vehiculos/placa
+    Ctl->>Srv: modificarVehiculo(placa, datos)
+    Srv->>Repo: findByPlaca(placa)
+    Srv->>Ve: modificarDatosDelVehiculo()
+    Srv->>Repo: save(vehiculo)
+    Ctl-->>UI: 200
+
+    Note over U,Ve: Dar de baja (RF-050, solo administrador)
+    U->>UI: elige dar de baja e indica el motivo
+    UI->>Ctl: PATCH /api/vehiculos/placa/baja
+    Ctl->>Srv: darDeBajaVehiculo(placa, motivo)
+    Srv->>Repo: findByPlaca(placa)
+    Srv->>Ve: darDeBajaVehiculoPorMotivo(motivo)
+    Srv->>Repo: save(vehiculo)
+    Ctl-->>UI: 200

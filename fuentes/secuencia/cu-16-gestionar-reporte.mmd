@@ -1,0 +1,58 @@
+%% titulo: CU-16 Gestionar reporte
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Reportes (React)
+    participant Ctl as ReporteControlador
+    participant Srv as ReporteServicio
+    participant Repo as ReporteRepositorio
+    participant RI as IntegranteRepositorio
+    participant Rp as Reporte
+    participant S as SeguimientoReporte
+    participant Cat as CategoriaReporte
+    participant Pub as PublicadorEventos
+
+    Note over A,Pub: Asignar responsable (RF-096)
+    A->>UI: abre el reporte y elige un responsable
+    UI->>Ctl: PATCH /api/reportes/id/responsable
+    Ctl->>Srv: asignarResponsable(reporteId, integranteId)
+    Srv->>Repo: findById(reporteId)
+    Srv->>RI: findById(integranteId)
+    Srv->>Rp: asignarResponsableDelReporte(responsable)
+    Rp->>Pub: publicar(EventoSistema REPORTE_ASIGNADO)
+    Srv->>Repo: save(reporte)
+    Ctl-->>UI: 200
+
+    Note over A,Pub: Cambiar estado y registrar seguimiento (RF-097, RF-098)
+    A->>UI: cambia el estado y escribe una observación
+    UI->>Ctl: POST /api/reportes/id/seguimientos
+    Ctl->>Srv: registrarSeguimiento(reporteId, nuevoEstado, observacion)
+    Srv->>Rp: cambiarEstadoDelReporte(nuevoEstado)
+    Srv->>S: new SeguimientoReporte(observacion)
+    Srv->>S: registrarObservacionDeSeguimiento()
+    Rp->>Pub: publicar(EventoSistema REPORTE_CAMBIO_DE_ESTADO)
+    Srv->>Repo: save(reporte)
+    Ctl-->>UI: 201
+
+    Note over A,Pub: Cerrar reporte (RF-099)
+    A->>UI: escribe la solución aplicada
+    UI->>Ctl: PATCH /api/reportes/id/cerrar
+    Ctl->>Srv: cerrarReporte(reporteId, solucion)
+    Srv->>Rp: cerrarReporteConSolucion(solucion)
+    Rp->>Pub: publicar(EventoSistema REPORTE_CERRADO)
+    Srv->>Repo: save(reporte)
+    Ctl-->>UI: 200 estado CERRADO
+
+    Note over A,Pub: Administrar categorías (RF-100, RF-110, RF-111)
+    A->>UI: crea, modifica o desactiva una categoría
+    UI->>Ctl: POST, PUT o PATCH /api/categorias-reporte
+    Ctl->>Srv: administrarCategoria(datos)
+    alt crear
+        Srv->>Cat: new CategoriaReporte(nombre)
+        Srv->>Cat: crearCategoriaDeReporte()
+    else modificar
+        Srv->>Cat: modificarCategoriaDeReporte()
+    else desactivar
+        Srv->>Cat: desactivarCategoriaDeReporte()
+    end
+    Ctl-->>UI: 200

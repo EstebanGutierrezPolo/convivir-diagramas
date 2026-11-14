@@ -1,0 +1,102 @@
+%% titulo: Diagrama general del sistema
+flowchart LR
+    adm["👤<br/>Administrador"]:::actor
+    vig["👤<br/>Vigilante"]:::actor
+    pres["👤<br/>Propietario residente"]:::actor
+    pnor["👤<br/>Propietario no residente"]:::actor
+    arr["👤<br/>Arrendatario"]:::actor
+    raut["👤<br/>Residente autorizado"]:::actor
+    con["👤<br/>Miembro del consejo"]:::actor
+    ur["👤<br/>Usuario registrado"]:::actor
+
+    subgraph sistema["Convivir"]
+        direction TB
+        subgraph g1["Acceso y portería"]
+            cu01(["CU-01 Iniciar sesión"])
+            cu05(["CU-05 Registrar visita ocasional"])
+            cu06(["CU-06 Registrar autorización recurrente"])
+            cu07(["CU-07 Registrar ingreso y salida de visitantes y autorizados"])
+            cu10(["CU-10 Registrar movimiento vehicular"])
+        end
+        subgraph g2["Inmuebles, integrantes y vehículos"]
+            cu02(["CU-02 Gestionar inmuebles"])
+            cu19(["CU-19 Gestionar tipos de inmueble"])
+            cu03(["CU-03 Gestionar integrantes"])
+            cu04(["CU-04 Gestionar vinculación integrante–inmueble"])
+            cu08(["CU-08 Gestionar vehículos"])
+            cu09(["CU-09 Gestionar parqueaderos y cesiones de uso"])
+        end
+        subgraph g3["Obligaciones, pagos y cartera"]
+            cu11(["CU-11 Generar y administrar obligaciones"])
+            cu12(["CU-12 Consultar obligación y pagar"])
+            cu13(["CU-13 Registrar pago presencial"])
+            cu14(["CU-14 Consultar cartera e información financiera"])
+        end
+        subgraph g4["Reservas de zonas comunes"]
+            cu20(["CU-20 Reservar zona común"])
+            cu21(["CU-21 Gestionar reservas"])
+        end
+        subgraph g5["Reportes, notificaciones y administración"]
+            cu15(["CU-15 Crear reporte"])
+            cu16(["CU-16 Gestionar reporte"])
+            cu17(["CU-17 Configurar notificaciones"])
+            cu18(["CU-18 Gestionar usuarios, roles y auditoría"])
+        end
+    end
+
+    pagos["⚙️<br/>Servicio de pagos"]:::actor
+    notif["⚙️<br/>Servicio de notificaciones"]:::actor
+
+    %% Todos los actores humanos son usuarios registrados
+    adm -.->|es un| ur
+    vig -.->|es un| ur
+    pres -.->|es un| ur
+    pnor -.->|es un| ur
+    arr -.->|es un| ur
+    raut -.->|es un| ur
+    con -.->|es un| ur
+    ur --- cu01
+
+    adm --- cu02
+    adm --- cu19
+    adm --- cu03
+    adm --- cu04
+    adm --- cu08
+    adm --- cu09
+    adm --- cu11
+    adm --- cu13
+    adm --- cu14
+    adm --- cu16
+    adm --- cu17
+    adm --- cu18
+    adm --- cu21
+
+    vig --- cu07
+    vig --- cu10
+    vig --- cu15
+
+    pres --- cu05
+    pres --- cu06
+    pres --- cu08
+    pres --- cu12
+    pres --- cu15
+    pres --- cu20
+
+    pnor --- cu12
+
+    arr --- cu05
+    arr --- cu06
+    arr --- cu08
+    arr --- cu12
+    arr --- cu15
+    arr --- cu20
+
+    raut --- cu20
+
+    con --- cu14
+    con --- cu18
+
+    cu12 --- pagos
+    cu17 --- notif
+
+    classDef actor fill:none,stroke:none

@@ -1,0 +1,30 @@
+%% titulo: Reservas de zonas comunes (CU-20, 21)
+flowchart LR
+    pres["👤<br/>Propietario residente"]:::actor
+    arr["👤<br/>Arrendatario"]:::actor
+    raut["👤<br/>Residente autorizado"]:::actor
+
+    subgraph sistema["Convivir · Reservas de zonas comunes"]
+        direction TB
+        cu20(["CU-20 Reservar zona común"])
+        cu21(["CU-21 Gestionar reservas"])
+
+        disp(["Consultar disponibilidad del periodo (RF-115)"])
+        cancelar(["Cancelar reserva propia (RF-118)"])
+        obligacion(["Generar obligación ALQUILER_ZONA (RN-39)"])
+        multa(["Registrar multa por incumplimiento (RF-122)"])
+    end
+
+    adm["👤<br/>Administrador"]:::actor
+
+    pres --- cu20
+    arr --- cu20
+    raut --- cu20
+    cu21 --- adm
+
+    cu20 -.->|«include»| disp
+    cancelar -.->|«extend»| cu20
+    cu21 -.->|«include»| obligacion
+    multa -.->|«extend»| cu21
+
+    classDef actor fill:none,stroke:none

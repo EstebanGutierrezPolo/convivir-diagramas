@@ -1,0 +1,47 @@
+%% titulo: CU-01 Iniciar sesión
+sequenceDiagram
+    autonumber
+    actor U as Usuario registrado
+    participant UI as Pantalla de acceso (React)
+    participant Ctl as CuentaControlador
+    participant Srv as CuentaServicio
+    participant Repo as CuentaRepositorio
+    participant C as Cuenta
+    participant Pub as PublicadorEventos
+
+    U->>UI: escribe login y contraseña
+    UI->>Ctl: POST /api/sesion
+    Ctl->>Srv: iniciarSesion(login, contrasena)
+    Srv->>Repo: findByLogin(login)
+    Repo-->>Srv: cuenta
+    alt la cuenta no existe o no está ACTIVA
+        Srv-->>Ctl: acceso rechazado
+        Ctl-->>UI: 401 credenciales inválidas o cuenta bloqueada
+    else la cuenta está ACTIVA
+        Srv->>C: iniciarSesionConLoginYContrasena()
+        C->>C: validarContrasenaIngresada(contrasena)
+        alt contraseña incorrecta
+            C->>C: aumenta intentosFallidos
+            opt supera el máximo de intentos (RNF-01)
+                C->>C: bloquearCuentaPorIntentosFallidos()
+            end
+            Srv->>Repo: save(cuenta)
+            Srv-->>Ctl: acceso rechazado
+            Ctl-->>UI: 401 credenciales inválidas
+        else contraseña correcta
+            Srv->>C: obtenerRolDelIntegrante()
+            Srv->>C: obtenerInmueblesAccesibles()
+            C->>Pub: publicar(EventoSistema INICIO_SESION)
+            Srv->>Repo: save(cuenta)
+            Srv-->>Ctl: sesión, rol e inmuebles accesibles
+            Ctl-->>UI: 200
+            UI-->>U: muestra el menú según el rol
+        end
+    end
+
+    Note over U,Pub: Cerrar sesión (RF-004)
+    U->>UI: elige cerrar sesión
+    UI->>Ctl: DELETE /api/sesion
+    Ctl->>Srv: cerrarSesion()
+    Srv->>C: cerrarSesionActiva()
+    Ctl-->>UI: 204

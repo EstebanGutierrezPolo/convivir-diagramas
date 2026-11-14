@@ -1,0 +1,40 @@
+%% titulo: Obligaciones, pagos y cartera (CU-11, 12, 13, 14)
+flowchart LR
+    adm["👤<br/>Administrador"]:::actor
+    pres["👤<br/>Propietario residente"]:::actor
+    pnor["👤<br/>Propietario no residente"]:::actor
+    arr["👤<br/>Arrendatario"]:::actor
+    con["👤<br/>Miembro del consejo"]:::actor
+
+    subgraph sistema["Convivir · Obligaciones, pagos y cartera"]
+        direction TB
+        cu11(["CU-11 Generar y administrar obligaciones"])
+        cu12(["CU-12 Consultar obligación y pagar"])
+        cu13(["CU-13 Registrar pago presencial"])
+        cu14(["CU-14 Consultar cartera e información financiera"])
+
+        abono(["Abonar parcialmente una obligación (RF-123)"])
+        comprobante(["Descargar comprobante (RF-077)"])
+        recibo(["Generar recibo de caja (RF-080)"])
+        anular(["Anular pago registrado por error (RF-081)"])
+        paz(["Expedir paz y salvo (RF-120)"])
+    end
+
+    pagos["⚙️<br/>Servicio de pagos"]:::actor
+
+    adm --- cu11
+    adm --- cu13
+    adm --- cu14
+    pres --- cu12
+    pnor --- cu12
+    arr --- cu12
+    con --- cu14
+    cu12 --- pagos
+
+    abono -.->|«extend»| cu12
+    comprobante -.->|«extend»| cu12
+    cu13 -.->|«include»| recibo
+    anular -.->|«extend»| cu13
+    paz -.->|«extend»| cu14
+
+    classDef actor fill:none,stroke:none

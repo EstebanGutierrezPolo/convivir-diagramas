@@ -1,0 +1,34 @@
+%% titulo: CU-17 Configurar notificaciones
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Notificaciones (React)
+    participant Ctl as NotificacionControlador
+    participant Srv as NotificacionServicio
+    participant Repo as ConfiguracionNotificacionRepositorio
+    participant Cf as ConfiguracionNotificacion
+
+    Note over A,Cf: Consultar la configuración
+    A->>UI: abre la configuración de notificaciones
+    UI->>Ctl: GET /api/notificaciones/configuracion
+    Ctl->>Srv: consultarConfiguracion()
+    Srv->>Repo: findByPropiedadHorizontal(propiedadHorizontal)
+    Ctl-->>UI: eventos con su destinatario y si están habilitados
+
+    Note over A,Cf: Configurar un evento (RF-107)
+    A->>UI: elige el evento, el destinatario y lo habilita o deshabilita
+    UI->>Ctl: PUT /api/notificaciones/configuracion/evento
+    Ctl->>Srv: configurarEvento(evento, destinatario, estaHabilitada)
+    Srv->>Repo: findByEvento(evento)
+    alt el evento no tiene configuración todavía
+        Srv->>Cf: new ConfiguracionNotificacion(evento, destinatario)
+    else ya existe
+        Repo-->>Srv: configuracionNotificacion
+    end
+    Srv->>Cf: configurarEventoDeNotificacion()
+    Note right of Cf: los avisos de cobro van al obligado del pago (RN-28) y los operativos a los residentes vinculados (RN-29)
+    Srv->>Repo: save(configuracionNotificacion)
+    Ctl-->>UI: 200
+    UI-->>A: muestra la configuración guardada
+
+    Note over A,Cf: El envío ocurre cuando se publica el evento. Ver el diagrama transversal de eventos

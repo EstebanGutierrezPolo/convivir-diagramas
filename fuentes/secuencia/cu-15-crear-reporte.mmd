@@ -1,0 +1,42 @@
+%% titulo: CU-15 Crear reporte
+sequenceDiagram
+    autonumber
+    actor U as Propietario residente / Arrendatario / Vigilante
+    participant UI as Pantalla Reportes (React)
+    participant Ctl as ReporteControlador
+    participant Srv as ReporteServicio
+    participant RC as CategoriaReporteRepositorio
+    participant RV as VinculacionRepositorio
+    participant Rp as Reporte
+    participant Repo as ReporteRepositorio
+    participant Pub as PublicadorEventos
+
+    Note over U,Pub: Crear reporte (RF-090, RF-091)
+    U->>UI: elige categoría, describe la novedad y adjunta una imagen
+    UI->>Ctl: POST /api/reportes
+    Ctl->>Srv: crearReporte(categoriaId, descripcion, evidencia, inmuebleId)
+    Srv->>RC: findById(categoriaId)
+    RC-->>Srv: categoria ACTIVA
+    opt el reporte se asocia a un inmueble
+        Srv->>RV: vinculaciones vigentes del usuario en el inmueble
+        RV-->>Srv: vinculacion
+    end
+    alt un residente reporta sobre un inmueble sin estar vinculado (RN-33)
+        Srv-->>Ctl: sin permiso
+        Ctl-->>UI: 403 no tiene vínculo vigente con ese inmueble
+    else datos válidos
+        Srv->>Rp: new Reporte(descripcion)
+        Srv->>Rp: crearReporteDeNovedad()
+        Rp->>Pub: publicar(EventoSistema REPORTE_CREADO)
+        Srv->>Repo: save(reporte)
+        Srv-->>Ctl: reporte en estado ABIERTO
+        Ctl-->>UI: 201
+        UI-->>U: muestra el reporte con su estado
+    end
+
+    Note over U,Pub: Consultar reportes propios y del inmueble (RF-092, RF-093)
+    U->>UI: abre sus reportes
+    UI->>Ctl: GET /api/reportes/mios
+    Ctl->>Srv: consultarReportesDelUsuario()
+    Srv->>Repo: reportes creados por el usuario y de sus inmuebles
+    Ctl-->>UI: listado con estado e historial

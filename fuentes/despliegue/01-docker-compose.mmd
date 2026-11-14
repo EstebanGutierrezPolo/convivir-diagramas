@@ -1,0 +1,41 @@
+%% titulo: Despliegue con Docker Compose
+%% Refleja el archivo docker-compose.yml del proyecto.
+flowchart LR
+    subgraph pc["«device» PC del usuario"]
+        nav["«execution environment»<br/>Navegador web"]
+    end
+
+    subgraph host["«device» Equipo anfitrión · Docker Desktop"]
+        direction TB
+        subgraph red["Red interna de Docker Compose"]
+            direction LR
+            subgraph cfe["«container» frontend · imagen node:24-alpine"]
+                afe["«artifact»<br/>dist/ (React compilado)<br/>servido por Vite · puerto 3000"]
+            end
+            subgraph cbe["«container» backend · imagen eclipse-temurin:21-jre"]
+                abe["«artifact»<br/>convivir.jar (Spring Boot 4)<br/>puerto 8080"]
+            end
+            subgraph cdb["«container» db · imagen postgres:17"]
+                adb[("«database»<br/>convivir<br/>puerto 5432 · 5435 en el anfitrión")]
+            end
+        end
+        vol[("«volume»<br/>convivir_db")]
+        envf["«artifact»<br/>.env · credenciales fuera de Git"]
+        comp["«build»<br/>maven:3.9-eclipse-temurin-21<br/>compila el .jar dentro de Docker"]
+    end
+
+    subgraph ext["Servicios externos · simulados en el MVP"]
+        direction TB
+        pas["Pasarela de pagos"]
+        noti["Servicio de notificaciones"]
+    end
+
+    nav -->|"HTTP · localhost:3000"| afe
+    afe -->|"HTTP · /api · backend:8080"| abe
+    abe -->|"JDBC · db:5432"| adb
+    adb --- vol
+    envf -.-> abe
+    envf -.-> adb
+    comp -.->|genera| abe
+    abe -.->|HTTPS| pas
+    abe -.->|"HTTPS / SMTP"| noti

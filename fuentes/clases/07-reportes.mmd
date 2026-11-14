@@ -1,0 +1,51 @@
+%% titulo: Módulo 7 · Reportes y seguimiento
+classDiagram
+direction TB
+
+class Reporte {
+    +id : int
+    +descripcion : String
+    +evidencia : String
+    +fechaCreacion : Date
+    +estado : EstadoReporte
+    +solucionAplicada : String
+    +Reporte(descripcion : String)
+    +crearReporteDeNovedad()
+    +asignarResponsableDelReporte(responsable : Integrante)
+    +cambiarEstadoDelReporte(nuevoEstado : EstadoReporte)
+    +cerrarReporteConSolucion(solucion : String)
+}
+
+class CategoriaReporte {
+    +id : int
+    +nombre : String
+    +descripcion : String
+    +estado : EstadoRegistro
+    +CategoriaReporte(nombre : String)
+    +crearCategoriaDeReporte()
+    +modificarCategoriaDeReporte()
+    +desactivarCategoriaDeReporte()
+}
+
+class SeguimientoReporte {
+    +id : int
+    +fechaHora : DateTime
+    +observacion : String
+    +SeguimientoReporte(observacion : String)
+    +registrarObservacionDeSeguimiento()
+}
+
+class EstadoReporte {
+    <<enumeration>>
+    ABIERTO
+    EN_PROCESO
+    CERRADO
+}
+
+%% ===== Relaciones =====
+Inmueble "0..1" *-- "*" Reporte : origina
+Integrante "1" --> "*" Reporte : crea
+Integrante "0..1" --> "*" Reporte : atiende
+CategoriaReporte "1" o-- "*" Reporte : clasifica
+Reporte "1" *-- "*" SeguimientoReporte : recibe
+Reporte ..> EstadoReporte

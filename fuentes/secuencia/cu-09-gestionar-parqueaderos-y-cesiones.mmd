@@ -1,0 +1,46 @@
+%% titulo: CU-09 Gestionar parqueaderos y cesiones de uso
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Parqueaderos (React)
+    participant Ctl as CesionUsoControlador
+    participant Srv as CesionUsoServicio
+    participant RM as InmuebleRepositorio
+    participant Repo as CesionUsoRepositorio
+    participant Ce as CesionUso
+    participant T as TipoInmueble
+
+    Note over A,T: El parqueadero se registra como un Inmueble de tipo parqueadero (RF-056, ver CU-02)
+
+    Note over A,T: Registrar cesión de uso (RF-060)
+    A->>UI: elige parqueadero, inmueble usuario, vigencia y vehículo opcional
+    UI->>Ctl: POST /api/cesiones
+    Ctl->>Srv: registrarCesion(datos)
+    Srv->>RM: findById(inmuebleCedidoId)
+    RM-->>Srv: inmueble que cede
+    Srv->>RM: findById(inmuebleUsuarioId)
+    RM-->>Srv: inmueble que usa
+    Srv->>Ce: new CesionUso(fechaInicio, fechaFin)
+    Srv->>Ce: registrarCesionDeUso()
+    Ce->>Ce: validarQueElTipoDeInmueblePermitaCesion()
+    Ce->>T: permiteCesion
+    T-->>Ce: verdadero o falso
+    Ce->>Ce: validarQueNoSeSuperpongaConOtraCesion()
+    alt el tipo no permite cesión (RN-17) o se cruza con otra cesión vigente (RN-18)
+        Srv-->>Ctl: regla incumplida
+        Ctl-->>UI: 422 la cesión no es válida
+    else cesión válida
+        Srv->>Repo: save(cesion)
+        Srv-->>Ctl: cesión VIGENTE
+        Ctl-->>UI: 201
+        UI-->>A: muestra el inmueble con el uso vigente
+    end
+
+    Note over A,T: Finalizar cesión (RF-061)
+    A->>UI: indica la fecha de terminación
+    UI->>Ctl: PATCH /api/cesiones/id/finalizar
+    Ctl->>Srv: finalizarCesion(id, fechaFin)
+    Srv->>Repo: findById(id)
+    Srv->>Ce: finalizarCesionDeUso(fechaFin)
+    Srv->>Repo: save(cesion)
+    Ctl-->>UI: 200 estado FINALIZADA

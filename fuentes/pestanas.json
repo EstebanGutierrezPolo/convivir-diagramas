@@ -1,0 +1,8 @@
+[
+  { "carpeta": "notas", "titulo": "Proyecto", "tipo": "notas" },
+  { "carpeta": "casos-de-uso", "titulo": "Casos de uso", "tipo": "flujo" },
+  { "carpeta": "clases", "titulo": "Clases", "tipo": "clases" },
+  { "carpeta": "componentes", "titulo": "Componentes", "tipo": "flujo" },
+  { "carpeta": "despliegue", "titulo": "Despliegue", "tipo": "flujo" },
+  { "carpeta": "secuencia", "titulo": "Secuencia", "tipo": "secuencia" }
+]

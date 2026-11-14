@@ -1,0 +1,145 @@
+%% titulo: Módulo 2 · Integrantes y vinculaciones
+classDiagram
+direction TB
+
+class Integrante {
+    <<interface>>
+    +tipoDocumento : String
+    +documento : String
+    +nombres : String
+    +apellidos : String
+    +razonSocial : String
+    +genero : Genero
+    +fechaNacimiento : Date
+    +paisResidencia : String
+    +ciudadResidencia : String
+    +direccionResidencia : String
+    +telefono : String
+    +correo : String
+    +estado : EstadoRegistro
+    +motivoDesactivacion : String
+    +modificarDatosDeContacto()
+    +obtenerNombreCompleto() : String
+    +obtenerRolDelIntegrante() : String
+}
+
+class Propietario {
+    +direccionCorrespondencia : String
+    +Propietario(documento : String, nombres : String, apellidos : String)
+    +obtenerRolDelIntegrante() : String
+}
+
+class Arrendatario {
+    +numeroContrato : String
+    +Arrendatario(documento : String, nombres : String, apellidos : String, numeroContrato : String)
+    +obtenerRolDelIntegrante() : String
+}
+
+class ResidenteAutorizado {
+    +parentesco : String
+    +ResidenteAutorizado(documento : String, nombres : String, apellidos : String, parentesco : String)
+    +obtenerRolDelIntegrante() : String
+}
+
+class MiembroConsejo {
+    +cargoEnConsejo : String
+    +periodoInicio : Date
+    +periodoFin : Date
+    +MiembroConsejo(documento : String, nombres : String, apellidos : String, cargoEnConsejo : String)
+    +obtenerRolDelIntegrante() : String
+}
+
+class Empleado {
+    +cargoEmpleado : CargoEmpleado
+    +fechaIngreso : Date
+    +fechaFin : Date
+    +empresaSeguridad : String
+    +turno : String
+    +Empleado(documento : String, nombres : String, apellidos : String, cargoEmpleado : CargoEmpleado)
+    +registrarIntegranteEnLaCopropiedad(integrante : Integrante)
+    +desactivarIntegrantePorMotivo(integrante : Integrante, motivo : String)
+    +obtenerRolDelIntegrante() : String
+    #validarQueElCargoSeaAdministrador() : boolean
+}
+
+class FabricaIntegrante {
+    +crearIntegrante(rol : String, documento : String, nombres : String, apellidos : String) : Integrante
+}
+
+class Vinculacion {
+    +id : int
+    +esResidente : boolean
+    +porcentajePropiedad : double
+    +fechaInicio : Date
+    +fechaFin : Date
+    +estado : EstadoVigencia
+    +autorizaAcceso : boolean
+    +motivoCorreccion : String
+    +Vinculacion(esResidente : boolean, porcentajePropiedad : double, fechaInicio : Date)
+    +vincularIntegranteAlInmueble()
+    +finalizarVinculacion(fechaFin : Date)
+    +corregirDatosDeLaVinculacion(esResidente : boolean, porcentajePropiedad : double, motivo : String)
+    +asignarPermisoParaAutorizarAccesos(autoriza : boolean)
+}
+
+class Cuenta {
+    +login : String
+    -contrasena : String
+    -intentosFallidos : int
+    +estado : EstadoCuenta
+    +motivoDesactivacion : String
+    +Cuenta(login : String, contrasena : String)
+    +iniciarSesionConLoginYContrasena() : boolean
+    +cerrarSesionActiva()
+    +restablecerContrasena()
+    +desactivarCuentaPorMotivo(motivo : String)
+    +obtenerRolDelIntegrante() : String
+    +obtenerInmueblesAccesibles() : List~Inmueble~
+    +obtenerRolDelIntegranteEnInmueble(inmueble : Inmueble) : String
+    -validarContrasenaIngresada(contrasena : String) : boolean
+    -bloquearCuentaPorIntentosFallidos()
+}
+
+class Genero {
+    <<enumeration>>
+    MASCULINO
+    FEMENINO
+    NO_BINARIO
+}
+
+class CargoEmpleado {
+    <<enumeration>>
+    ADMINISTRADOR
+    VIGILANTE
+}
+
+class EstadoCuenta {
+    <<enumeration>>
+    ACTIVA
+    INACTIVA
+    BLOQUEADA
+}
+
+class EstadoVigencia {
+    <<enumeration>>
+    VIGENTE
+    FINALIZADA
+}
+
+%% ===== Relaciones =====
+Integrante "*" -- "*" Inmueble : se relaciona con
+Vinculacion "*" --> "1" Inmueble : registra
+Cuenta ..> Inmueble : obtiene accesibles
+Integrante <|.. Propietario
+Integrante <|.. Arrendatario
+Integrante <|.. ResidenteAutorizado
+Integrante <|.. MiembroConsejo
+Integrante <|.. Empleado
+FabricaIntegrante ..> Integrante : crea
+PropiedadHorizontal "1" o-- "*" Integrante : agrupa
+Integrante "1" --> "*" Vinculacion : tiene
+Integrante "1" *-- "0..1" Cuenta : accede con
+Cuenta ..> Vinculacion : consulta
+Integrante ..> Genero
+Empleado ..> CargoEmpleado
+Cuenta ..> EstadoCuenta

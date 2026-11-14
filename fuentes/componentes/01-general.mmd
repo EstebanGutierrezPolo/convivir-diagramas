@@ -1,0 +1,51 @@
+%% titulo: Componentes del sistema
+%% Verde: ya existe en el código. Línea punteada: por construir.
+flowchart LR
+    nav["«actor»<br/>Navegador del usuario"]
+
+    subgraph fe["«subsystem» Frontend · React + Vite · puerto 3000"]
+        direction TB
+        pag["«component»<br/>Páginas por módulo"]:::pendiente
+        ses["«component»<br/>Sesión y menú según el rol"]:::pendiente
+        cli["«component»<br/>Cliente de la API (fetch)"]:::pendiente
+        est["«component»<br/>Pantalla de estado"]:::hecho
+        prox["«component»<br/>Reenvío de /api (Vite)"]:::hecho
+    end
+
+    subgraph be["«subsystem» Backend · Spring Boot 4 · Java 21 · puerto 8080"]
+        direction TB
+        seg["«component»<br/>Seguridad<br/>sesión, rol y vínculo"]:::pendiente
+        ctl["«component»<br/>Controladores REST"]:::pendiente
+        srv["«component»<br/>Servicios de aplicación<br/>coordinan y guardan"]:::pendiente
+        dom["«component»<br/>Dominio<br/>clases del diagrama de clases"]:::pendiente
+        rep["«component»<br/>Repositorios<br/>Spring Data JPA"]:::pendiente
+        evt["«component»<br/>Eventos<br/>PublicadorEventos y observadores"]:::pendiente
+        ada["«component»<br/>Adaptadores externos<br/>PasarelaPago"]:::pendiente
+        ectl["«component»<br/>EstadoController"]:::hecho
+    end
+
+    db[("«database»<br/>PostgreSQL 17<br/>convivir")]:::hecho
+    pas["«external»<br/>Servicio de pagos<br/>simulado en el MVP"]:::pendiente
+    noti["«external»<br/>Servicio de notificaciones<br/>simulado en el MVP"]:::pendiente
+
+    nav -->|HTTP| pag
+    pag --> ses
+    pag --> cli
+    est --> prox
+    cli --> prox
+    prox -->|"REST · JSON · /api"| seg
+    prox -->|"/api/estado"| ectl
+    seg --> ctl
+    ctl --> srv
+    srv --> dom
+    srv --> rep
+    dom -->|publica| evt
+    srv --> ada
+    evt --> rep
+    rep -->|JDBC| db
+    ectl -->|JDBC| db
+    ada -.->|HTTPS| pas
+    evt -.->|"HTTPS / SMTP"| noti
+
+    classDef hecho fill:#E7F2EC,stroke:#146C43,color:#1A1F26
+    classDef pendiente fill:#FFFFFF,stroke:#626C78,color:#1A1F26,stroke-dasharray:4 3

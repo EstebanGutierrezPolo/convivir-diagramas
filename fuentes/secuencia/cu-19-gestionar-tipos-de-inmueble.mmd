@@ -1,0 +1,49 @@
+%% titulo: CU-19 Gestionar tipos de inmueble
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Tipos de inmueble (React)
+    participant Ctl as TipoInmuebleControlador
+    participant Srv as TipoInmuebleServicio
+    participant Repo as TipoInmuebleRepositorio
+    participant RM as InmuebleRepositorio
+    participant T as TipoInmueble
+
+    Note over A,T: Registrar tipo de inmueble (RF-112)
+    A->>UI: escribe nombre, descripción y si permite cesión, reserva y cuota
+    UI->>Ctl: POST /api/tipos-inmueble
+    Ctl->>Srv: registrarTipo(datos)
+    Srv->>Repo: existsByNombre(nombre)
+    alt ya existe un tipo con ese nombre
+        Srv-->>Ctl: dato repetido
+        Ctl-->>UI: 409 ya existe un tipo con ese nombre
+    else nombre nuevo
+        Srv->>T: new TipoInmueble(nombre, esBienComun)
+        Srv->>T: registrarTipoDeInmueble()
+        Srv->>Repo: save(tipoInmueble)
+        Ctl-->>UI: 201
+        UI-->>A: muestra el tipo en el listado
+    end
+
+    Note over A,T: Modificar condiciones (RF-113)
+    A->>UI: cambia permiteCesion, permiteReserva, generaCuota, tarifa o multa
+    UI->>Ctl: PUT /api/tipos-inmueble/id
+    Ctl->>Srv: modificarTipo(id, datos)
+    Srv->>Repo: findById(id)
+    Srv->>T: modificarParametrosDelTipoDeInmueble()
+    Srv->>Repo: save(tipoInmueble)
+    Ctl-->>UI: 200
+
+    Note over A,T: Desactivar tipo (RF-114)
+    A->>UI: elige desactivar
+    UI->>Ctl: PATCH /api/tipos-inmueble/id/desactivar
+    Ctl->>Srv: desactivarTipo(id)
+    Srv->>RM: existsByTipoInmuebleAndEstado(tipo, ACTIVO)
+    alt tiene inmuebles activos que dependen de él
+        Srv-->>Ctl: regla incumplida
+        Ctl-->>UI: 409 hay inmuebles activos de este tipo
+    else sin inmuebles activos
+        Srv->>T: desactivarTipoDeInmueble()
+        Srv->>Repo: save(tipoInmueble)
+        Ctl-->>UI: 200 estado INACTIVO
+    end

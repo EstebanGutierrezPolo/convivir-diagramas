@@ -1,0 +1,48 @@
+%% titulo: CU-13 Registrar pago presencial
+sequenceDiagram
+    autonumber
+    actor A as Administrador
+    participant UI as Pantalla Caja (React)
+    participant Ctl as PagoControlador
+    participant Srv as PagoServicio
+    participant RO as ObligacionRepositorio
+    participant O as Obligacion
+    participant Pg as Pago
+    participant Repo as PagoRepositorio
+    participant Pub as PublicadorEventos
+
+    Note over A,Pub: Registrar pago presencial (RF-079, RF-080)
+    A->>UI: consulta las obligaciones del inmueble (RF-068)
+    UI->>Ctl: GET /api/inmuebles/id/obligaciones
+    Ctl-->>UI: obligaciones pendientes
+    A->>UI: elige obligación, valor, fecha, medio de pago y pagador
+    UI->>Ctl: POST /api/pagos/presenciales
+    Ctl->>Srv: registrarPagoPresencial(datos)
+    Srv->>RO: findById(obligacionId)
+    RO-->>Srv: obligacion
+    alt el valor supera el saldo pendiente
+        Srv-->>Ctl: dato inválido
+        Ctl-->>UI: 422 el valor no puede superar el saldo pendiente
+    else valor válido
+        Srv->>Pg: new Pago(valor, medioPago, PRESENCIAL)
+        Note right of Pg: medio EFECTIVO, TRANSFERENCIA o CHEQUE. Guarda el usuario que registra y el pagador (RN-24)
+        Srv->>Pg: procesarPagoDeLaObligacion()
+        Srv->>O: registrarAbonoALaObligacion(valorAbono)
+        Srv->>Pg: generarComprobanteDePago()
+        Pg->>Pub: publicar(EventoSistema PAGO_REGISTRADO)
+        Srv->>Repo: save(pago)
+        Srv->>RO: save(obligacion)
+        Ctl-->>UI: 201 recibo de caja
+        UI-->>A: muestra el recibo para imprimir
+    end
+
+    Note over A,Pub: Anular pago registrado por error (RF-081)
+    A->>UI: elige anular e indica el motivo
+    UI->>Ctl: PATCH /api/pagos/id/anular
+    Ctl->>Srv: anularPago(id, motivo)
+    Srv->>Repo: findById(id)
+    Srv->>Pg: anularPagoPorMotivo(motivo)
+    Note right of O: PENDIENTE DE DEFINIR. El diagrama de clases no tiene un método que devuelva el saldo a la obligación
+    Pg->>Pub: publicar(EventoSistema PAGO_ANULADO)
+    Srv->>Repo: save(pago)
+    Ctl-->>UI: 200 estado ANULADO (RN-27)

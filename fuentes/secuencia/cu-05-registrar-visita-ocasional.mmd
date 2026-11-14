@@ -1,0 +1,45 @@
+%% titulo: CU-05 Registrar visita ocasional
+sequenceDiagram
+    autonumber
+    actor R as Propietario residente / Arrendatario
+    participant UI as Pantalla Visitas (React)
+    participant Ctl as AutorizacionControlador
+    participant Srv as AutorizacionServicio
+    participant RV as VinculacionRepositorio
+    participant RM as InmuebleRepositorio
+    participant Repo as AutorizacionAccesoRepositorio
+    participant Au as AutorizacionAcceso
+
+    Note over R,Au: Registrar visita (RF-027, RF-028)
+    R->>UI: escribe nombre y documento del visitante y el periodo de la visita
+    opt el visitante usará parqueadero de visitantes
+        UI->>Ctl: GET /api/parqueaderos/visitantes/disponibles
+        Ctl->>Srv: contarParqueaderosDeVisitantesDisponibles()
+        Srv->>RM: parqueaderos de uso general sin ocupar
+        Ctl-->>UI: cantidad disponible (RF-064)
+    end
+    UI->>Ctl: POST /api/autorizaciones
+    Ctl->>Srv: registrarVisitaOcasional(datos)
+    Srv->>RV: vinculaciones vigentes del usuario en el inmueble
+    RV-->>Srv: vinculacion
+    Srv->>Au: new AutorizacionAcceso(nombreVisitante, documentoVisitante, OCASIONAL)
+    Srv->>Au: registrarAutorizacionDeAcceso()
+    Au->>Au: validarQueElAutorizanteTengaPermiso()
+    alt el autorizante no tiene vinculación vigente con permiso (RN-08)
+        Srv-->>Ctl: sin permiso
+        Ctl-->>UI: 403 no puede autorizar visitas en este inmueble
+    else autorizante válido
+        Srv->>Repo: save(autorizacion)
+        Srv-->>Ctl: autorización VIGENTE
+        Ctl-->>UI: 201
+        UI-->>R: muestra la visita en su listado
+    end
+
+    Note over R,Au: Cancelar visita no ingresada (RF-030)
+    R->>UI: elige cancelar la visita
+    UI->>Ctl: PATCH /api/autorizaciones/id/cancelar
+    Ctl->>Srv: cancelarVisita(id)
+    Srv->>Repo: findById(id)
+    Srv->>Au: cancelarAutorizacionOcasional()
+    Srv->>Repo: save(autorizacion)
+    Ctl-->>UI: 200 estado CANCELADA

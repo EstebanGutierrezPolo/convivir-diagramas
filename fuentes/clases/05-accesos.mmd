@@ -1,0 +1,70 @@
+%% titulo: Módulo 5 · Accesos y seguridad
+classDiagram
+direction TB
+
+class AutorizacionAcceso {
+    +id : int
+    +tipoAutorizacion : TipoAutorizacion
+    +nombreVisitante : String
+    +documentoVisitante : String
+    +motivoAcceso : String
+    +usaParqueaderoVisitantes : boolean
+    +fechaInicio : Date
+    +fechaFin : Date
+    +diasPermitidos : String
+    +horarios : String
+    +estado : EstadoAutorizacion
+    +AutorizacionAcceso(nombreVisitante : String, documentoVisitante : String, tipoAutorizacion : TipoAutorizacion)
+    +registrarAutorizacionDeAcceso()
+    +validarVigenciaDeLaAutorizacion() : boolean
+    +cancelarAutorizacionOcasional()
+    +revocarAutorizacionRecurrente()
+    #validarDiaYHorarioPermitido() : boolean
+    #validarQueElAutorizanteTengaPermiso() : boolean
+}
+
+class MovimientoAcceso {
+    +id : int
+    +fechaHora : DateTime
+    +sentidoMovimiento : SentidoMovimiento
+    +motivoExcepcion : String
+    +placaVisitante : String
+    +MovimientoAcceso(sentidoMovimiento : SentidoMovimiento)
+    +registrarIngresoAlConjunto()
+    +registrarSalidaDelConjunto()
+    +consultarPersonasPresentesEnElConjunto() : List~MovimientoAcceso~
+}
+
+class TipoAutorizacion {
+    <<enumeration>>
+    OCASIONAL
+    RECURRENTE
+}
+
+class EstadoAutorizacion {
+    <<enumeration>>
+    VIGENTE
+    UTILIZADA
+    CANCELADA
+    REVOCADA
+    VENCIDA
+}
+
+class SentidoMovimiento {
+    <<enumeration>>
+    INGRESO
+    SALIDA
+}
+
+%% ===== Relaciones =====
+Inmueble "1" *-- "*" AutorizacionAcceso : recibe
+Inmueble "0..1" o-- "*" MovimientoAcceso : recibe
+Inmueble "0..1" <-- "*" MovimientoAcceso : ocupa parqueadero
+Integrante "1" --> "*" AutorizacionAcceso : otorga
+AutorizacionAcceso ..> Vinculacion : valida autorizante
+AutorizacionAcceso "0..1" --> "*" MovimientoAcceso : habilita
+Vehiculo "0..1" --> "*" MovimientoAcceso : genera
+Integrante "1" --> "*" MovimientoAcceso : registra
+AutorizacionAcceso ..> TipoAutorizacion
+AutorizacionAcceso ..> EstadoAutorizacion
+MovimientoAcceso ..> SentidoMovimiento

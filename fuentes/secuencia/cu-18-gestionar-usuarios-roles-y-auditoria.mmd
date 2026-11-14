@@ -1,0 +1,70 @@
+%% titulo: CU-18 Gestionar usuarios, roles y auditoría
+sequenceDiagram
+    autonumber
+    actor U as Administrador / Miembro del consejo
+    participant UI as Pantalla Usuarios y auditoría (React)
+    participant Ctl as CuentaControlador
+    participant Srv as CuentaServicio
+    participant RI as IntegranteRepositorio
+    participant Repo as CuentaRepositorio
+    participant C as Cuenta
+    participant In as Integrante
+    participant Pub as PublicadorEventos
+    participant CtlA as AuditoriaControlador
+    participant RA as AuditoriaRepositorio
+    participant Aud as Auditoria
+
+    Note over U,Aud: Crear cuenta de usuario (RF-101, solo administrador)
+    U->>UI: elige un integrante y escribe su login
+    UI->>Ctl: POST /api/cuentas
+    Ctl->>Srv: crearCuenta(integranteId, login)
+    Srv->>RI: findById(integranteId)
+    RI-->>Srv: integrante
+    Srv->>Repo: existsByLogin(login)
+    alt el login ya existe o el integrante ya tiene cuenta
+        Srv-->>Ctl: dato repetido
+        Ctl-->>UI: 409 no se puede crear la cuenta
+    else se puede crear
+        Srv->>C: new Cuenta(login, contrasena)
+        Note right of C: la contraseña se guarda con hash y salt (RNF-01)
+        C->>Pub: publicar(EventoSistema CUENTA_CREADA)
+        Srv->>Repo: save(cuenta)
+        Ctl-->>UI: 201
+    end
+
+    Note over U,Aud: Consultar cuentas con su rol y estado (RF-102, RF-105)
+    UI->>Ctl: GET /api/cuentas
+    Ctl->>Srv: consultarCuentas()
+    Srv->>Repo: findAll()
+    loop por cada cuenta
+        Srv->>C: obtenerRolDelIntegrante()
+        C->>In: obtenerRolDelIntegrante()
+        In-->>C: rol derivado del tipo de integrante
+    end
+    Ctl-->>UI: cuentas con rol y estado
+
+    Note over U,Aud: Desactivar cuenta o restablecer contraseña (RF-103, RF-104)
+    U->>UI: elige la acción sobre una cuenta
+    UI->>Ctl: PATCH /api/cuentas/login
+    alt desactivar
+        Ctl->>Srv: desactivarCuenta(login, motivo)
+        Srv->>C: desactivarCuentaPorMotivo(motivo)
+    else restablecer contraseña
+        Ctl->>Srv: restablecerContrasena(login)
+        Srv->>C: restablecerContrasena()
+    end
+    C->>Pub: publicar(EventoSistema CUENTA_MODIFICADA)
+    Srv->>Repo: save(cuenta)
+    Ctl-->>UI: 200
+
+    Note over U,Aud: Consultar y exportar auditoría (RF-108, RF-109)
+    U->>UI: filtra por usuario, fecha o tipo de operación
+    UI->>CtlA: GET /api/auditoria?usuario&desde&hasta&accion
+    CtlA->>RA: registros que cumplen el filtro
+    CtlA-->>UI: registro de auditoría
+    opt exportar (solo administrador)
+        UI->>CtlA: GET /api/auditoria/exportar?desde&hasta
+        CtlA->>Aud: exportarRegistroDeAuditoria(fechaDesde, fechaHasta)
+        Aud-->>CtlA: archivo
+        CtlA-->>UI: descarga del archivo
+    end

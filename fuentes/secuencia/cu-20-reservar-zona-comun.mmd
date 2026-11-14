@@ -1,0 +1,60 @@
+%% titulo: CU-20 Reservar zona común
+sequenceDiagram
+    autonumber
+    actor R as Propietario residente / Arrendatario / Residente autorizado
+    participant UI as Pantalla Reservas (React)
+    participant Ctl as ReservaControlador
+    participant Srv as ReservaServicio
+    participant RM as InmuebleRepositorio
+    participant I as Inmueble (zona común)
+    participant As as AsignacionInmueble
+    participant Pr as ProgramacionAsignacion
+    participant Re as Reserva
+    participant FT as FabricaEstrategiaTarifa
+    participant Repo as ReservaRepositorio
+
+    Note over R,Repo: Consultar disponibilidad (RF-115)
+    R->>UI: elige la zona común y el periodo
+    UI->>Ctl: GET /api/zonas/id/disponibilidad?inicio&fin
+    Ctl->>Srv: consultarDisponibilidad(zonaId, periodo)
+    Srv->>RM: findById(zonaId)
+    Srv->>I: obtenerDisponibilidadEnPeriodo(fechaInicio, fechaFin, horaInicio, horaFin)
+    I->>As: consultarPeriodosOcupadosDelInmueble(inmueble)
+    As-->>I: periodos ocupados
+    I-->>Srv: disponible o no
+    Ctl-->>UI: disponibilidad del periodo
+
+    Note over R,Repo: Solicitar reserva (RF-116)
+    R->>UI: indica el inmueble que paga, el periodo y la finalidad
+    UI->>Ctl: POST /api/reservas
+    Ctl->>Srv: solicitarReserva(datos)
+    Srv->>As: new AsignacionInmueble(fechaInicio, fechaFin)
+    Srv->>Pr: new ProgramacionAsignacion(diaSemana, horaInicio, horaFin)
+    Pr->>Pr: validarQueLaFranjaHorariaSeaValida()
+    Srv->>As: registrarAsignacionDelInmueble()
+    As->>As: validarQueFechasYHorariosNoSeSuperpongan()
+    Srv->>Re: new Reserva(asignacionInmueble, inmuebleQuePaga)
+    Srv->>Re: registrarReservaDeZonaComun()
+    Re->>Re: validarQueElIntegranteSeaResidente()
+    Re->>Re: validarDisponibilidadDeLaZona()
+    alt el tipo no permite reserva (RN-37), no es residente vigente (RN-43) o el periodo está ocupado (RN-38)
+        Srv-->>Ctl: regla incumplida
+        Ctl-->>UI: 422 la reserva no se puede solicitar
+    else solicitud válida
+        Srv->>FT: obtenerEstrategia(unidadTarifa)
+        FT-->>Srv: TarifaPorHora, TarifaPorDia o TarifaPorEvento
+        Note right of Re: la reserva queda SOLICITADA con el comportamiento ReservaSolicitada
+        Srv->>Repo: save(reserva)
+        Ctl-->>UI: 201
+        UI-->>R: muestra la reserva en estado SOLICITADA
+    end
+
+    Note over R,Repo: Cancelar reserva propia (RF-118)
+    R->>UI: elige cancelar e indica el motivo
+    UI->>Ctl: PATCH /api/reservas/id/cancelar
+    Ctl->>Srv: cancelarReserva(id, motivo)
+    Srv->>Repo: findById(id)
+    Srv->>Re: cancelarReservaPorMotivo(motivo)
+    Note right of Re: delega en su ComportamientoReserva. Solo se cancela si el estado lo permite
+    Srv->>Repo: save(reserva)
+    Ctl-->>UI: 200 estado CANCELADA

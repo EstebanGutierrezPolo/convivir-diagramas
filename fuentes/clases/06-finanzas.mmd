@@ -1,0 +1,148 @@
+%% titulo: Módulo 6 · Obligaciones, pagos y gastos
+classDiagram
+direction TB
+
+class PeriodoFacturacion {
+    +id : int
+    +periodo : String
+    +valorBaseCuota : double
+    +PeriodoFacturacion(periodo : String, valorBaseCuota : double)
+    +configurarValorBaseDeLaCuotaDelPeriodo(valorBaseCuota : double)
+    +generarObligacionesDelPeriodoParaInmueblesActivos()
+}
+
+class Obligacion {
+    +id : int
+    +concepto : ConceptoObligacion
+    +descripcion : String
+    +valor : double
+    +saldoPendiente : double
+    +fechaVencimiento : Date
+    +estado : EstadoObligacion
+    +motivoAnulacion : String
+    -politicaInteres : PoliticaInteresMora
+    +Obligacion(concepto : ConceptoObligacion, valor : double, fechaVencimiento : Date)
+    +registrarAbonoALaObligacion(valorAbono : double)
+    +anularObligacionPorMotivo(motivo : String)
+    +calcularDiasDeMora() : int
+    +generarInformeDeCartera(minDias : int, maxDias : int) : File
+    #calcularInteresDeMora() : double
+    #determinarSiHaySolidaridadDelArrendatario() : boolean
+}
+
+class PoliticaInteresMora {
+    <<interface>>
+    +calcularInteres(saldo : double, diasMora : int) : double
+}
+
+class InteresMoraLegal {
+    +calcularInteres(saldo : double, diasMora : int) : double
+}
+
+class FabricaObligacion {
+    +crearCuotaOrdinaria(valor : double, fechaVencimiento : Date) : Obligacion
+    +crearObligacionIndividual(concepto : ConceptoObligacion, valor : double, fechaVencimiento : Date) : Obligacion
+    +crearObligacionPorReserva(reserva : Reserva) : Obligacion
+}
+
+class Pago {
+    +id : int
+    +fecha : Date
+    +valor : double
+    +medioPago : MedioPago
+    +canalRecaudo : CanalRecaudo
+    +comprobante : String
+    -referenciaPasarela : String
+    -pasarela : PasarelaPago
+    +estado : EstadoPago
+    +motivoAnulacion : String
+    +Pago(valor : double, medioPago : MedioPago, canalRecaudo : CanalRecaudo)
+    +asignarPasarela(pasarela : PasarelaPago)
+    +procesarPagoDeLaObligacion()
+    +generarComprobanteDePago() : String
+    +anularPagoPorMotivo(motivo : String)
+    #validarResultadoDeLaPasarela() : boolean
+}
+
+class PasarelaPago {
+    <<interface>>
+    +iniciarCobro(valor : double, referencia : String) : String
+    +consultarResultado(referencia : String) : EstadoPago
+}
+
+class AdaptadorPasarelaExterna {
+    +iniciarCobro(valor : double, referencia : String) : String
+    +consultarResultado(referencia : String) : EstadoPago
+}
+
+class Gasto {
+    +id : int
+    +concepto : String
+    +valor : double
+    +fecha : Date
+    +Gasto(concepto : String, valor : double, fecha : Date)
+    +consultarGastosDelPeriodo(periodo : String) : List~Gasto~
+}
+
+class ConceptoObligacion {
+    <<enumeration>>
+    CUOTA_ORDINARIA
+    CUOTA_EXTRAORDINARIA
+    MULTA
+    INTERES_MORA
+    ALQUILER_ZONA
+}
+
+class EstadoObligacion {
+    <<enumeration>>
+    PENDIENTE
+    PAGADA_PARCIALMENTE
+    PAGADA
+    VENCIDA
+    ANULADA
+}
+
+class MedioPago {
+    <<enumeration>>
+    PASARELA
+    EFECTIVO
+    TRANSFERENCIA
+    CHEQUE
+}
+
+class CanalRecaudo {
+    <<enumeration>>
+    EN_LINEA
+    PRESENCIAL
+}
+
+class EstadoPago {
+    <<enumeration>>
+    PENDIENTE
+    CONFIRMADO
+    RECHAZADO
+    ANULADO
+}
+
+%% ===== Relaciones =====
+Inmueble "1" *-- "*" Obligacion : adeuda
+Inmueble "1" *-- "*" Pago : realiza
+PropiedadHorizontal "1" *-- "*" PeriodoFacturacion : factura en
+PropiedadHorizontal "1" --> "*" Pago : recibe
+PropiedadHorizontal "1" --> "*" Gasto : asume
+PeriodoFacturacion "0..1" --> "*" Obligacion : genera
+PeriodoFacturacion ..> Inmueble : recorre
+PeriodoFacturacion ..> TipoInmueble : consulta
+PeriodoFacturacion ..> FabricaObligacion : usa
+FabricaObligacion ..> Obligacion : crea
+FabricaObligacion ..> Reserva : lee
+Obligacion "1" <-- "*" Pago : abona
+PoliticaInteresMora <|.. InteresMoraLegal
+Obligacion "1" --> "1" PoliticaInteresMora : calcula mora con
+PasarelaPago <|.. AdaptadorPasarelaExterna
+Pago "1" --> "0..1" PasarelaPago : cobra con
+Obligacion ..> ConceptoObligacion
+Obligacion ..> EstadoObligacion
+Pago ..> MedioPago
+Pago ..> CanalRecaudo
+Pago ..> EstadoPago

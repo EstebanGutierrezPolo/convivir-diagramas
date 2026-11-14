@@ -1,0 +1,66 @@
+%% titulo: CU-12 Consultar obligación y pagar
+sequenceDiagram
+    autonumber
+    actor U as Propietario / Arrendatario
+    participant UI as Pantalla Mis pagos (React)
+    participant Ctl as PagoControlador
+    participant Srv as PagoServicio
+    participant RO as ObligacionRepositorio
+    participant I as Inmueble
+    participant O as Obligacion
+    participant Pg as Pago
+    participant Ad as AdaptadorPasarelaExterna
+    participant SP as Servicio de pagos
+    participant Repo as PagoRepositorio
+    participant Pub as PublicadorEventos
+
+    Note over U,Pub: Consultar obligaciones y saldo (RF-070 a RF-073)
+    U->>UI: abre sus obligaciones
+    UI->>Ctl: GET /api/inmuebles/id/obligaciones
+    Ctl->>Srv: consultarObligaciones(inmuebleId)
+    Srv->>RO: findByInmueble(inmueble)
+    Srv->>I: calcularSaldoPendienteDelInmueble()
+    Ctl-->>UI: obligaciones, estados, vencimientos y saldo total
+
+    Note over U,Pub: Pagar o abonar por pasarela (RF-074, RF-075, RF-123)
+    U->>UI: selecciona obligaciones y el valor a pagar o abonar
+    UI->>Ctl: POST /api/pagos
+    Ctl->>Srv: iniciarPago(obligacionIds, valor)
+    loop por cada obligación seleccionada
+        Srv->>RO: findById(obligacionId)
+        opt quien paga es arrendatario
+            Srv->>O: determinarSiHaySolidaridadDelArrendatario()
+        end
+    end
+    alt un arrendatario eligió una obligación que no es cuota ordinaria (RN-22)
+        Srv-->>Ctl: regla incumplida
+        Ctl-->>UI: 422 solo puede pagar expensas comunes ordinarias
+    else selección válida
+        Srv->>Pg: new Pago(valor, PASARELA, EN_LINEA)
+        Srv->>Pg: asignarPasarela(adaptadorPasarelaExterna)
+        Srv->>Pg: procesarPagoDeLaObligacion()
+        Pg->>Ad: iniciarCobro(valor, referencia)
+        Ad->>SP: solicitud de cobro
+        SP-->>Ad: referencia de la transacción
+        Srv->>Repo: save(pago en estado PENDIENTE)
+        Ctl-->>UI: 202 dirige al usuario a la pasarela
+    end
+
+    Note over U,Pub: Resultado de la transacción (RF-076, RN-23)
+    UI->>Ctl: GET /api/pagos/id
+    Ctl->>Srv: consultarResultado(pagoId)
+    Srv->>Pg: validarResultadoDeLaPasarela()
+    Pg->>Ad: consultarResultado(referencia)
+    Ad->>SP: consulta de la transacción
+    SP-->>Ad: estado
+    alt CONFIRMADO
+        Srv->>O: registrarAbonoALaObligacion(valorAbono)
+        Note right of O: actualiza saldoPendiente y pasa a PAGADA o PAGADA_PARCIALMENTE (RN-42)
+        Srv->>Pg: generarComprobanteDePago()
+        Pg->>Pub: publicar(EventoSistema PAGO_CONFIRMADO)
+        Srv->>Repo: save(pago)
+        Ctl-->>UI: 200 pago confirmado y comprobante disponible (RF-077)
+    else RECHAZADO
+        Srv->>Repo: save(pago)
+        Ctl-->>UI: 200 pago rechazado, la obligación no cambia
+    end
