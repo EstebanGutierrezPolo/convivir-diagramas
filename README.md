@@ -37,6 +37,22 @@ Abre http://localhost:4000
 - **Descargar SVG** baja la imagen en tema claro para insertarla en Word.
 - En Clases, el diagrama completo se arma solo uniendo los módulos.
 
+## Publicar en Vercel
+
+La versión publicada es estática y de solo lectura: muestra los diagramas, las vistas, el sistema de diseño y la guía del equipo, y permite descargar el SVG, pero no editar ni guardar, porque en Vercel no hay un disco donde escribir. Para editar se sigue usando `npm start` en el PC.
+
+1. En Vercel, crea un proyecto e importa el repositorio `convivir-diagramas`.
+2. Deja la configuración que trae: la toma de `vercel.json` (instala con `npm ci`, arma con `npm run construir` y publica la carpeta `publico`). No necesita variables de entorno.
+3. Cada push a `main` se vuelve a publicar solo.
+
+Para ver en el PC lo mismo que se publica:
+
+```bash
+npm run construir
+```
+
+Y abre la carpeta `publico/` con cualquier servidor estático.
+
 ## Ver las interfaces
 
 Con el visor corriendo, abre http://localhost:4000/vistas/ o el enlace **Vistas** de la barra. Cada vista se puede ver como administrador, vigilante, residente o miembro del consejo desde el menú de la cuenta, en tema claro u oscuro. Las reglas para construir una vista nueva están en `vistas/GUIA-VISTAS.md`.

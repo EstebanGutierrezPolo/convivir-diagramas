@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "npm ci",
+  "buildCommand": "npm run construir",
+  "outputDirectory": "publico",
+  "redirects": [
+    { "source": "/vistas", "destination": "/vistas/", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/sistema", "destination": "/convivir_sistema.html" },
+    { "source": "/guia", "destination": "/guia-equipo.html" }
+  ],
+  "headers": [
+    {
+      "source": "/fuentes/(.*)",
+      "headers": [{ "key": "Content-Type", "value": "text/plain; charset=utf-8" }]
+    }
+  ]
+}

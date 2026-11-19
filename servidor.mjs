@@ -2,9 +2,10 @@
 // Sirve la pagina y lee/guarda los archivos de la carpeta "fuentes".
 // Solo escucha en este PC (127.0.0.1).
 import { createServer } from 'node:http'
-import { readFile, writeFile, readdir, access } from 'node:fs/promises'
+import { readFile, writeFile, access } from 'node:fs/promises'
 import { dirname, extname, join, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { construirIndice } from './indice.mjs'
 
 const RAIZ = dirname(fileURLToPath(import.meta.url))
 const WEB = join(RAIZ, 'web')
@@ -44,26 +45,6 @@ function rutaEnDisco(ruta) {
   if (!RUTA_VALIDA.test(ruta || '')) return null
   const completa = resolve(FUENTES, ruta)
   return completa.startsWith(FUENTES + sep) ? completa : null
-}
-
-function tituloDe(texto, nombre) {
-  const m = /^\s*(?:%%|<!--)\s*titulo:\s*(.+?)\s*(?:-->)?\s*$/m.exec(texto.slice(0, 400))
-  return m ? m[1] : nombre
-}
-
-async function construirIndice() {
-  const pestanas = JSON.parse(await readFile(join(FUENTES, 'pestanas.json'), 'utf8'))
-  for (const pestana of pestanas) {
-    const nombres = (await readdir(join(FUENTES, pestana.carpeta)).catch(() => []))
-      .filter((n) => ['.mmd', '.md'].includes(extname(n)))
-      .sort()
-    pestana.diagramas = []
-    for (const nombre of nombres) {
-      const texto = await readFile(join(FUENTES, pestana.carpeta, nombre), 'utf8')
-      pestana.diagramas.push({ ruta: `${pestana.carpeta}/${nombre}`, titulo: tituloDe(texto, nombre) })
-    }
-  }
-  return pestanas
 }
 
 function responder(res, estado, cuerpo, tipo = 'application/json; charset=utf-8') {
@@ -106,7 +87,7 @@ const servidor = createServer(async (req, res) => {
     }
 
     if (req.method === 'GET' && url.pathname === '/api/indice') {
-      return responder(res, 200, await construirIndice())
+      return responder(res, 200, await construirIndice(FUENTES))
     }
 
     if (url.pathname === '/api/fuente') {

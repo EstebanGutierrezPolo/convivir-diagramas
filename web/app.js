@@ -153,8 +153,12 @@ async function pedir(url, opciones) {
   return respuesta
 }
 
+// En la versión publicada (Vercel, ver scripts/construir.mjs) no hay servidor:
+// el índice y las fuentes son archivos y no se puede editar ni guardar.
+const PUBLICADO = window.CONVIVIR_PUBLICADO === true
+
 async function cargarIndice() {
-  estado.indice = await (await pedir('/api/indice')).json()
+  estado.indice = await (await pedir(PUBLICADO ? '/indice.json' : '/api/indice')).json()
   const clases = estado.indice.find((p) => p.carpeta === 'clases')
   if (clases && clases.diagramas.length > 1) {
     clases.diagramas.unshift({ ruta: RUTA_COMPLETO, titulo: 'Diagrama completo (se arma solo)' })
@@ -162,7 +166,9 @@ async function cargarIndice() {
 }
 
 async function leerFuente(ruta) {
-  if (ruta !== RUTA_COMPLETO) return (await pedir(`/api/fuente?ruta=${encodeURIComponent(ruta)}`)).text()
+  if (ruta !== RUTA_COMPLETO) {
+    return (await pedir(PUBLICADO ? `/fuentes/${ruta}` : `/api/fuente?ruta=${encodeURIComponent(ruta)}`)).text()
+  }
   // Une todos los modulos de clases en un solo diagrama.
   const modulos = estado.indice.find((p) => p.carpeta === 'clases').diagramas.filter((d) => d.ruta !== RUTA_COMPLETO)
   const textos = await Promise.all(modulos.map((d) => leerFuente(d.ruta)))
@@ -403,7 +409,7 @@ async function abrir(ruta, pestanaVacia) {
   }
   pintarPestanas()
   pintarLista()
-  estado.soloLectura = !estado.diagrama || estado.diagrama.ruta === RUTA_COMPLETO
+  estado.soloLectura = PUBLICADO || !estado.diagrama || estado.diagrama.ruta === RUTA_COMPLETO
   $('nota-solo-lectura').hidden = !estado.diagrama || estado.diagrama.ruta !== RUTA_COMPLETO
   $('nota-solo-lectura').textContent = 'Este diagrama se arma uniendo los módulos. Para cambiarlo, edita el módulo que corresponda.'
   $('texto').readOnly = estado.soloLectura
@@ -514,6 +520,16 @@ async function iniciar() {
   try { editorAbierto = localStorage.getItem('editorAbierto') === '1' } catch { /* sin almacenamiento */ }
   $('panel-editor').hidden = !editorAbierto
   $('boton-editar').textContent = editorAbierto ? 'Cerrar editor' : 'Editar diagrama'
+
+  if (PUBLICADO) {
+    $('panel-editor').hidden = true
+    $('boton-editar').hidden = true
+    $('boton-nuevo').hidden = true
+    const nota = document.createElement('p')
+    nota.className = 'nota'
+    nota.textContent = 'Versión publicada, solo para consultar. Para editar un diagrama, abre el visor en tu PC con npm start.'
+    $('boton-nuevo').after(nota)
+  }
 
   for (const boton of document.querySelectorAll('.conmutador button')) boton.onclick = () => elegirTema(boton.dataset.t)
   preferenciaOscura.addEventListener('change', () => { if (leerTema() === 'auto') aplicarTema('auto') })
