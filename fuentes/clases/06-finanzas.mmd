@@ -6,7 +6,7 @@ class PeriodoFacturacion {
     +id : int
     +periodo : String
     +valorBaseCuota : double
-    +PeriodoFacturacion(periodo : String, valorBaseCuota : double)
+    +PeriodoFacturacion(periodo : String, valorBaseCuota : double, propiedadHorizontal : PropiedadHorizontal)
     +configurarValorBaseDeLaCuotaDelPeriodo(valorBaseCuota : double)
     +generarObligacionesDelPeriodoParaInmueblesActivos()
 }
@@ -22,12 +22,17 @@ class Obligacion {
     +motivoAnulacion : String
     -politicaInteres : PoliticaInteresMora
     +Obligacion(concepto : ConceptoObligacion, valor : double, fechaVencimiento : Date)
+    +describir(descripcion : String)
+    +cargarAlInmueble(inmueble : Inmueble)
     +registrarAbonoALaObligacion(valorAbono : double)
+    +revertirAbonoDeLaObligacion(valorAbono : double)
     +anularObligacionPorMotivo(motivo : String)
     +calcularDiasDeMora() : int
-    +generarInformeDeCartera(minDias : int, maxDias : int) : File
+    +generarInformeDeCartera(obligaciones : List~Obligacion~, minDias : int, maxDias : int)$ byte[]
     #calcularInteresDeMora() : double
-    #determinarSiHaySolidaridadDelArrendatario() : boolean
+    +determinarSiHaySolidaridadDelArrendatario() : boolean
+    ~asignarPeriodo(periodoFacturacion : PeriodoFacturacion)
+    ~asignarReserva(reserva : Reserva)
 }
 
 class PoliticaInteresMora {
@@ -52,16 +57,18 @@ class Pago {
     +medioPago : MedioPago
     +canalRecaudo : CanalRecaudo
     +comprobante : String
+    +pagador : String
     -referenciaPasarela : String
     -pasarela : PasarelaPago
     +estado : EstadoPago
     +motivoAnulacion : String
     +Pago(valor : double, medioPago : MedioPago, canalRecaudo : CanalRecaudo)
     +asignarPasarela(pasarela : PasarelaPago)
-    +procesarPagoDeLaObligacion()
+    +registrarDatosDelPagoPresencial(fecha : Date, pagador : String)
+    +procesarPagoDeLaObligacion(obligacion : Obligacion)
     +generarComprobanteDePago() : String
     +anularPagoPorMotivo(motivo : String)
-    #validarResultadoDeLaPasarela() : boolean
+    +validarResultadoDeLaPasarela() : boolean
 }
 
 class PasarelaPago {
@@ -80,8 +87,8 @@ class Gasto {
     +concepto : String
     +valor : double
     +fecha : Date
-    +Gasto(concepto : String, valor : double, fecha : Date)
-    +consultarGastosDelPeriodo(periodo : String) : List~Gasto~
+    +Gasto(concepto : String, valor : double, fecha : Date, propiedadHorizontal : PropiedadHorizontal)
+    +consultarGastosDelPeriodo(gastos : List~Gasto~, periodo : String)$ List~Gasto~
 }
 
 class ConceptoObligacion {

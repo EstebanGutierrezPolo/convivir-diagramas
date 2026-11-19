@@ -16,7 +16,9 @@ class Observador {
 }
 
 class PublicadorEventos {
+    -instancia$ PublicadorEventos
     -observadores : List~Observador~
+    +obtenerInstancia()$ PublicadorEventos
     +suscribir(observador : Observador)
     +desuscribir(observador : Observador)
     +publicar(evento : EventoSistema)
@@ -35,9 +37,10 @@ class Auditoria {
     +fechaHora : DateTime
     +accion : String
     +elementoAfectado : String
+    +documentoActor : String
     +Auditoria(accion : String, elementoAfectado : String)
-    +registrarOperacionEnAuditoria()
-    +exportarRegistroDeAuditoria(fechaDesde : Date, fechaHasta : Date) : File
+    +registrarOperacionEnAuditoria(propiedadHorizontal : PropiedadHorizontal, integrante : Integrante, documentoActor : String)
+    +exportarRegistroDeAuditoria(registros : List~Auditoria~, fechaDesde : Date, fechaHasta : Date)$ byte[]
 }
 
 class Notificacion {
@@ -46,7 +49,7 @@ class Notificacion {
     +contenido : String
     +resultadoEnvio : ResultadoEnvio
     +Notificacion(contenido : String)
-    +enviarNotificacionAlDestinatario()
+    +enviarNotificacionAlDestinatario(configuracion : ConfiguracionNotificacion, destinatario : Integrante)
     +registrarResultadoDelEnvio(resultadoEnvio : ResultadoEnvio)
 }
 
@@ -56,7 +59,7 @@ class ConfiguracionNotificacion {
     +destinatario : String
     +estaHabilitada : boolean
     +ConfiguracionNotificacion(evento : String, destinatario : String)
-    +configurarEventoDeNotificacion()
+    +configurarEventoDeNotificacion(propiedadHorizontal : PropiedadHorizontal, destinatario : String, estaHabilitada : boolean)
 }
 
 class ResultadoEnvio {

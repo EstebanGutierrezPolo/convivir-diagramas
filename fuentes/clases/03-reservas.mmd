@@ -9,10 +9,11 @@ class Reserva {
     +motivoMulta : String
     +estado : EstadoReserva
     +motivoCancelacion : String
+    +finalidad : String
     -comportamiento : ComportamientoReserva
     -estrategiaTarifa : EstrategiaTarifa
     +Reserva(asignacionInmueble : AsignacionInmueble, inmuebleQuePaga : Inmueble)
-    +registrarReservaDeZonaComun()
+    +registrarReservaDeZonaComun(integrante : Integrante, finalidad : String)
     +confirmarReserva()
     +finalizarReserva()
     +cancelarReservaPorMotivo(motivo : String)
@@ -21,6 +22,10 @@ class Reserva {
     +cambiarComportamiento(nuevoComportamiento : ComportamientoReserva)
     #validarQueElIntegranteSeaResidente() : boolean
     #validarDisponibilidadDeLaZona() : boolean
+    ~pasarA(nuevoEstado : EstadoReserva, nuevoComportamiento : ComportamientoReserva)
+    ~registrarCancelacion(motivo : String)
+    ~registrarMulta(valorMulta : double, motivo : String)
+    ~zona() : Inmueble
 }
 
 class ComportamientoReserva {
@@ -78,9 +83,13 @@ class AsignacionInmueble {
     +fechaInicio : Date
     +fechaFin : Date
     +AsignacionInmueble(fechaInicio : Date, fechaFin : Date)
-    +registrarAsignacionDelInmueble()
-    +consultarPeriodosOcupadosDelInmueble(inmueble : Inmueble) : List~AsignacionInmueble~
+    +registrarAsignacionDelInmueble(inmueble : Inmueble)
+    +consultarPeriodosOcupadosDelInmueble(inmueble : Inmueble)$ List~AsignacionInmueble~
     #validarQueFechasYHorariosNoSeSuperpongan() : boolean
+    ~seCruzaCon(otra : AsignacionInmueble) : boolean
+    ~contarDiasDe(diaSemana : DiaSemana) : long
+    ~agregarProgramacion(programacion : ProgramacionAsignacion)
+    ~vincularReserva(reserva : Reserva)
 }
 
 class ProgramacionAsignacion {
@@ -89,7 +98,7 @@ class ProgramacionAsignacion {
     +horaInicio : Time
     +horaFin : Time
     +ProgramacionAsignacion(diaSemana : DiaSemana, horaInicio : Time, horaFin : Time)
-    +registrarProgramacionDeLaAsignacion()
+    +registrarProgramacionDeLaAsignacion(asignacionInmueble : AsignacionInmueble)
     #validarQueLaFranjaHorariaSeaValida() : boolean
 }
 

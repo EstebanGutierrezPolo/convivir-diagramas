@@ -7,6 +7,7 @@ sequenceDiagram
     participant Srv as InmuebleServicio
     participant RT as TipoInmuebleRepositorio
     participant Repo as InmuebleRepositorio
+    participant RP as PropiedadHorizontalRepositorio
     participant I as Inmueble
     participant Pub as PublicadorEventos
 
@@ -20,19 +21,37 @@ sequenceDiagram
         Srv->>Repo: findById(contenedorId)
         Repo-->>Srv: inmuebleContenedor
     end
-    Srv->>Repo: existsByIdentificacion(identificacion)
+    Srv->>Repo: existsByIdentificacionIgnoreCase(identificacion)
     alt la identificación ya existe
         Srv-->>Ctl: dato repetido
         Ctl-->>UI: 409 ya existe un inmueble con esa identificación
     else datos válidos
-        Srv->>I: new Inmueble(identificacion, coeficiente, areaM2, inmuebleContenedor)
+        Srv->>I: new Inmueble(identificacion, coeficiente, areaM2, naturalezaInmueble, tipoInmueble, inmuebleContenedor)
+        Srv->>RP: findFirstByOrderByIdAsc()
+        RP-->>Srv: propiedadHorizontal
+        Srv->>I: asignarPropiedadHorizontal(propiedadHorizontal)
         Srv->>I: registrarInmueble()
+        alt coeficiente fuera de 0 a 1, área en cero o tipo inactivo
+            I-->>Srv: regla incumplida
+            Ctl-->>UI: 422 explica el dato y cómo corregirlo
+        end
         I->>Pub: publicar(EventoSistema INMUEBLE_REGISTRADO)
         Srv->>Repo: save(inmueble)
         Srv-->>Ctl: inmueble registrado
         Ctl-->>UI: 201
         UI-->>A: muestra el inmueble en el listado
     end
+
+    Note over A,Pub: Modificar datos del inmueble (RF-010)
+    A->>UI: cambia coeficiente, área o naturaleza
+    UI->>Ctl: PUT /api/inmuebles/id
+    Ctl->>Srv: modificarInmueble(id, datos)
+    Srv->>Repo: findById(id)
+    Repo-->>Srv: inmueble
+    Srv->>I: modificarDatosDelInmueble(coeficiente, areaM2, naturalezaInmueble)
+    I->>Pub: publicar(EventoSistema INMUEBLE_MODIFICADO)
+    Srv->>Repo: save(inmueble)
+    Ctl-->>UI: 200
 
     Note over A,Pub: Desactivar inmueble (RF-011)
     A->>UI: elige desactivar e indica el motivo
@@ -44,3 +63,25 @@ sequenceDiagram
     I->>Pub: publicar(EventoSistema INMUEBLE_DESACTIVADO)
     Srv->>Repo: save(inmueble)
     Ctl-->>UI: 200 el historial se conserva (RN-04)
+
+    Note over A,Pub: Reactivar inmueble (RF-012)
+    A->>UI: elige reactivar
+    UI->>Ctl: PATCH /api/inmuebles/id/reactivar
+    Ctl->>Srv: reactivarInmueble(id)
+    Srv->>Repo: findById(id)
+    Srv->>I: reactivarInmuebleDesactivado()
+    I->>Pub: publicar(EventoSistema INMUEBLE_REACTIVADO)
+    Srv->>Repo: save(inmueble)
+    Ctl-->>UI: 200
+
+    Note over A,Pub: Consultar historial del inmueble (RF-013)
+    A->>UI: abre el inmueble
+    UI->>Ctl: GET /api/inmuebles/id/historial
+    Ctl->>Srv: consultarHistorial(id)
+    Srv->>Repo: findById(id)
+    Srv->>I: consultarHistorialDeVinculacionesDelInmueble()
+    Srv->>I: consultarHistorialDeObligacionesDelInmueble()
+    Srv->>I: consultarHistorialDePagosDelInmueble()
+    Srv->>I: consultarHistorialDeReportesDelInmueble()
+    Srv->>I: consultarHistorialDeMovimientosDelInmueble()
+    Ctl-->>UI: 200 vinculaciones, obligaciones, pagos, reportes y movimientos

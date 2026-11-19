@@ -13,13 +13,18 @@ sequenceDiagram
     A->>UI: escribe nombre, descripción y si permite cesión, reserva y cuota
     UI->>Ctl: POST /api/tipos-inmueble
     Ctl->>Srv: registrarTipo(datos)
-    Srv->>Repo: existsByNombre(nombre)
+    Srv->>Repo: existsByNombreIgnoreCase(nombre)
     alt ya existe un tipo con ese nombre
         Srv-->>Ctl: dato repetido
         Ctl-->>UI: 409 ya existe un tipo con ese nombre
     else nombre nuevo
         Srv->>T: new TipoInmueble(nombre, esBienComun)
+        Srv->>T: modificarParametrosDelTipoDeInmueble(descripcion, permiteCesion, permiteReserva, generaCuota, valorTarifa, unidadTarifa, valorMulta)
         Srv->>T: registrarTipoDeInmueble()
+        alt se reserva sin unidad de tarifa, o tarifa o multa negativas
+            T-->>Srv: regla incumplida
+            Ctl-->>UI: 422 explica qué falta
+        end
         Srv->>Repo: save(tipoInmueble)
         Ctl-->>UI: 201
         UI-->>A: muestra el tipo en el listado
@@ -30,7 +35,7 @@ sequenceDiagram
     UI->>Ctl: PUT /api/tipos-inmueble/id
     Ctl->>Srv: modificarTipo(id, datos)
     Srv->>Repo: findById(id)
-    Srv->>T: modificarParametrosDelTipoDeInmueble()
+    Srv->>T: modificarParametrosDelTipoDeInmueble(descripcion, permiteCesion, permiteReserva, generaCuota, valorTarifa, unidadTarifa, valorMulta)
     Srv->>Repo: save(tipoInmueble)
     Ctl-->>UI: 200
 
@@ -38,7 +43,8 @@ sequenceDiagram
     A->>UI: elige desactivar
     UI->>Ctl: PATCH /api/tipos-inmueble/id/desactivar
     Ctl->>Srv: desactivarTipo(id)
-    Srv->>RM: existsByTipoInmuebleAndEstado(tipo, ACTIVO)
+    Srv->>Repo: findById(id)
+    Srv->>RM: countByTipoInmuebleAndEstado(tipo, ACTIVO)
     alt tiene inmuebles activos que dependen de él
         Srv-->>Ctl: regla incumplida
         Ctl-->>UI: 409 hay inmuebles activos de este tipo

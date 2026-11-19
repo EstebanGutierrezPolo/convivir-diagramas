@@ -28,21 +28,23 @@ class TipoInmueble {
     +estado : EstadoRegistro
     +TipoInmueble(nombre : String, esBienComun : boolean)
     +registrarTipoDeInmueble()
-    +modificarParametrosDelTipoDeInmueble()
+    +modificarParametrosDelTipoDeInmueble(descripcion : String, permiteCesion : boolean, permiteReserva : boolean, generaCuota : boolean, valorTarifa : double, unidadTarifa : UnidadTarifa, valorMulta : double)
     +desactivarTipoDeInmueble()
 }
 
 class Inmueble {
+    +id : int
     +identificacion : String
     +coeficiente : double
     +areaM2 : double
     +naturalezaInmueble : NaturalezaInmueble
     +estado : EstadoRegistro
     +motivoDesactivacion : String
-    +Inmueble(identificacion : String, coeficiente : double, areaM2 : double)
-    +Inmueble(identificacion : String, coeficiente : double, areaM2 : double, inmuebleContenedor : Inmueble)
+    +Inmueble(identificacion : String, coeficiente : double, areaM2 : double, naturalezaInmueble : NaturalezaInmueble, tipoInmueble : TipoInmueble)
+    +Inmueble(identificacion : String, coeficiente : double, areaM2 : double, naturalezaInmueble : NaturalezaInmueble, tipoInmueble : TipoInmueble, inmuebleContenedor : Inmueble)
     +registrarInmueble()
-    +modificarDatosDelInmueble()
+    +asignarPropiedadHorizontal(propiedadHorizontal : PropiedadHorizontal)
+    +modificarDatosDelInmueble(coeficiente : double, areaM2 : double, naturalezaInmueble : NaturalezaInmueble)
     +desactivarInmueblePorMotivo(motivo : String)
     +reactivarInmuebleDesactivado()
     +consultarHistorialDeVinculacionesDelInmueble() : List~Vinculacion~

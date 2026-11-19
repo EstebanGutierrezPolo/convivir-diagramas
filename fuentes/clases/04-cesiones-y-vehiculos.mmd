@@ -8,13 +8,14 @@ class CesionUso {
     +fechaFin : Date
     +estado : EstadoVigencia
     +CesionUso(fechaInicio : Date, fechaFin : Date)
-    +registrarCesionDeUso()
+    +registrarCesionDeUso(inmuebleQueCede : Inmueble, inmuebleQueUsa : Inmueble, vehiculo : Vehiculo)
     +finalizarCesionDeUso(fechaFin : Date)
     #validarQueElTipoDeInmueblePermitaCesion() : boolean
     #validarQueNoSeSuperpongaConOtraCesion() : boolean
 }
 
 class Vehiculo {
+    +id : int
     +placa : String
     +tipoVehiculo : String
     +marca : String
@@ -22,9 +23,10 @@ class Vehiculo {
     +estado : EstadoRegistro
     +motivoBaja : String
     +Vehiculo(placa : String, tipoVehiculo : String, marca : String, color : String)
-    +registrarVehiculo()
-    +modificarDatosDelVehiculo()
+    +registrarVehiculo(inmueble : Inmueble, responsable : Integrante)
+    +modificarDatosDelVehiculo(tipoVehiculo : String, marca : String, color : String)
     +darDeBajaVehiculoPorMotivo(motivo : String)
+    +normalizarPlaca(placa : String)$ String
 }
 
 %% ===== Relaciones =====

@@ -20,13 +20,14 @@ Versión 1.2 del documento de requisitos (23 de octubre de 2026):
 | Entregable | Estado | Dónde está |
 |---|---|---|
 | Diagramas de casos de uso | Borrador para revisar | Pestaña Casos de uso |
-| Diagrama de clases | Hecho por el equipo, con decisiones abiertas | Pestaña Clases |
+| Diagrama de clases | Hecho por el equipo. Ajustado al programar el dominio; quedan 3 decisiones de negocio abiertas | Pestaña Clases y Proyecto, "Decisiones abiertas" |
 | Diagrama de componentes | Borrador para revisar | Pestaña Componentes |
 | Diagrama de despliegue | Refleja lo que ya corre en Docker | Pestaña Despliegue |
 | Diagramas de secuencia, uno por caso de uso | Borrador para revisar | Pestaña Secuencia |
 | Metodología | Pendiente | |
-| Cómo se implementaron las relaciones en el código | Propuesta | Proyecto, "Relaciones en el código" |
-| Aplicación funcionando | Solo el esqueleto | Carpetas `backend` y `frontend` |
+| Cómo se implementaron las relaciones en el código | Aplicado en todo el dominio | Proyecto, "Relaciones en el código" |
+| Interfaces de la aplicación | Hechas en React: las 28 pantallas de los cuatro roles. Las vistas HTML siguen siendo la referencia de diseño | Carpeta `frontend/src/paginas` y enlace **Vistas** del visor |
+| Aplicación funcionando | Dominio completo en Java. API de CU-02 y CU-19 conectada al frontend; las demás pantallas con datos de ejemplo | Carpetas `backend` y `frontend` |
 
 ## Tecnologías decididas
 
@@ -40,9 +41,22 @@ Versión 1.2 del documento de requisitos (23 de octubre de 2026):
 ## Qué está construido hoy
 
 - Los tres contenedores levantan con `docker compose up -d --build`.
-- El backend solo tiene `EstadoController` (`/api/estado`), que confirma que la API responde y llega a la base.
-- El frontend solo tiene una pantalla que muestra ese estado.
-- Todavía no hay ninguna clase del dominio en el código.
+- **Dominio completo:** las 67 clases y enumeraciones del diagrama están en Java, un paquete por módulo (`com.convivir.inmuebles`, `integrantes`, `reservas`, `cesiones`, `accesos`, `finanzas`, `reportes`, `eventos`), con sus relaciones en JPA y sus patrones (Fábrica, Estado, Estrategia, Adaptador, Observador, Singleton). Al arrancar, Hibernate crea las 28 tablas en PostgreSQL.
+- **Auditoría automática:** toda operación del dominio publica un evento y `ObservadorAuditoria` lo guarda (RN-30).
+- **Casos de uso con API, probados de punta a punta:**
+
+  | Caso de uso | Rutas |
+  |---|---|
+  | CU-19 Gestionar tipos de inmueble | `GET`, `POST /api/tipos-inmueble`, `PUT /api/tipos-inmueble/{id}`, `PATCH …/{id}/desactivar` |
+  | CU-01 Iniciar sesión | `POST`, `GET`, `DELETE /api/sesion`, `POST /api/sesion/restablecimiento` |
+  | CU-02 Gestionar inmuebles | `GET`, `POST /api/inmuebles`, `PUT /api/inmuebles/{id}`, `PATCH …/{id}/desactivar`, `PATCH …/{id}/reactivar`, `GET …/{id}/historial` |
+
+- **Errores:** responden 404, 409 o 422 con un mensaje que explica y dirige, como en los diagramas de secuencia.
+- **Datos iniciales:** la primera vez que arranca crea la copropiedad Villa Campestre y seis tipos de inmueble de ejemplo.
+- **Sesión y permisos:** la sesión vive en una cookie del servidor. Toda la API pide sesión salvo `/api/estado` y `/api/sesion`, inmuebles y tipos solo los usa el administrador (403 para los demás), y la auditoría registra el documento de quien actúa. La contraseña de las cuentas de ejemplo sale de `CONVIVIR_CONTRASENA_INICIAL` en el `.env`.
+- **Falta en el backend:** los servicios y controladores de los otros 18 casos de uso, y completar el restablecimiento de contraseña (hoy se registra el envío del enlace, simulado; falta la pantalla para fijar la nueva).
+- **Frontend en React:** las 28 pantallas de administrador, vigilante, residente y consejo, con rutas por rol, tema claro y oscuro y la hoja del sistema de diseño. Inmuebles, el detalle del inmueble y Tipos de inmueble leen y escriben en la API real. Las demás muestran un aviso de datos de ejemplo hasta que exista su API. El inicio de sesión es el real (CU-01).
+- Las interfaces definitivas están en `vistas/` del repositorio de diagramas, en HTML y CSS sin dependencias. `vistas/convivir.css` se copia tal cual al frontend y cada vista se vuelve una página de React. Las reglas para construirlas están en `vistas/GUIA-VISTAS.md`.
 
 ## Regla del proyecto: el diagrama es el código
 
@@ -59,5 +73,6 @@ Versión 1.2 del documento de requisitos (23 de octubre de 2026):
 - **Guardar diagrama** (o Ctrl + S) escribe el archivo en `fuentes/`. Esos archivos van al repositorio.
 - **Nuevo diagrama** crea un diagrama en la pestaña actual.
 - **Descargar SVG** baja la imagen en tema claro para insertarla en Word.
+- **Vistas** abre el catálogo de pantallas de la aplicación, agrupadas por actor, con la tabla de qué caso de uso se realiza en cada una.
 - El interruptor **Claro, Oscuro, Sistema** cambia el tema de la página y de los diagramas. **Sistema de diseño** abre la guía visual de Convivir.
 - En Clases, el "Diagrama completo" se arma solo uniendo los ocho módulos: se edita el módulo, no el completo.

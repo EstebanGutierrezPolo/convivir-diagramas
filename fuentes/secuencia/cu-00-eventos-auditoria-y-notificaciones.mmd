@@ -12,11 +12,12 @@ sequenceDiagram
     participant N as Notificacion
     participant SN as Servicio de notificaciones
 
+    D->>Pub: obtenerInstancia()
     D->>Pub: publicar(EventoSistema)
     loop por cada Observador suscrito
         Pub->>OA: actualizar(evento)
         OA->>Aud: new Auditoria(accion, elementoAfectado)
-        OA->>Aud: registrarOperacionEnAuditoria()
+        OA->>Aud: registrarOperacionEnAuditoria(propiedadHorizontal, integrante, documentoActor)
         OA->>RA: save(auditoria)
 
         Pub->>ON: actualizar(evento)
@@ -24,7 +25,7 @@ sequenceDiagram
         RC-->>ON: configuracionNotificacion
         opt la configuración está habilitada
             ON->>N: new Notificacion(contenido)
-            ON->>N: enviarNotificacionAlDestinatario()
+            ON->>N: enviarNotificacionAlDestinatario(configuracionNotificacion, destinatario)
             N->>SN: enviar al destinatario configurado
             SN-->>N: resultado
             N->>N: registrarResultadoDelEnvio(resultadoEnvio)

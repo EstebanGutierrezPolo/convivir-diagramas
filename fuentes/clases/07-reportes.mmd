@@ -10,10 +10,11 @@ class Reporte {
     +estado : EstadoReporte
     +solucionAplicada : String
     +Reporte(descripcion : String)
-    +crearReporteDeNovedad()
+    +crearReporteDeNovedad(creadoPor : Integrante, categoria : CategoriaReporte, inmueble : Inmueble, evidencia : String)
     +asignarResponsableDelReporte(responsable : Integrante)
     +cambiarEstadoDelReporte(nuevoEstado : EstadoReporte)
     +cerrarReporteConSolucion(solucion : String)
+    ~validarQueNoEsteCerrado()
 }
 
 class CategoriaReporte {
@@ -22,8 +23,8 @@ class CategoriaReporte {
     +descripcion : String
     +estado : EstadoRegistro
     +CategoriaReporte(nombre : String)
-    +crearCategoriaDeReporte()
-    +modificarCategoriaDeReporte()
+    +crearCategoriaDeReporte(descripcion : String)
+    +modificarCategoriaDeReporte(nombre : String, descripcion : String)
     +desactivarCategoriaDeReporte()
 }
 
@@ -32,7 +33,7 @@ class SeguimientoReporte {
     +fechaHora : DateTime
     +observacion : String
     +SeguimientoReporte(observacion : String)
-    +registrarObservacionDeSeguimiento()
+    +registrarObservacionDeSeguimiento(reporte : Reporte)
 }
 
 class EstadoReporte {

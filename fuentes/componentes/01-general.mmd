@@ -5,9 +5,9 @@ flowchart LR
 
     subgraph fe["«subsystem» Frontend · React + Vite · puerto 3000"]
         direction TB
-        pag["«component»<br/>Páginas por módulo"]:::pendiente
-        ses["«component»<br/>Sesión y menú según el rol"]:::pendiente
-        cli["«component»<br/>Cliente de la API (fetch)"]:::pendiente
+        pag["«component»<br/>Páginas por módulo"]:::hecho
+        ses["«component»<br/>Sesión y menú según el rol"]:::hecho
+        cli["«component»<br/>Cliente de la API (fetch)"]:::hecho
         est["«component»<br/>Pantalla de estado"]:::hecho
         prox["«component»<br/>Reenvío de /api (Vite)"]:::hecho
     end
@@ -17,10 +17,10 @@ flowchart LR
         seg["«component»<br/>Seguridad<br/>sesión, rol y vínculo"]:::pendiente
         ctl["«component»<br/>Controladores REST"]:::pendiente
         srv["«component»<br/>Servicios de aplicación<br/>coordinan y guardan"]:::pendiente
-        dom["«component»<br/>Dominio<br/>clases del diagrama de clases"]:::pendiente
+        dom["«component»<br/>Dominio<br/>clases del diagrama de clases"]:::hecho
         rep["«component»<br/>Repositorios<br/>Spring Data JPA"]:::pendiente
-        evt["«component»<br/>Eventos<br/>PublicadorEventos y observadores"]:::pendiente
-        ada["«component»<br/>Adaptadores externos<br/>PasarelaPago"]:::pendiente
+        evt["«component»<br/>Eventos<br/>PublicadorEventos y observadores"]:::hecho
+        ada["«component»<br/>Adaptadores externos<br/>PasarelaPago (simulada)"]:::hecho
         ectl["«component»<br/>EstadoController"]:::hecho
     end
 

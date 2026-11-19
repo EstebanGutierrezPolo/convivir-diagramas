@@ -9,18 +9,20 @@ class AutorizacionAcceso {
     +documentoVisitante : String
     +motivoAcceso : String
     +usaParqueaderoVisitantes : boolean
-    +fechaInicio : Date
-    +fechaFin : Date
+    +fechaInicio : DateTime
+    +fechaFin : DateTime
     +diasPermitidos : String
     +horarios : String
     +estado : EstadoAutorizacion
     +AutorizacionAcceso(nombreVisitante : String, documentoVisitante : String, tipoAutorizacion : TipoAutorizacion)
-    +registrarAutorizacionDeAcceso()
+    +definirVigencia(fechaInicio : DateTime, fechaFin : DateTime, diasPermitidos : String, horarios : String, motivoAcceso : String, usaParqueaderoVisitantes : boolean)
+    +registrarAutorizacionDeAcceso(inmueble : Inmueble, autorizante : Integrante)
     +validarVigenciaDeLaAutorizacion() : boolean
     +cancelarAutorizacionOcasional()
     +revocarAutorizacionRecurrente()
     #validarDiaYHorarioPermitido() : boolean
     #validarQueElAutorizanteTengaPermiso() : boolean
+    ~registrarUso()
 }
 
 class MovimientoAcceso {
@@ -30,9 +32,10 @@ class MovimientoAcceso {
     +motivoExcepcion : String
     +placaVisitante : String
     +MovimientoAcceso(sentidoMovimiento : SentidoMovimiento)
-    +registrarIngresoAlConjunto()
-    +registrarSalidaDelConjunto()
-    +consultarPersonasPresentesEnElConjunto() : List~MovimientoAcceso~
+    +registrarIngresoAlConjunto(registradoPor : Integrante, autorizacion : AutorizacionAcceso, inmuebleDestino : Inmueble, motivoExcepcion : String, placaVisitante : String)
+    +asignarVehiculoYParqueadero(vehiculo : Vehiculo, parqueadero : Inmueble)
+    +registrarSalidaDelConjunto(registradoPor : Integrante, ingreso : MovimientoAcceso)
+    +consultarPersonasPresentesEnElConjunto(movimientos : List~MovimientoAcceso~)$ List~MovimientoAcceso~
 }
 
 class TipoAutorizacion {
@@ -65,6 +68,7 @@ AutorizacionAcceso ..> Vinculacion : valida autorizante
 AutorizacionAcceso "0..1" --> "*" MovimientoAcceso : habilita
 Vehiculo "0..1" --> "*" MovimientoAcceso : genera
 Integrante "1" --> "*" MovimientoAcceso : registra
+MovimientoAcceso "0..1" --> "0..1" MovimientoAcceso : cierra
 AutorizacionAcceso ..> TipoAutorizacion
 AutorizacionAcceso ..> EstadoAutorizacion
 MovimientoAcceso ..> SentidoMovimiento

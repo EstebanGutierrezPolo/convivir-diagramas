@@ -3,7 +3,8 @@ classDiagram
 direction TB
 
 class Integrante {
-    <<interface>>
+    <<abstract>>
+    +id : int
     +tipoDocumento : String
     +documento : String
     +nombres : String
@@ -18,14 +19,20 @@ class Integrante {
     +correo : String
     +estado : EstadoRegistro
     +motivoDesactivacion : String
-    +modificarDatosDeContacto()
+    +completarDatosPersonales(tipoDocumento : String, razonSocial : String, genero : Genero, fechaNacimiento : Date, paisResidencia : String, ciudadResidencia : String)
+    +modificarDatosDeContacto(telefono : String, correo : String, direccionResidencia : String)
     +obtenerNombreCompleto() : String
-    +obtenerRolDelIntegrante() : String
+    +normalizarDocumento(documento : String)$ String
+    +obtenerRolDelIntegrante()* String
+    ~incorporarALaCopropiedad(propiedadHorizontal : PropiedadHorizontal)
+    ~registrarDesactivacion(motivo : String)
+    ~asignarCuenta(cuenta : Cuenta)
 }
 
 class Propietario {
     +direccionCorrespondencia : String
     +Propietario(documento : String, nombres : String, apellidos : String)
+    +asignarDireccionCorrespondencia(direccionCorrespondencia : String)
     +obtenerRolDelIntegrante() : String
 }
 
@@ -46,6 +53,7 @@ class MiembroConsejo {
     +periodoInicio : Date
     +periodoFin : Date
     +MiembroConsejo(documento : String, nombres : String, apellidos : String, cargoEnConsejo : String)
+    +asignarPeriodoEnConsejo(periodoInicio : Date, periodoFin : Date)
     +obtenerRolDelIntegrante() : String
 }
 
@@ -56,6 +64,7 @@ class Empleado {
     +empresaSeguridad : String
     +turno : String
     +Empleado(documento : String, nombres : String, apellidos : String, cargoEmpleado : CargoEmpleado)
+    +asignarDatosLaborales(fechaIngreso : Date, empresaSeguridad : String, turno : String)
     +registrarIntegranteEnLaCopropiedad(integrante : Integrante)
     +desactivarIntegrantePorMotivo(integrante : Integrante, motivo : String)
     +obtenerRolDelIntegrante() : String
@@ -63,7 +72,7 @@ class Empleado {
 }
 
 class FabricaIntegrante {
-    +crearIntegrante(rol : String, documento : String, nombres : String, apellidos : String) : Integrante
+    +crearIntegrante(rol : String, documento : String, nombres : String, apellidos : String, datoDelRol : String) : Integrante
 }
 
 class Vinculacion {
@@ -76,22 +85,24 @@ class Vinculacion {
     +autorizaAcceso : boolean
     +motivoCorreccion : String
     +Vinculacion(esResidente : boolean, porcentajePropiedad : double, fechaInicio : Date)
-    +vincularIntegranteAlInmueble()
+    +vincularIntegranteAlInmueble(integrante : Integrante, inmueble : Inmueble)
     +finalizarVinculacion(fechaFin : Date)
     +corregirDatosDeLaVinculacion(esResidente : boolean, porcentajePropiedad : double, motivo : String)
     +asignarPermisoParaAutorizarAccesos(autoriza : boolean)
 }
 
 class Cuenta {
+    +id : int
     +login : String
     -contrasena : String
     -intentosFallidos : int
     +estado : EstadoCuenta
     +motivoDesactivacion : String
     +Cuenta(login : String, contrasena : String)
-    +iniciarSesionConLoginYContrasena() : boolean
+    +asignarAlIntegrante(integrante : Integrante)
+    +iniciarSesionConLoginYContrasena(contrasenaIngresada : String) : boolean
     +cerrarSesionActiva()
-    +restablecerContrasena()
+    +restablecerContrasena(nuevaContrasena : String)
     +desactivarCuentaPorMotivo(motivo : String)
     +obtenerRolDelIntegrante() : String
     +obtenerInmueblesAccesibles() : List~Inmueble~
@@ -130,11 +141,11 @@ class EstadoVigencia {
 Integrante "*" -- "*" Inmueble : se relaciona con
 Vinculacion "*" --> "1" Inmueble : registra
 Cuenta ..> Inmueble : obtiene accesibles
-Integrante <|.. Propietario
-Integrante <|.. Arrendatario
-Integrante <|.. ResidenteAutorizado
-Integrante <|.. MiembroConsejo
-Integrante <|.. Empleado
+Integrante <|-- Propietario
+Integrante <|-- Arrendatario
+Integrante <|-- ResidenteAutorizado
+Integrante <|-- MiembroConsejo
+Integrante <|-- Empleado
 FabricaIntegrante ..> Integrante : crea
 PropiedadHorizontal "1" o-- "*" Integrante : agrupa
 Integrante "1" --> "*" Vinculacion : tiene

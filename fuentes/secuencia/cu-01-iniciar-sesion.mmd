@@ -18,30 +18,56 @@ sequenceDiagram
         Srv-->>Ctl: acceso rechazado
         Ctl-->>UI: 401 credenciales inválidas o cuenta bloqueada
     else la cuenta está ACTIVA
-        Srv->>C: iniciarSesionConLoginYContrasena()
+        Srv->>C: iniciarSesionConLoginYContrasena(contrasena)
         C->>C: validarContrasenaIngresada(contrasena)
         alt contraseña incorrecta
             C->>C: aumenta intentosFallidos
             opt supera el máximo de intentos (RNF-01)
                 C->>C: bloquearCuentaPorIntentosFallidos()
+                C->>Pub: publicar(EventoSistema CUENTA_BLOQUEADA)
             end
             Srv->>Repo: save(cuenta)
+            Note over Srv,Repo: el 401 no revierte la transacción: el intento y el bloqueo quedan guardados
             Srv-->>Ctl: acceso rechazado
-            Ctl-->>UI: 401 credenciales inválidas
+            Ctl-->>UI: 401 credenciales inválidas, o cuenta bloqueada si este fue el último intento
         else contraseña correcta
             Srv->>C: obtenerRolDelIntegrante()
             Srv->>C: obtenerInmueblesAccesibles()
+            Srv->>C: obtenerRolDelIntegranteEnInmueble(inmueble)
             C->>Pub: publicar(EventoSistema INICIO_SESION)
             Srv->>Repo: save(cuenta)
             Srv-->>Ctl: sesión, rol e inmuebles accesibles
+            Ctl->>Ctl: abre la sesión del servidor con un identificador nuevo (cookie JSESSIONID)
             Ctl-->>UI: 200
             UI-->>U: muestra el menú según el rol
         end
     end
 
+    Note over U,Pub: Recuperar la sesión al recargar la página
+    UI->>Ctl: GET /api/sesion
+    Ctl->>Srv: consultarSesion(cuentaId)
+    Srv->>Repo: findById(cuentaId)
+    alt no hay sesión o la cuenta ya no está ACTIVA
+        Ctl-->>UI: 401 lleva a iniciar sesión
+    else sesión vigente
+        Ctl-->>UI: 200 sesión, rol e inmuebles accesibles
+    end
+
     Note over U,Pub: Cerrar sesión (RF-004)
     U->>UI: elige cerrar sesión
     UI->>Ctl: DELETE /api/sesion
-    Ctl->>Srv: cerrarSesion()
+    Ctl->>Srv: cerrarSesion(cuentaId)
     Srv->>C: cerrarSesionActiva()
+    C->>Pub: publicar(EventoSistema CIERRE_SESION)
+    Ctl->>Ctl: invalida la sesión del servidor
     Ctl-->>UI: 204
+
+    Note over U,Pub: Restablecer contraseña (RF-002, extensión)
+    U->>UI: escribe su usuario o correo
+    UI->>Ctl: POST /api/sesion/restablecimiento
+    Ctl->>Srv: solicitarRestablecimiento(login)
+    Srv->>Repo: findByLogin(login)
+    opt la cuenta existe
+        Srv->>Srv: envía el enlace al correo (servicio simulado, decisión 9)
+    end
+    Ctl-->>UI: 202 la misma respuesta exista o no, para no revelar cuentas
