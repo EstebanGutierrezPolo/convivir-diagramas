@@ -1,0 +1,580 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parqueaderos y cesiones · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-09 Gestionar parqueaderos y cesiones de uso · Inmueble.obtenerInmuebleConUsoVigente() (RF-063)
+     new CesionUso(fechaInicio, fechaFin), CesionUso.registrarCesionDeUso() (RF-060) con
+     validarQueElTipoDeInmueblePermitaCesion() (RN-17) y validarQueNoSeSuperpongaConOtraCesion() (RN-18),
+     CesionUso.finalizarCesionDeUso(fechaFin) (RF-061) -->
+<body data-rol="administrador" data-seccion="inmuebles" data-sub="parqueaderos">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Parqueaderos y cesiones</h1>
+      <p class="guia">Sótanos 1 y 2 · un propietario puede ceder el uso de su parqueadero a otro inmueble por un tiempo.</p>
+    </div>
+    <div class="acciones">
+      <button class="btn" type="button" id="abrir-registrar">Registrar cesión</button>
+    </div>
+  </div>
+
+  <div class="rejilla r3" aria-label="Ocupación">
+    <div class="superficie cifra">
+      <div class="etiqueta">Privados</div>
+      <div class="valor">180</div>
+      <div class="proporcion" aria-hidden="true"><span id="barra-cedidos" style="width:2.2%"></span></div>
+      <div class="meta"><span id="meta-privados">4 cedidos a otro inmueble · 176 los usa su propietario</span></div>
+    </div>
+    <div class="superficie cifra">
+      <div class="etiqueta">Uso exclusivo</div>
+      <div class="valor">8</div>
+      <div class="proporcion" aria-hidden="true"><span style="width:100%"></span></div>
+      <div class="meta">Comunes, asignados a una unidad · <span class="identificador">UE-01</span> a <span class="identificador">UE-08</span></div>
+    </div>
+    <div class="superficie cifra">
+      <div class="etiqueta">Visitantes ocupados ahora</div>
+      <div class="valor">8 <span class="guia" style="font-size:var(--t-md);font-weight:500">de 12</span></div>
+      <div class="proporcion" aria-hidden="true"><span style="width:66.7%"></span></div>
+      <div class="meta">4 libres: <span class="identificador">V-04</span>, <span class="identificador">V-07</span>, <span class="identificador">V-09</span>, <span class="identificador">V-12</span></div>
+    </div>
+  </div>
+
+  <!-- Parqueaderos con su uso vigente -->
+  <section class="seccion" aria-labelledby="titulo-parqueaderos">
+    <div class="encabezado">
+      <div>
+        <h2 id="titulo-parqueaderos">Quién usa cada parqueadero hoy</h2>
+        <p class="guia">Si hay una cesión vigente, lo usa el inmueble que lo recibió; si no, su propietario.</p>
+      </div>
+    </div>
+
+    <div class="filtros">
+      <label class="buscador">
+        <span class="solo-lectores">Buscar parqueadero</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+        <input id="buscar" type="search" placeholder="Parqueadero, unidad, persona o placa" autocomplete="off">
+      </label>
+      <div class="segmentos" data-grupo id="filtro-naturaleza" role="group" aria-label="Naturaleza">
+        <button type="button" data-valor="" aria-pressed="true">Todos</button>
+        <button type="button" data-valor="BIEN_PRIVADO" aria-pressed="false">Privados</button>
+        <button type="button" data-valor="USO_EXCLUSIVO" aria-pressed="false">Uso exclusivo</button>
+        <button type="button" data-valor="USO_GENERAL" aria-pressed="false">Visitantes</button>
+      </div>
+    </div>
+
+    <div class="superficie">
+      <div class="tabla-envoltura">
+        <table class="tabla" id="tabla-parqueaderos">
+          <thead>
+            <tr>
+              <th>Parqueadero</th>
+              <th>Naturaleza</th>
+              <th>Propietario o asignación</th>
+              <th>Lo usa hoy</th>
+              <th>Vehículo</th>
+              <th>Cesión</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="sin-parqueaderos" hidden>
+        <h3>Ningún parqueadero coincide con la búsqueda</h3>
+        <p>Busca por el número, por ejemplo <span class="identificador">P-022</span>, por la unidad que lo usa o por la placa.</p>
+        <button class="btn segundo" type="button" id="limpiar">Quitar filtros</button>
+      </div>
+      <div class="pie">
+        <span id="conteo-parqueaderos"></span>
+        <div class="fila" style="gap:var(--e1)">
+          <button class="btn segundo chico" type="button" disabled>Anterior</button>
+          <button class="btn segundo chico" type="button">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Cesiones de uso -->
+  <section class="seccion" aria-labelledby="titulo-cesiones">
+    <div class="encabezado">
+      <div>
+        <h2 id="titulo-cesiones">Cesiones de uso</h2>
+        <p class="guia">Una cesión finalizada queda en el historial de los dos inmuebles.</p>
+      </div>
+      <div class="segmentos" data-grupo id="filtro-cesiones" role="group" aria-label="Estado de la cesión">
+        <button type="button" data-valor="VIGENTE" aria-pressed="true">Vigentes <span class="dato" id="n-vigentes"></span></button>
+        <button type="button" data-valor="FINALIZADA" aria-pressed="false">Finalizadas <span class="dato" id="n-finalizadas"></span></button>
+      </div>
+    </div>
+    <div class="superficie">
+      <div class="tabla-envoltura">
+        <table class="tabla" id="tabla-cesiones">
+          <thead>
+            <tr>
+              <th>Inmueble que cede</th>
+              <th>Inmueble que lo usa</th>
+              <th>Desde</th>
+              <th>Hasta</th>
+              <th>Vehículo amparado</th>
+              <th>Estado</th>
+              <th><span class="solo-lectores">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="sin-cesiones" hidden>
+        <h3>No hay cesiones vigentes</h3>
+        <p>Cuando un propietario preste su parqueadero a otro inmueble, regístralo para que portería sepa quién puede usarlo.</p>
+        <button class="btn" type="button" data-registrar-cesion>Registrar cesión</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Registrar cesión: CesionUsoServicio.registrarCesion(datos). 422 si el tipo no permite cesión (RN-17) o se superpone (RN-18). -->
+<dialog class="dialogo" id="dialogo-registrar" aria-labelledby="titulo-registrar">
+  <form id="form-registrar" data-confirmar="Cesión registrada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-registrar">Registrar cesión de uso</h2>
+        <p class="guia">El propietario sigue siendo el mismo. Solo cambia quién lo usa durante esas fechas.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="aviso no" id="aviso-cesion" hidden role="alert" style="margin-bottom:var(--e4)">
+        <p id="texto-cesion"></p>
+        <p id="salida-cesion"></p>
+        <div class="fila" style="margin-top:var(--e3)" id="accion-cesion" hidden>
+          <button class="btn segundo chico" type="button" id="finalizar-cruzada">Finalizar esa cesión</button>
+        </div>
+      </div>
+      <div class="formulario dos">
+        <label class="campo completo">
+          <span>Inmueble que cede</span>
+          <select id="c-cede" required data-error="Elige el parqueadero o inmueble que se va a ceder.">
+            <option value="">Elige el inmueble</option>
+            <optgroup label="Parqueaderos privados">
+              <option value="P-022">P-022 · Ernesto Vargas</option>
+              <option value="P-045">P-045 · Marta Oviedo</option>
+              <option value="P-061">P-061 · Gloria Ariza</option>
+              <option value="P-088">P-088 · Jorge Peñaranda</option>
+              <option value="P-102">P-102 · Diana Salcedo</option>
+              <option value="P-130">P-130 · Inversiones Lomas del Norte S.A.S.</option>
+              <option value="P-140">P-140 · Ricardo Lozano</option>
+              <option value="P-151">P-151 · Gloria Ariza</option>
+            </optgroup>
+            <optgroup label="Depósitos">
+              <option value="D-014">D-014 · uso exclusivo de A-0902</option>
+              <option value="D-021">D-021 · Diana Salcedo</option>
+            </optgroup>
+            <optgroup label="Parqueaderos de visitantes">
+              <option value="V-04">V-04 · bien común</option>
+            </optgroup>
+          </select>
+          <span class="ayuda" id="uso-actual">Al elegirlo verás quién lo usa hoy.</span>
+        </label>
+        <label class="campo completo">
+          <span>Inmueble que lo usa</span>
+          <select id="c-usa" required data-error="Elige el inmueble que va a usar el parqueadero.">
+            <option value="">Elige el inmueble</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span>Desde</span>
+          <input id="c-desde" type="date" required value="2026-11-14" data-error="Elige la fecha en que empieza la cesión.">
+        </label>
+        <label class="campo">
+          <span>Hasta</span>
+          <input id="c-hasta" type="date" required data-error="Elige la fecha en que termina la cesión. Siempre tiene fin.">
+        </label>
+        <label class="campo completo">
+          <span>Vehículo amparado <span class="opcional">(opcional)</span></span>
+          <select id="c-vehiculo" disabled>
+            <option value="">Primero elige el inmueble que lo usa</option>
+          </select>
+          <span class="ayuda">Portería deja entrar ese vehículo al parqueadero cedido.</span>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Registrar cesión</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Finalizar cesión: CesionUso.finalizarCesionDeUso(fechaFin) -->
+<dialog class="dialogo" id="dialogo-finalizar" aria-labelledby="titulo-finalizar">
+  <form id="form-finalizar" data-confirmar="Cesión finalizada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-finalizar">Finalizar cesión</h2>
+        <p class="guia" id="guia-finalizar"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario">
+        <label class="campo">
+          <span>Fecha de terminación</span>
+          <input id="f-fecha" type="date" required value="2026-11-14" data-error="Elige el día en que el inmueble deja de usar el parqueadero.">
+          <span class="ayuda" id="ayuda-finalizar"></span>
+        </label>
+        <div class="aviso" id="aviso-finalizar"></div>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn riesgo" type="submit">Finalizar cesión</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var HOY = '2026-11-14'
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+  // Tipo de cada inmueble que se puede elegir y si su TipoInmueble permite cesión (RN-17).
+  var TIPOS = {
+    P: { nombre: 'Parqueadero', permiteCesion: true },
+    D: { nombre: 'Depósito', permiteCesion: false },
+    V: { nombre: 'Parqueadero de visitantes', permiteCesion: false },
+  }
+
+  // Inmuebles que pueden usar un parqueadero: quién vive ahí y sus vehículos activos.
+  var UNIDADES = {
+    'A-0401': { quien: 'Gloria Ariza', vehiculos: ['RTY 22E · Yamaha NMAX azul', 'DFG 761 · Kia Picanto blanco'] },
+    'A-0703': { quien: 'Inversiones Lomas del Norte S.A.S.', vehiculos: ['GTR 219 · Mazda CX-5 gris'] },
+    'A-0902': { quien: 'Marta Oviedo', vehiculos: ['HZM 908 · Toyota Fortuner negro'] },
+    'A-1104': { quien: 'Sin ocupante', vehiculos: [] },
+    'B-0302': { quien: 'Lucía Mendoza', vehiculos: ['BQA 47F · Mazda 2 gris'] },
+    'C-0310': { quien: 'Hernán Ruiz', vehiculos: ['SXB 77D · Honda CB 190 negro'] },
+    'C-0402': { quien: 'Ricardo Lozano', vehiculos: [] },
+    'C-0705': { quien: 'Andrés Caicedo', vehiculos: ['LMN 604 · Renault Logan plata'] },
+    'C-1201': { quien: 'Diana Salcedo', vehiculos: ['KLP 334 · Chevrolet Onix rojo'] },
+  }
+
+  // Parqueaderos: el inmueble del titular es el que lo usa cuando no hay cesión.
+  var parqueaderos = [
+    { id: 'P-022', donde: 'Sótano 1', naturaleza: 'BIEN_PRIVADO', titular: 'Ernesto Vargas', unidad: 'B-0302', vehiculo: '' },
+    { id: 'P-045', donde: 'Sótano 1', naturaleza: 'BIEN_PRIVADO', titular: 'Marta Oviedo', unidad: 'A-0902', vehiculo: 'HZM 908' },
+    { id: 'P-061', donde: 'Sótano 1', naturaleza: 'BIEN_PRIVADO', titular: 'Gloria Ariza', unidad: 'A-0401', vehiculo: '' },
+    { id: 'P-088', donde: 'Sótano 1', naturaleza: 'BIEN_PRIVADO', titular: 'Jorge Peñaranda', unidad: 'A-1104', vehiculo: '' },
+    { id: 'P-102', donde: 'Sótano 2', naturaleza: 'BIEN_PRIVADO', titular: 'Diana Salcedo', unidad: 'C-1201', vehiculo: 'KLP 334' },
+    { id: 'P-130', donde: 'Sótano 2', naturaleza: 'BIEN_PRIVADO', titular: 'Inversiones Lomas del Norte S.A.S.', unidad: 'A-0703', vehiculo: 'GTR 219' },
+    { id: 'P-140', donde: 'Sótano 2', naturaleza: 'BIEN_PRIVADO', titular: 'Ricardo Lozano', unidad: 'C-0402', vehiculo: '' },
+    { id: 'P-151', donde: 'Sótano 2', naturaleza: 'BIEN_PRIVADO', titular: 'Gloria Ariza', unidad: 'A-0401', vehiculo: 'DFG 761' },
+    { id: 'UE-03', donde: 'Sótano 1', naturaleza: 'USO_EXCLUSIVO', titular: 'Asignado a C-0310', unidad: 'C-0310', vehiculo: 'SXB 77D' },
+    { id: 'UE-05', donde: 'Sótano 2', naturaleza: 'USO_EXCLUSIVO', titular: 'Asignado a C-0705', unidad: 'C-0705', vehiculo: '' },
+    { id: 'V-01', donde: 'Portería principal', naturaleza: 'USO_GENERAL', titular: 'Bien común', visita: { placa: 'EFR 330', unidad: 'A-0401', desde: '6:15 p. m.' } },
+    { id: 'V-02', donde: 'Portería principal', naturaleza: 'USO_GENERAL', titular: 'Bien común', visita: { placa: 'JKT 512', unidad: 'C-0705', desde: '7:52 p. m.' } },
+    { id: 'V-04', donde: 'Portería principal', naturaleza: 'USO_GENERAL', titular: 'Bien común' },
+    { id: 'V-07', donde: 'Portería principal', naturaleza: 'USO_GENERAL', titular: 'Bien común' },
+  ]
+
+  // CesionUso: fechaInicio, fechaFin, estado; inmueble que cede, inmueble que usa y vehículo amparado (0..1).
+  var cesiones = [
+    { id: 1, cede: 'P-022', usa: 'B-0302', inicio: '2026-09-01', fin: '2026-11-30', vehiculo: 'BQA 47F', estado: 'VIGENTE' },
+    { id: 2, cede: 'P-061', usa: 'C-0705', inicio: '2026-10-01', fin: '2027-03-31', vehiculo: 'LMN 604', estado: 'VIGENTE' },
+    { id: 3, cede: 'P-088', usa: 'C-1201', inicio: '2026-07-01', fin: '2026-12-31', vehiculo: '', estado: 'VIGENTE' },
+    { id: 4, cede: 'P-140', usa: 'A-0401', inicio: '2026-08-15', fin: '2027-02-14', vehiculo: 'RTY 22E', estado: 'VIGENTE' },
+    { id: 5, cede: 'P-022', usa: 'B-0302', inicio: '2026-03-01', fin: '2026-08-31', vehiculo: 'BQA 47F', estado: 'FINALIZADA' },
+    { id: 6, cede: 'P-088', usa: 'A-0902', inicio: '2025-11-01', fin: '2026-06-30', vehiculo: '', estado: 'FINALIZADA' },
+    { id: 7, cede: 'P-061', usa: 'C-1201', inicio: '2025-01-10', fin: '2025-09-30', pactada: '2025-12-31', vehiculo: 'KLP 334', estado: 'FINALIZADA' },
+  ]
+
+  var NATURALEZA = { BIEN_PRIVADO: 'Bien privado', USO_EXCLUSIVO: 'Uso exclusivo', USO_GENERAL: 'Visitantes' }
+  var naturaleza = ''
+  var estadoCesiones = 'VIGENTE'
+  var actual = null
+  var cruzada = null
+
+  // ---------- Utilidades ----------
+  function esc(texto) {
+    return String(texto).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] })
+  }
+  function fecha(iso, conAnio) {
+    var p = iso.split('-')
+    var texto = Number(p[2]) + ' de ' + MESES[Number(p[1]) - 1]
+    return conAnio || p[0] !== HOY.slice(0, 4) ? texto + ' de ' + p[0] : texto
+  }
+  function dias(desde, hasta) { return Math.round((new Date(hasta) - new Date(desde)) / 86400000) }
+  function siguiente(iso) { var d = new Date(iso + 'T12:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10) }
+  function propietarioDe(id) {
+    var p = parqueaderos.filter(function (x) { return x.id === id })[0]
+    if (p) return p.titular
+    return id === 'D-014' ? 'uso exclusivo de A-0902' : id === 'D-021' ? 'Diana Salcedo' : 'bien común'
+  }
+
+  // Inmueble.obtenerInmuebleConUsoVigente(): la cesión vigente que cubre hoy, o el propio titular.
+  function cesionDeHoy(id) {
+    return cesiones.filter(function (c) { return c.cede === id && c.estado === 'VIGENTE' && c.inicio <= HOY && c.fin >= HOY })[0]
+  }
+
+  // ---------- Parqueaderos ----------
+  function filaParqueadero(p) {
+    var usa, vehiculo, cesion
+    var c = cesionDeHoy(p.id)
+    if (p.naturaleza === 'USO_GENERAL') {
+      usa = p.visita
+        ? '<span class="identificador">' + p.visita.unidad + '</span><span class="sub">Visita, desde las ' + p.visita.desde + '</span>'
+        : '<span class="guia">Libre</span>'
+      vehiculo = p.visita ? '<span class="identificador">' + p.visita.placa + '</span>' : '<span class="guia">—</span>'
+      cesion = '<span class="guia">No se cede</span>'
+    } else if (c) {
+      var faltan = dias(HOY, c.fin)
+      usa = '<span class="identificador">' + c.usa + '</span><span class="sub">Por cesión de ' + esc(p.titular) + '</span>'
+      vehiculo = c.vehiculo ? '<span class="identificador">' + c.vehiculo + '</span>' : '<span class="guia">Sin vehículo amparado</span>'
+      cesion = faltan <= 20
+        ? '<span class="pildora p-al">Vence en ' + faltan + (faltan === 1 ? ' día' : ' días') + '</span><span class="sub">El ' + fecha(c.fin) + '</span>'
+        : '<span class="pildora p-ok">Cedido</span><span class="sub">Hasta el ' + fecha(c.fin) + '</span>'
+    } else {
+      usa = '<span class="identificador">' + p.unidad + '</span><span class="sub">' + (p.naturaleza === 'USO_EXCLUSIVO' ? 'Uso exclusivo asignado' : 'Su propietario') + '</span>'
+      vehiculo = p.vehiculo ? '<span class="identificador">' + p.vehiculo + '</span>' : '<span class="guia">Sin vehículo registrado</span>'
+      var proxima = cesiones.filter(function (x) { return x.cede === p.id && x.estado === 'VIGENTE' && x.inicio > HOY })[0]
+      cesion = proxima
+        ? '<span class="pildora p-al">Cesión desde el ' + fecha(proxima.inicio) + '</span><span class="sub">A ' + proxima.usa + '</span>'
+        : '<span class="guia">' + (p.naturaleza === 'USO_EXCLUSIVO' ? 'No aplica' : 'Sin cesión') + '</span>'
+    }
+    return '<tr data-buscable="' + esc((p.id + ' ' + p.titular + ' ' + (p.unidad || '') + ' ' + (p.vehiculo || '') + ' ' + (c ? c.usa + ' ' + c.vehiculo : '') + ' ' + (p.visita ? p.visita.placa + ' ' + p.visita.unidad : '')).toLowerCase()) + '">' +
+      '<td><span class="identificador fuerte">' + p.id + '</span><span class="sub">' + p.donde + '</span></td>' +
+      '<td><span class="etiqueta">' + NATURALEZA[p.naturaleza] + '</span></td>' +
+      '<td>' + esc(p.titular) + '</td><td>' + usa + '</td><td>' + vehiculo + '</td><td>' + cesion + '</td></tr>'
+  }
+
+  function pintarParqueaderos() {
+    var texto = document.getElementById('buscar').value.trim().toLowerCase()
+    var cuerpo = document.querySelector('#tabla-parqueaderos tbody')
+    cuerpo.innerHTML = parqueaderos.filter(function (p) { return !naturaleza || p.naturaleza === naturaleza }).map(filaParqueadero).join('')
+    var visibles = 0
+    cuerpo.querySelectorAll('tr').forEach(function (tr) {
+      var coincide = !texto || tr.getAttribute('data-buscable').indexOf(texto) >= 0
+      tr.hidden = !coincide
+      if (coincide) visibles++
+    })
+    document.getElementById('sin-parqueaderos').hidden = visibles > 0
+    document.querySelector('#tabla-parqueaderos thead').hidden = visibles === 0
+    document.getElementById('conteo-parqueaderos').textContent = visibles + ' de 200 parqueaderos'
+
+    var cedidos = cesiones.filter(function (c) { return c.estado === 'VIGENTE' && c.cede.charAt(0) === 'P' && c.inicio <= HOY && c.fin >= HOY }).length
+    document.getElementById('meta-privados').textContent = cedidos + (cedidos === 1 ? ' cedido' : ' cedidos') + ' a otro inmueble · ' + (180 - cedidos) + ' los usa su propietario'
+    document.getElementById('barra-cedidos').style.width = (cedidos / 180 * 100).toFixed(1) + '%'
+  }
+
+  // ---------- Cesiones ----------
+  function filaCesion(c) {
+    var vigente = c.estado === 'VIGENTE'
+    var pildora
+    if (!vigente) pildora = '<span class="pildora p-ne">Finalizada</span>' + (c.pactada ? '<span class="sub">Antes de lo pactado (' + fecha(c.pactada) + ')</span>' : '')
+    else if (c.inicio > HOY) pildora = '<span class="pildora p-ok">Vigente</span><span class="sub">Empieza el ' + fecha(c.inicio) + '</span>'
+    else {
+      var faltan = dias(HOY, c.fin)
+      pildora = faltan <= 20 ? '<span class="pildora p-al">Vence en ' + faltan + (faltan === 1 ? ' día' : ' días') + '</span>' : '<span class="pildora p-ok">Vigente</span>'
+    }
+    return '<tr>' +
+      '<td><span class="identificador fuerte">' + c.cede + '</span><span class="sub">De ' + esc(propietarioDe(c.cede)) + '</span></td>' +
+      '<td><a class="fila-enlace identificador" href="inmueble.html">' + c.usa + '</a><span class="sub">' + esc(UNIDADES[c.usa].quien) + '</span></td>' +
+      '<td>' + fecha(c.inicio, true) + '</td><td>' + fecha(c.fin, true) + '</td>' +
+      '<td>' + (c.vehiculo ? '<span class="identificador">' + c.vehiculo + '</span>' : '<span class="guia">Ninguno</span>') + '</td>' +
+      '<td>' + pildora + '</td>' +
+      '<td class="acciones-fila">' + (vigente ? '<button class="btn texto chico" type="button" data-finalizar="' + c.id + '">Finalizar</button>' : '') + '</td></tr>'
+  }
+
+  function pintarCesiones() {
+    var lista = cesiones.filter(function (c) { return c.estado === estadoCesiones })
+    lista.sort(function (a, b) { return estadoCesiones === 'VIGENTE' ? (a.fin < b.fin ? -1 : 1) : (a.fin < b.fin ? 1 : -1) })
+    document.querySelector('#tabla-cesiones tbody').innerHTML = lista.map(filaCesion).join('')
+    var vacio = document.getElementById('sin-cesiones')
+    vacio.hidden = lista.length > 0
+    vacio.querySelector('h3').textContent = estadoCesiones === 'VIGENTE' ? 'No hay cesiones vigentes' : 'Todavía no hay cesiones finalizadas'
+    vacio.querySelector('button').hidden = estadoCesiones !== 'VIGENTE'
+    document.querySelector('#tabla-cesiones thead').hidden = lista.length === 0
+    document.getElementById('n-vigentes').textContent = cesiones.filter(function (c) { return c.estado === 'VIGENTE' }).length
+    document.getElementById('n-finalizadas').textContent = cesiones.filter(function (c) { return c.estado === 'FINALIZADA' }).length
+  }
+
+  function pintar() { pintarParqueaderos(); pintarCesiones() }
+
+  // ---------- Registrar cesión ----------
+  var form = document.getElementById('form-registrar')
+  var selCede = document.getElementById('c-cede')
+  var selUsa = document.getElementById('c-usa')
+  var selVehiculo = document.getElementById('c-vehiculo')
+  var desde = document.getElementById('c-desde')
+  var hasta = document.getElementById('c-hasta')
+
+  Object.keys(UNIDADES).forEach(function (id) {
+    var o = document.createElement('option')
+    o.value = id
+    o.textContent = id + ' · ' + UNIDADES[id].quien
+    selUsa.appendChild(o)
+  })
+
+  function ocultarAviso() { document.getElementById('aviso-cesion').hidden = true; cruzada = null }
+
+  selCede.addEventListener('change', function () {
+    ocultarAviso()
+    var ayuda = document.getElementById('uso-actual')
+    var id = selCede.value
+    if (!id) { ayuda.textContent = 'Al elegirlo verás quién lo usa hoy.'; return }
+    var c = cesionDeHoy(id)
+    var p = parqueaderos.filter(function (x) { return x.id === id })[0]
+    if (c) ayuda.textContent = 'Hoy lo usa ' + c.usa + ' por cesión hasta el ' + fecha(c.fin) + '.'
+    else if (p && p.unidad) ayuda.textContent = 'Hoy lo usa su propietario, ' + p.titular + ' (' + p.unidad + ').'
+    else ayuda.textContent = 'Tipo ' + TIPOS[id.charAt(0)].nombre + '.'
+  })
+  selUsa.addEventListener('change', function () {
+    var unidad = UNIDADES[selUsa.value]
+    selVehiculo.innerHTML = ''
+    var primera = document.createElement('option')
+    primera.value = ''
+    primera.textContent = !unidad ? 'Primero elige el inmueble que lo usa' : unidad.vehiculos.length ? 'Sin vehículo amparado' : 'Este inmueble no tiene vehículos registrados'
+    selVehiculo.appendChild(primera)
+    ;(unidad ? unidad.vehiculos : []).forEach(function (v) {
+      var o = document.createElement('option'); o.value = v.split(' · ')[0]; o.textContent = v; selVehiculo.appendChild(o)
+    })
+    selVehiculo.disabled = !unidad || !unidad.vehiculos.length
+  })
+  ;[desde, hasta].forEach(function (c) { c.addEventListener('change', ocultarAviso) })
+
+  function abrirRegistrar() {
+    form.reset()
+    form.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    form.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+    ocultarAviso()
+    selCede.dispatchEvent(new Event('change'))
+    selUsa.dispatchEvent(new Event('change'))
+    Convivir.abrir('dialogo-registrar')
+  }
+
+  function mostrarRegla(texto, salida, conCesion) {
+    document.getElementById('texto-cesion').innerHTML = texto
+    document.getElementById('salida-cesion').innerHTML = salida
+    document.getElementById('accion-cesion').hidden = !conCesion
+    var aviso = document.getElementById('aviso-cesion')
+    aviso.hidden = false
+    aviso.scrollIntoView({ block: 'nearest' })
+  }
+
+  form.addEventListener('confirmado', function (e) {
+    ocultarAviso()
+    var id = selCede.value
+    if (hasta.value < desde.value) {
+      e.preventDefault()
+      hasta.setAttribute('aria-invalid', 'true')
+      var error = document.createElement('span')
+      error.className = 'error'
+      error.setAttribute('data-generado', '')
+      error.textContent = 'La cesión termina antes de empezar. Elige una fecha desde el ' + fecha(desde.value) + '.'
+      hasta.closest('.campo').appendChild(error)
+      hasta.focus()
+      return
+    }
+
+    // RN-17: CesionUso.validarQueElTipoDeInmueblePermitaCesion() lee TipoInmueble.permiteCesion
+    var tipo = TIPOS[id.charAt(0)]
+    if (!tipo.permiteCesion) {
+      e.preventDefault()
+      mostrarRegla(
+        '<b>' + id + ' no se puede ceder.</b> Es de tipo ' + tipo.nombre + ', y ese tipo no permite cesión de uso.',
+        'Elige un parqueadero privado. Si el reglamento cambió, actívalo en <a href="tipos-inmueble.html">Tipos de inmueble</a>.', false)
+      return
+    }
+
+    // RN-18: CesionUso.validarQueNoSeSuperpongaConOtraCesion()
+    var cruce = cesiones.filter(function (c) {
+      return c.cede === id && c.estado === 'VIGENTE' && c.inicio <= hasta.value && c.fin >= desde.value
+    })[0]
+    if (cruce) {
+      e.preventDefault()
+      cruzada = cruce
+      mostrarRegla(
+        '<b>Esas fechas se cruzan con otra cesión.</b> ' + id + ' ya está cedido a <span class="identificador">' + cruce.usa + '</span> (' + esc(UNIDADES[cruce.usa].quien) + ') del ' + fecha(cruce.inicio, true) + ' al ' + fecha(cruce.fin, true) + '.',
+        'Elige fechas desde el ' + fecha(siguiente(cruce.fin), true) + ', o finaliza esa cesión primero.', true)
+      return
+    }
+
+    var nueva = { id: cesiones.length + 1, cede: id, usa: selUsa.value, inicio: desde.value, fin: hasta.value, vehiculo: selVehiculo.value, estado: 'VIGENTE' }
+    cesiones.push(nueva)
+    form.setAttribute('data-confirmar', 'Cesión registrada: ' + id + ' lo usa ' + nueva.usa + ' del ' + fecha(nueva.inicio) + ' al ' + fecha(nueva.fin, true) + '.')
+    document.querySelector('#filtro-cesiones [data-valor="VIGENTE"]').click()
+    pintar()
+  })
+
+  document.getElementById('finalizar-cruzada').addEventListener('click', function () {
+    var c = cruzada
+    document.getElementById('dialogo-registrar').close()
+    abrirFinalizar(c)
+  })
+
+  // ---------- Finalizar cesión ----------
+  var formFin = document.getElementById('form-finalizar')
+  var campoFecha = document.getElementById('f-fecha')
+  function abrirFinalizar(c) {
+    actual = c
+    formFin.reset()
+    formFin.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    campoFecha.removeAttribute('aria-invalid')
+    campoFecha.value = HOY < c.inicio ? c.inicio : HOY > c.fin ? c.fin : HOY
+    campoFecha.min = c.inicio
+    campoFecha.max = c.fin
+    document.getElementById('titulo-finalizar').textContent = 'Finalizar la cesión de ' + c.cede
+    document.getElementById('guia-finalizar').textContent = 'Cedido a ' + c.usa + ' (' + UNIDADES[c.usa].quien + ') del ' + fecha(c.inicio, true) + ' al ' + fecha(c.fin, true) + '.'
+    document.getElementById('ayuda-finalizar').textContent = 'Entre el ' + fecha(c.inicio, true) + ' y el ' + fecha(c.fin, true) + '.'
+    document.getElementById('aviso-finalizar').textContent = c.cede + ' vuelve a su propietario, ' + propietarioDe(c.cede) + '. La cesión queda en el historial de ' + c.cede + ' y de ' + c.usa + '.'
+    Convivir.abrir('dialogo-finalizar')
+  }
+
+  formFin.addEventListener('confirmado', function (e) {
+    var valor = campoFecha.value
+    if (valor < actual.inicio || valor > actual.fin) {
+      e.preventDefault()
+      campoFecha.setAttribute('aria-invalid', 'true')
+      var error = document.createElement('span')
+      error.className = 'error'
+      error.setAttribute('data-generado', '')
+      error.textContent = valor < actual.inicio
+        ? 'La cesión empezó el ' + fecha(actual.inicio, true) + '. Elige esa fecha o una posterior.'
+        : 'La cesión ya termina el ' + fecha(actual.fin, true) + '. Para extenderla, registra una cesión nueva desde el ' + fecha(siguiente(actual.fin), true) + '.'
+      campoFecha.closest('.campo').appendChild(error)
+      campoFecha.focus()
+      return
+    }
+    if (valor !== actual.fin) actual.pactada = actual.fin
+    actual.fin = valor
+    actual.estado = 'FINALIZADA'
+    formFin.setAttribute('data-confirmar', 'Cesión finalizada el ' + fecha(valor) + '. ' + actual.cede + ' vuelve a su propietario.')
+    pintar()
+  })
+
+  // ---------- Eventos ----------
+  document.getElementById('abrir-registrar').addEventListener('click', abrirRegistrar)
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-registrar-cesion]')) abrirRegistrar()
+    var fin = e.target.closest('[data-finalizar]')
+    if (fin) abrirFinalizar(cesiones.filter(function (c) { return c.id === Number(fin.dataset.finalizar) })[0])
+  })
+  document.getElementById('buscar').addEventListener('input', pintarParqueaderos)
+  document.getElementById('filtro-naturaleza').addEventListener('cambio', function (e) { naturaleza = e.detail; pintarParqueaderos() })
+  document.getElementById('filtro-cesiones').addEventListener('cambio', function (e) { estadoCesiones = e.detail; pintarCesiones() })
+  document.getElementById('limpiar').addEventListener('click', function () {
+    document.getElementById('buscar').value = ''
+    document.querySelector('#filtro-naturaleza [data-valor=""]').click()
+  })
+
+  pintar()
+})()
+</script>
+</body>
+</html>

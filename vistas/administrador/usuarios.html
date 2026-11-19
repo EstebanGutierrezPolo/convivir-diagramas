@@ -1,0 +1,390 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Usuarios y roles · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-18 Gestionar usuarios, roles y auditoría · new Cuenta(login, contrasena) (RF-101), Cuenta.obtenerRolDelIntegrante() (RF-102, RF-105),
+     Cuenta.desactivarCuentaPorMotivo(motivo) (RF-103), Cuenta.restablecerContrasena() (RF-104)
+     Estados: EstadoCuenta ACTIVA, INACTIVA, BLOQUEADA (Cuenta.bloquearCuentaPorIntentosFallidos(), CU-01) -->
+<body data-rol="administrador" data-seccion="administracion" data-sub="usuarios">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Usuarios y roles</h1>
+      <p class="guia" id="resumen"></p>
+    </div>
+    <div class="acciones">
+      <button class="btn" type="button" id="crear-cuenta">Crear cuenta</button>
+    </div>
+  </div>
+
+  <div class="aviso" style="margin-bottom:var(--e5)">
+    <p><b>El rol no se elige aquí.</b> Sale del tipo con que se registró a la persona en <a href="integrantes.html">Personas</a>: propietario, arrendatario, residente autorizado, miembro del consejo o empleado (administrador o vigilante).</p>
+    <p>Cada persona registrada tiene una sola cuenta y un solo rol. Si alguien es propietario y también miembro del consejo, se registra una vez por cada rol y tiene una cuenta para cada uno.</p>
+  </div>
+
+  <div class="filtros">
+    <label class="buscador">
+      <span class="solo-lectores">Buscar cuenta</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+      <input id="buscar" type="search" placeholder="Nombre, login o documento" autocomplete="off">
+    </label>
+    <label class="campo">
+      <span class="solo-lectores">Rol</span>
+      <select id="filtro-rol">
+        <option value="">Todos los roles</option>
+        <option>Administrador</option>
+        <option>Vigilante</option>
+        <option>Miembro del consejo</option>
+        <option>Propietario</option>
+        <option>Arrendatario</option>
+        <option>Residente autorizado</option>
+      </select>
+    </label>
+    <div class="segmentos" data-grupo id="filtro-estado" role="group" aria-label="Estado de la cuenta">
+      <button type="button" data-valor="" aria-pressed="true">Todas</button>
+      <button type="button" data-valor="ACTIVA" aria-pressed="false">Activas</button>
+      <button type="button" data-valor="BLOQUEADA" aria-pressed="false">Bloqueadas</button>
+      <button type="button" data-valor="INACTIVA" aria-pressed="false">Inactivas</button>
+    </div>
+  </div>
+
+  <div class="superficie">
+    <div class="tabla-envoltura">
+      <table class="tabla" id="tabla-cuentas">
+        <thead>
+          <tr><th>Persona</th><th>Login</th><th>Rol</th><th>Estado</th><th><span class="solo-lectores">Acciones</span></th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="vacio" id="sin-resultados" hidden>
+      <h3>Ninguna cuenta coincide con la búsqueda</h3>
+      <p>Busca por el nombre, el login o el documento sin puntos. Si la persona no tiene cuenta, créala desde aquí.</p>
+      <button class="btn segundo" type="button" id="limpiar">Quitar filtros</button>
+    </div>
+    <div class="pie"><span id="conteo"></span><span>Una cuenta se bloquea sola después de 5 intentos fallidos de inicio de sesión.</span></div>
+  </div>
+</main>
+
+<!-- Crear cuenta: CuentaServicio.crearCuenta(integranteId, login) → 409 si el login existe o la persona ya tiene cuenta -->
+<dialog class="dialogo" id="dialogo-crear" aria-labelledby="titulo-crear">
+  <form data-confirmar="Cuenta creada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-crear">Crear cuenta</h2>
+        <p class="guia">Para una persona que ya está registrada en Personas.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo formulario">
+      <label class="campo">
+        <span>Persona</span>
+        <select id="crear-persona" required data-error="Elige la persona. Si no aparece, regístrala primero en Personas."></select>
+      </label>
+      <div class="ficha az" id="crear-rol" hidden>
+        <div class="fuerte">Entrará como <span data-campo="rol"></span></div>
+        <div class="meta" data-campo="rol-porque"></div>
+      </div>
+      <label class="campo">
+        <span>Login</span>
+        <input id="crear-login" class="identificador" required autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ernesto.vargas"
+               data-error="Escribe el login con el que va a entrar, por ejemplo ernesto.vargas.">
+        <span class="ayuda">En minúsculas, sin espacios ni tildes. Puede llevar puntos.</span>
+      </label>
+      <p class="guia">No escribes ninguna contraseña. Le enviamos a la persona un enlace a su correo para que elija la suya.</p>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Crear cuenta</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Restablecer contraseña o desbloquear: Cuenta.restablecerContrasena() → EventoSistema CUENTA_MODIFICADA -->
+<dialog class="dialogo" id="dialogo-restablecer" aria-labelledby="titulo-restablecer">
+  <form data-confirmar="Enlace enviado" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-restablecer">Restablecer contraseña</h2>
+        <p class="guia" data-campo="cuenta"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <div class="aviso no" id="bloqueo" hidden><p data-campo="bloqueo"></p></div>
+      <p data-campo="explicacion"></p>
+      <p class="guia">Nadie ve la contraseña nueva, tampoco la administración. El enlace vence en 24 horas.</p>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit" id="boton-restablecer">Enviar enlace</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Desactivar: Cuenta.desactivarCuentaPorMotivo(motivo) -->
+<dialog class="dialogo" id="dialogo-desactivar" aria-labelledby="titulo-desactivar">
+  <form data-confirmar="Cuenta desactivada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-desactivar">Desactivar cuenta</h2>
+        <p class="guia" data-campo="cuenta"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <p>La persona ya no podrá entrar a Convivir. Su registro en Personas, sus vinculaciones y su historial se conservan.</p>
+      <label class="campo">
+        <span>Motivo</span>
+        <textarea id="motivo-desactivar" required placeholder="Terminó su contrato de arrendamiento de C-0705."
+                  data-error="Escribe el motivo. Queda en la cuenta y en la auditoría."></textarea>
+        <span class="ayuda">Queda en la cuenta y en la auditoría.</span>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn riesgo" type="submit">Desactivar cuenta</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  // Personas registradas (Integrante). El rol lo da su tipo: Integrante.obtenerRolDelIntegrante().
+  var personas = [
+    { id: 1, nombre: 'Paula Ortega', documento: '32765418', tipo: 'Empleado · administradora', rol: 'Administrador', correo: 'pa•••@villacampestre.co' },
+    { id: 2, nombre: 'Jhon Rojas', documento: '1047392815', tipo: 'Empleado · vigilante', rol: 'Vigilante', correo: 'jh•••@gmail.com' },
+    { id: 3, nombre: 'Édgar Molina', documento: '72318904', tipo: 'Empleado · vigilante', rol: 'Vigilante', correo: 'ed•••@hotmail.com' },
+    { id: 4, nombre: 'Hernán Ruiz', documento: '8745210', tipo: 'Miembro del consejo · tesorero', rol: 'Miembro del consejo', correo: 'he•••@gmail.com' },
+    { id: 5, nombre: 'Lucía Mendoza', documento: '1143228790', tipo: 'Arrendataria · B-0302', rol: 'Arrendatario', correo: 'lu•••@gmail.com' },
+    { id: 6, nombre: 'Marta Oviedo', documento: '22465831', tipo: 'Propietaria residente · A-0902', rol: 'Propietario', correo: 'ma•••@hotmail.com' },
+    { id: 7, nombre: 'Gloria Ariza', documento: '32618447', tipo: 'Propietaria residente · A-0401', rol: 'Propietario', correo: 'gl•••@gmail.com' },
+    { id: 8, nombre: 'Sofía Restrepo', documento: '1001874552', tipo: 'Residente autorizada · A-0401', rol: 'Residente autorizado', correo: 'so•••@gmail.com' },
+    { id: 9, nombre: 'Andrés Caicedo', documento: '1129504377', tipo: 'Arrendatario · C-0705', rol: 'Arrendatario', correo: 'an•••@outlook.com' },
+    { id: 10, nombre: 'Diana Salcedo', documento: '45512093', tipo: 'Propietaria residente · C-1201', rol: 'Propietario', correo: 'di•••@gmail.com' },
+    { id: 11, nombre: 'Camilo Durán', documento: '1140266018', tipo: 'Arrendatario · contrato terminado', rol: 'Arrendatario', correo: 'ca•••@gmail.com' },
+    { id: 12, nombre: 'Ernesto Vargas', documento: '19384552', tipo: 'Propietario no residente · B-0302', rol: 'Propietario', correo: 'er•••@gmail.com' },
+    { id: 13, nombre: 'Jorge Peñaranda', documento: '79455120', tipo: 'Propietario no residente · A-1104', rol: 'Propietario', correo: 'jo•••@yahoo.com' },
+    { id: 14, nombre: 'Beatriz Londoño', documento: '32900145', tipo: 'Propietaria no residente · C-0705', rol: 'Propietario', correo: 'be•••@gmail.com' },
+  ]
+
+  // Cuenta: login, estado y motivoDesactivacion. La fecha del bloqueo sale de la auditoría.
+  var cuentas = [
+    { login: 'paula.ortega', persona: 1, estado: 'ACTIVA', propia: true },
+    { login: 'jhon.rojas', persona: 2, estado: 'ACTIVA' },
+    { login: 'edgar.molina', persona: 3, estado: 'BLOQUEADA', bloqueo: 'el jueves 12 de noviembre a las 6:02 a. m.' },
+    { login: 'hernan.ruiz', persona: 4, estado: 'ACTIVA' },
+    { login: 'lucia.mendoza', persona: 5, estado: 'ACTIVA' },
+    { login: 'marta.oviedo', persona: 6, estado: 'BLOQUEADA', bloqueo: 'hoy a las 7:18 a. m.' },
+    { login: 'gloria.ariza', persona: 7, estado: 'ACTIVA' },
+    { login: 'sofia.restrepo', persona: 8, estado: 'ACTIVA' },
+    { login: 'andres.caicedo', persona: 9, estado: 'ACTIVA' },
+    { login: 'diana.salcedo', persona: 10, estado: 'ACTIVA' },
+    { login: 'camilo.duran', persona: 11, estado: 'INACTIVA', motivo: 'Terminó su contrato de arrendamiento de C-0705 en septiembre.' },
+  ]
+
+  var filtro = { texto: '', rol: '', estado: '' }
+  var actual = null
+
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  function agrupar(n) { return n.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
+  function persona(id) { return personas.filter(function (p) { return p.id === id })[0] }
+  function cuentaDe(id) { return cuentas.filter(function (c) { return c.persona === id })[0] }
+  function nombreCorto(p) { return p.nombre.split(' ')[0] }
+  function sugerirLogin(p) {
+    return p.nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/ñ/g, 'n').split(' ').slice(0, 2).join('.')
+  }
+
+  // ---------- Tabla ----------
+  function pintar() {
+    var visibles = 0
+    var filas = cuentas.map(function (c) {
+      var p = persona(c.persona)
+      var texto = (p.nombre + ' ' + c.login + ' ' + p.documento).toLowerCase()
+      var busca = filtro.texto.replace(/[.\s]/g, '')
+      var coincide = (!filtro.texto || texto.indexOf(filtro.texto) >= 0 || (busca && p.documento.indexOf(busca) >= 0)) &&
+        (!filtro.rol || p.rol === filtro.rol) && (!filtro.estado || c.estado === filtro.estado)
+      if (!coincide) return ''
+      visibles++
+      var estado, acciones
+      if (c.estado === 'ACTIVA') {
+        estado = '<span class="pildora p-ok">Activa</span>'
+        acciones = '<button class="btn segundo chico" type="button" data-accion="restablecer" data-login="' + c.login + '">Restablecer contraseña</button>' +
+          (c.propia ? '' : ' <button class="btn texto chico" type="button" data-accion="desactivar" data-login="' + c.login + '">Desactivar</button>')
+      } else if (c.estado === 'BLOQUEADA') {
+        estado = '<span class="pildora p-no">Bloqueada</span><span class="sub">Desde ' + esc(c.bloqueo) + ', por intentos fallidos</span>'
+        acciones = '<button class="btn segundo chico" type="button" data-accion="desbloquear" data-login="' + c.login + '">Desbloquear</button>' +
+          ' <button class="btn texto chico" type="button" data-accion="desactivar" data-login="' + c.login + '">Desactivar</button>'
+      } else {
+        estado = '<span class="pildora p-ne">Inactiva</span><span class="sub">' + esc(c.motivo) + '</span>'
+        acciones = '<span class="guia">Sin acciones</span>'
+      }
+      return '<tr>' +
+        '<td><span class="fuerte">' + esc(p.nombre) + '</span>' + (c.propia ? ' <span class="pildora p-az">Tú</span>' : '') +
+        '<span class="sub">CC <span class="identificador">' + agrupar(p.documento) + '</span></span></td>' +
+        '<td class="mono">' + esc(c.login) + '</td>' +
+        '<td><span class="etiqueta">' + esc(p.rol) + '</span><span class="sub">' + esc(p.tipo) + '</span></td>' +
+        '<td style="min-width:12rem">' + estado + '</td>' +
+        '<td class="acciones-fila">' + acciones + '</td>' +
+        '</tr>'
+    }).join('')
+    document.querySelector('#tabla-cuentas tbody').innerHTML = filas
+    document.getElementById('tabla-cuentas').hidden = visibles === 0
+    document.getElementById('sin-resultados').hidden = visibles > 0
+    document.getElementById('conteo').textContent = visibles + ' de ' + cuentas.length + ' cuentas'
+    var bloqueadas = cuentas.filter(function (c) { return c.estado === 'BLOQUEADA' }).length
+    var activas = cuentas.filter(function (c) { return c.estado === 'ACTIVA' }).length
+    var sinCuenta = personas.filter(function (p) { return !cuentaDe(p.id) }).length
+    document.getElementById('resumen').textContent = activas + ' cuentas activas · ' +
+      (bloqueadas ? bloqueadas + (bloqueadas === 1 ? ' bloqueada' : ' bloqueadas') : 'ninguna bloqueada') + ' · ' +
+      sinCuenta + (sinCuenta === 1 ? ' persona registrada sin cuenta' : ' personas registradas sin cuenta')
+  }
+
+  function limpiarErrores(formulario) {
+    formulario.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    formulario.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+  }
+  function marcarError(campo, mensaje) {
+    campo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-generado', '')
+    error.textContent = mensaje
+    campo.closest('.campo').appendChild(error)
+    campo.focus()
+  }
+
+  // ---------- Crear cuenta ----------
+  var selectPersona = document.getElementById('crear-persona')
+  var campoLogin = document.getElementById('crear-login')
+
+  function opcionesPersonas() {
+    var sin = personas.filter(function (p) { return !cuentaDe(p.id) })
+    var con = personas.filter(function (p) { return cuentaDe(p.id) })
+    function opcion(p) { return '<option value="' + p.id + '">' + esc(p.nombre) + ' · CC ' + agrupar(p.documento) + '</option>' }
+    selectPersona.innerHTML = '<option value="">Elige una persona registrada</option>' +
+      '<optgroup label="Sin cuenta">' + sin.map(opcion).join('') + '</optgroup>' +
+      '<optgroup label="Ya tienen cuenta">' + con.map(opcion).join('') + '</optgroup>'
+  }
+
+  document.getElementById('crear-cuenta').addEventListener('click', function () {
+    var formulario = document.querySelector('#dialogo-crear form')
+    formulario.reset()
+    limpiarErrores(formulario)
+    opcionesPersonas()
+    document.getElementById('crear-rol').hidden = true
+    Convivir.abrir('dialogo-crear')
+  })
+
+  selectPersona.addEventListener('change', function () {
+    var p = persona(Number(this.value))
+    var caja = document.getElementById('crear-rol')
+    caja.hidden = !p
+    if (!p) return
+    caja.querySelector('[data-campo="rol"]').textContent = p.rol.toLowerCase()
+    caja.querySelector('[data-campo="rol-porque"]').textContent = 'Así se registró a ' + p.nombre + ' en Personas: ' + p.tipo + '. El enlace para elegir la contraseña llega a ' + p.correo + '.'
+    if (!campoLogin.value.trim() || campoLogin.dataset.sugerido === campoLogin.value) {
+      campoLogin.value = sugerirLogin(p)
+      campoLogin.dataset.sugerido = campoLogin.value
+    }
+  })
+
+  document.querySelector('#dialogo-crear form').addEventListener('confirmado', function (e) {
+    var p = persona(Number(selectPersona.value))
+    var login = campoLogin.value.trim()
+    var existente = cuentaDe(p.id)
+    // 409: la persona ya tiene cuenta.
+    if (existente) {
+      e.preventDefault()
+      marcarError(selectPersona, p.nombre + ' ya tiene la cuenta ' + existente.login + '. Cada persona tiene una sola cuenta: si no puede entrar, restablece su contraseña.')
+      return
+    }
+    if (!/^[a-z0-9]+([._-][a-z0-9]+)*$/.test(login)) {
+      e.preventDefault()
+      marcarError(campoLogin, 'El login va en minúsculas, sin espacios ni tildes, por ejemplo ' + sugerirLogin(p) + '.')
+      return
+    }
+    // 409: el login ya existe.
+    var duena = cuentas.filter(function (c) { return c.login === login })[0]
+    if (duena) {
+      e.preventDefault()
+      marcarError(campoLogin, 'El login ' + login + ' ya es de ' + persona(duena.persona).nombre + '. Prueba con otro, por ejemplo ' + login + '2.')
+      return
+    }
+    cuentas.push({ login: login, persona: p.id, estado: 'ACTIVA' })
+    this.setAttribute('data-confirmar', 'Cuenta creada para ' + p.nombre + '. Enviamos el enlace para elegir la contraseña a ' + p.correo + '.')
+    pintar()
+  })
+
+  // ---------- Restablecer, desbloquear y desactivar ----------
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-accion]')
+    if (!b) return
+    actual = cuentas.filter(function (c) { return c.login === b.getAttribute('data-login') })[0]
+    var p = persona(actual.persona)
+    var accion = b.getAttribute('data-accion')
+    if (accion === 'restablecer' || accion === 'desbloquear') {
+      var d = document.getElementById('dialogo-restablecer')
+      var desbloquear = accion === 'desbloquear'
+      d.setAttribute('data-modo', accion)
+      d.querySelector('#titulo-restablecer').textContent = desbloquear ? 'Desbloquear cuenta' : 'Restablecer contraseña'
+      d.querySelector('[data-campo="cuenta"]').textContent = p.nombre + ' · ' + actual.login
+      d.querySelector('#bloqueo').hidden = !desbloquear
+      d.querySelector('[data-campo="bloqueo"]').textContent = 'Bloqueada desde ' + (actual.bloqueo || '') + ' por superar los intentos fallidos de inicio de sesión.'
+      d.querySelector('[data-campo="explicacion"]').textContent = desbloquear
+        ? 'Para desbloquearla se restablece la contraseña: enviamos un enlace a ' + p.correo + ' para que ' + nombreCorto(p) + ' elija una nueva, y los intentos fallidos vuelven a cero.'
+        : 'Enviamos un enlace a ' + p.correo + ' para que ' + nombreCorto(p) + ' elija una contraseña nueva. La actual deja de funcionar en cuanto confirmes.'
+      d.querySelector('#boton-restablecer').textContent = desbloquear ? 'Desbloquear y enviar enlace' : 'Enviar enlace'
+      Convivir.abrir('dialogo-restablecer')
+    }
+    if (accion === 'desactivar') {
+      var formulario = document.querySelector('#dialogo-desactivar form')
+      formulario.reset()
+      limpiarErrores(formulario)
+      document.querySelector('#dialogo-desactivar [data-campo="cuenta"]').textContent = p.nombre + ' · ' + actual.login + ' · ' + p.rol.toLowerCase()
+      Convivir.abrir('dialogo-desactivar')
+    }
+  })
+
+  document.querySelector('#dialogo-restablecer form').addEventListener('confirmado', function () {
+    var p = persona(actual.persona)
+    var desbloquear = document.getElementById('dialogo-restablecer').getAttribute('data-modo') === 'desbloquear'
+    if (desbloquear) { actual.estado = 'ACTIVA'; delete actual.bloqueo }
+    this.setAttribute('data-confirmar', (desbloquear ? 'Cuenta desbloqueada. ' : 'Contraseña restablecida. ') + 'Enviamos el enlace a ' + p.correo + '.')
+    pintar()
+  })
+
+  document.querySelector('#dialogo-desactivar form').addEventListener('confirmado', function () {
+    actual.estado = 'INACTIVA'
+    actual.motivo = document.getElementById('motivo-desactivar').value.trim()
+    delete actual.bloqueo
+    this.setAttribute('data-confirmar', 'Cuenta desactivada: ' + actual.login + '. ' + persona(actual.persona).nombre + ' ya no puede entrar.')
+    pintar()
+  })
+
+  // ---------- Filtros ----------
+  document.getElementById('buscar').addEventListener('input', function () { filtro.texto = this.value.trim().toLowerCase(); pintar() })
+  document.getElementById('filtro-rol').addEventListener('change', function () { filtro.rol = this.value; pintar() })
+  document.getElementById('filtro-estado').addEventListener('cambio', function (e) { filtro.estado = e.detail; pintar() })
+  document.getElementById('limpiar').addEventListener('click', function () {
+    document.getElementById('buscar').value = ''
+    document.getElementById('filtro-rol').value = ''
+    document.querySelector('#filtro-estado [data-valor=""]').click()
+    filtro = { texto: '', rol: '', estado: '' }
+    pintar()
+  })
+
+  pintar()
+})()
+</script>
+</body>
+</html>

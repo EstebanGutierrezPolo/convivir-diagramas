@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guía del equipo · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script>
+  try { var t = localStorage.getItem('convivir-tema'); if (t === 'light' || t === 'dark') document.documentElement.setAttribute('data-theme', t) } catch (e) {}
+</script>
+<style>
+/* Tokens del sistema de diseño de Convivir (convivir_sistema.html, sección 10) */
+:root{
+  color-scheme: light;
+  --convivir:#1A4A7A; --convivir-o:#123757; --convivir-c:#E8EFF6;
+  --boton-f:#1A4A7A; --boton-t:#FFFFFF; --boton-h:#123757;
+  --tinta:#1A1F26; --acero:#626C78; --borde:#DCE0E4; --borde-f:#EDEFF1;
+  --concreto:#F2F4F5; --papel:#FFFFFF; --fondo:#FAFBFC;
+  --ok:#146C43; --ok-f:#E7F2EC; --ok-b:#A8D5BE;
+  --al:#8A5000; --al-f:#FAF0E2; --al-b:#E3C089;
+  --no:#8C1D24; --no-f:#FAE8E9; --no-b:#E3A8AC;
+  --texto:"Archivo",system-ui,-apple-system,sans-serif;
+  --dato:"IBM Plex Mono",ui-monospace,monospace;
+  --t-xs:.75rem; --t-sm:.875rem; --t-base:1rem; --t-md:1.25rem; --t-lg:1.5625rem; --t-xl:1.953rem; --t-2xl:2.441rem;
+  --e1:4px; --e2:8px; --e3:12px; --e4:16px; --e5:24px; --e6:32px; --e7:48px; --e8:72px;
+  --r-control:4px; --r-superficie:6px; --r-pildora:999px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --convivir:#7CB2E8; --convivir-o:#9CC8F2; --convivir-c:#16293B;
+    --boton-f:#5B9BD5; --boton-t:#0D1620; --boton-h:#79B0E2;
+    --tinta:#E8EBEE; --acero:#9AA4B0; --borde:#2C3640; --borde-f:#232B34;
+    --concreto:#1E262F; --papel:#171E26; --fondo:#10151B;
+    --ok:#5CC08E; --ok-f:#10281E; --ok-b:#2E6A4D;
+    --al:#D99F52; --al-f:#2A2013; --al-b:#7A5A24;
+    --no:#E8808A; --no-f:#2B1619; --no-b:#7E3840;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --convivir:#7CB2E8; --convivir-o:#9CC8F2; --convivir-c:#16293B;
+  --boton-f:#5B9BD5; --boton-t:#0D1620; --boton-h:#79B0E2;
+  --tinta:#E8EBEE; --acero:#9AA4B0; --borde:#2C3640; --borde-f:#232B34;
+  --concreto:#1E262F; --papel:#171E26; --fondo:#10151B;
+  --ok:#5CC08E; --ok-f:#10281E; --ok-b:#2E6A4D;
+  --al:#D99F52; --al-f:#2A2013; --al-b:#7A5A24;
+  --no:#E8808A; --no-f:#2B1619; --no-b:#7E3840;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--fondo);color:var(--tinta);font-family:var(--texto);font-size:var(--t-base);line-height:1.55;-webkit-font-smoothing:antialiased;overflow:hidden}
+h1,h2,h3{margin:0;letter-spacing:-.02em;line-height:1.12}
+p{margin:0;max-width:62ch}
+code,.dato{font-family:var(--dato);font-variant-numeric:tabular-nums}
+code{font-size:.88em;background:var(--concreto);padding:1px 6px;border-radius:var(--r-control);color:var(--convivir)}
+a{color:var(--convivir)}
+
+/* ---------- Diapositivas ---------- */
+.diapositiva{
+  position:fixed;inset:0 0 64px;
+  display:none;
+  overflow-y:auto;
+  padding:var(--e7) var(--e6) var(--e6);
+}
+.diapositiva.activa{display:flex;flex-direction:column}
+.diapositiva > .dentro{width:100%;max-width:64rem;margin:auto;display:flex;flex-direction:column;gap:var(--e5)}
+.antetitulo{font-size:var(--t-sm);font-weight:600;color:var(--convivir);display:flex;align-items:center;gap:var(--e2)}
+.antetitulo .n{font-family:var(--dato);color:var(--acero);font-weight:500}
+.diapositiva h2{font-size:var(--t-2xl);font-weight:700}
+.diapositiva h2 + p{font-size:var(--t-md);color:var(--acero);margin-top:calc(-1 * var(--e2));line-height:1.45}
+.grande{font-size:var(--t-md);line-height:1.5}
+.guia{color:var(--acero);font-size:var(--t-sm)}
+
+.rejilla{display:grid;gap:var(--e4)}
+.r2{grid-template-columns:repeat(auto-fit,minmax(min(100%,18rem),1fr))}
+.r3{grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr))}
+.r4{grid-template-columns:repeat(auto-fit,minmax(min(100%,11rem),1fr))}
+
+.caja{background:var(--papel);border:1px solid var(--borde);border-radius:var(--r-superficie);padding:var(--e4) var(--e5)}
+.caja h3{font-size:var(--t-md);font-weight:600;letter-spacing:-.01em}
+.caja p{margin-top:var(--e2);font-size:var(--t-sm);color:var(--acero)}
+.caja .cuando{font-family:var(--dato);font-size:var(--t-xs);color:var(--acero)}
+.caja.marca{border-left:4px solid var(--convivir)}
+.caja.ok{border-left:4px solid var(--ok)}
+.caja.al{border-left:4px solid var(--al)}
+.icono{width:40px;height:40px;border-radius:var(--r-superficie);background:var(--convivir-c);color:var(--convivir);display:grid;place-items:center;font-weight:700;font-size:var(--t-md);margin-bottom:var(--e3)}
+
+.aviso{border:1px solid var(--borde);border-left:3px solid var(--convivir);background:var(--convivir-c);padding:var(--e3) var(--e4);border-radius:var(--r-control);font-size:var(--t-sm)}
+.aviso.al{border-color:var(--al-b);border-left-color:var(--al);background:var(--al-f)}
+
+.pildora{display:inline-flex;align-items:center;gap:6px;font-size:var(--t-xs);font-weight:600;padding:2px 10px;border-radius:var(--r-pildora);border:1px solid;white-space:nowrap}
+.pildora::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.p-ok{color:var(--ok);background:var(--ok-f);border-color:var(--ok-b)}
+.p-al{color:var(--al);background:var(--al-f);border-color:var(--al-b)}
+.p-ne{color:var(--acero);background:var(--concreto);border-color:var(--borde)}
+
+table{width:100%;border-collapse:collapse;font-size:var(--t-sm);background:var(--papel);border:1px solid var(--borde);border-radius:var(--r-superficie);overflow:hidden}
+th{text-align:left;font-weight:600;color:var(--acero);font-size:var(--t-xs);border-bottom:1px solid var(--borde);padding:var(--e3) var(--e4)}
+td{border-bottom:1px solid var(--borde-f);padding:var(--e3) var(--e4);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td code{white-space:nowrap}
+
+/* Terminal: solo para mostrar comandos */
+.terminal{background:var(--concreto);border:1px solid var(--borde);border-radius:var(--r-superficie);padding:var(--e4) var(--e5);font-family:var(--dato);font-size:var(--t-sm);line-height:1.9;overflow-x:auto}
+.terminal .c{color:var(--acero)}
+.terminal .p{color:var(--convivir);user-select:none}
+
+/* Esquema de piezas */
+.esquema{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;align-items:stretch;gap:var(--e3)}
+.flecha{display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--acero);font-size:var(--t-xs);text-align:center;min-width:5.5rem;gap:2px}
+.flecha::after{content:"";display:block;width:100%;border-top:2px solid var(--borde);order:1}
+.flecha span{order:0}
+.flecha small{order:2;font-family:var(--dato)}
+.pieza{background:var(--papel);border:1px solid var(--borde);border-top:4px solid var(--convivir);border-radius:var(--r-superficie);padding:var(--e4)}
+.pieza .rol{font-size:var(--t-xs);font-weight:600;color:var(--acero)}
+.pieza h3{font-size:var(--t-lg);margin-top:var(--e1)}
+.pieza p{font-size:var(--t-sm);color:var(--acero);margin-top:var(--e2)}
+.pieza .tec{margin-top:var(--e3);font-size:var(--t-sm);font-weight:600}
+.pieza .puerto{font-family:var(--dato);font-size:var(--t-xs);color:var(--convivir);margin-top:var(--e1)}
+
+/* Docker: cajas de contenedores */
+.anfitrion{border:2px dashed var(--borde);border-radius:var(--r-superficie);padding:var(--e4);display:grid;gap:var(--e3)}
+.anfitrion > .rotulo{font-size:var(--t-xs);font-weight:600;color:var(--acero)}
+.contenedores{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,12rem),1fr));gap:var(--e3)}
+.contenedor{background:var(--papel);border:1px solid var(--convivir);border-radius:var(--r-superficie);padding:var(--e3) var(--e4)}
+.contenedor b{display:block}
+.contenedor .dato{font-size:var(--t-xs);color:var(--acero)}
+.contenedor .puerto{display:inline-block;margin-top:var(--e2);font-family:var(--dato);font-size:var(--t-xs);background:var(--convivir-c);color:var(--convivir);padding:1px 8px;border-radius:var(--r-control)}
+
+/* Línea de commits */
+.commits{display:flex;align-items:center;gap:0;overflow-x:auto;padding:var(--e4) 0}
+.commit{display:flex;flex-direction:column;align-items:center;gap:var(--e2);min-width:8.5rem;position:relative;text-align:center}
+.commit::before{content:"";position:absolute;top:9px;left:0;right:0;border-top:2px solid var(--borde);z-index:0}
+.commit:first-child::before{left:50%}.commit:last-child::before{right:50%}
+.commit i{width:20px;height:20px;border-radius:50%;background:var(--papel);border:3px solid var(--convivir);position:relative;z-index:1}
+.commit:last-child i{background:var(--convivir)}
+.commit span{font-size:var(--t-xs);color:var(--acero);max-width:8rem}
+.commit code{font-size:var(--t-xs)}
+
+/* Portada */
+.portada .dentro{gap:var(--e6)}
+.portada h1{font-size:clamp(2.2rem,6vw,3.8rem);font-weight:700;max-width:16ch}
+.portada .marca{display:inline-flex;align-items:center;gap:var(--e3)}
+.portada .marca span{font-weight:700;letter-spacing:.14em;color:var(--convivir);font-size:var(--t-md)}
+
+/* ---------- Controles ---------- */
+.controles{position:fixed;left:0;right:0;bottom:0;height:64px;display:flex;align-items:center;gap:var(--e3);padding:0 var(--e5);background:var(--papel);border-top:1px solid var(--borde);z-index:5}
+.progreso{position:absolute;top:-1px;left:0;height:2px;background:var(--convivir);transition:width .2s}
+.btn{font:inherit;font-size:var(--t-sm);font-weight:600;padding:8px var(--e4);border-radius:var(--r-control);cursor:pointer;border:1px solid var(--borde);background:var(--papel);color:var(--tinta)}
+.btn:hover{background:var(--concreto)}
+.btn.principal{background:var(--boton-f);color:var(--boton-t);border-color:transparent}
+.btn.principal:hover{background:var(--boton-h)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:focus-visible,.indice button:focus-visible{outline:2px solid var(--convivir);outline-offset:2px}
+.contador{font-family:var(--dato);font-size:var(--t-sm);color:var(--acero);min-width:4.5rem;text-align:center}
+.titulo-actual{flex:1;font-size:var(--t-sm);color:var(--acero);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.indice{position:fixed;right:var(--e4);bottom:76px;width:min(22rem,calc(100vw - 32px));max-height:60vh;overflow-y:auto;background:var(--papel);border:1px solid var(--borde);border-radius:var(--r-superficie);padding:var(--e2);z-index:6}
+.indice button{display:flex;gap:var(--e3);width:100%;text-align:left;border:0;background:none;padding:var(--e2) var(--e3);border-radius:var(--r-control);font:inherit;font-size:var(--t-sm);color:var(--tinta);cursor:pointer}
+.indice button:hover{background:var(--concreto)}
+.indice button[aria-current="true"]{background:var(--convivir-c);color:var(--convivir);font-weight:600}
+.indice button .dato{color:var(--acero);min-width:1.5rem}
+
+@media (max-width:48rem){
+  .diapositiva{padding:var(--e5) var(--e4) var(--e5)}
+  .diapositiva h2{font-size:var(--t-xl)}
+  .diapositiva h2 + p,.grande{font-size:var(--t-base)}
+  .esquema{grid-template-columns:1fr}
+  .flecha{min-height:2.5rem;flex-direction:row;gap:var(--e2)}
+  .flecha::after{display:none}
+  .titulo-actual{display:none}
+  .controles{padding:0 var(--e3);justify-content:space-between}
+}
+@media print{
+  body{overflow:visible}
+  .controles,.indice{display:none!important}
+  .diapositiva{position:static;display:flex!important;min-height:100vh;page-break-after:always;overflow:visible}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<!-- 1. Portada -->
+<section class="diapositiva portada" data-titulo="Portada">
+  <div class="dentro">
+    <span class="marca">
+      <svg width="40" height="40" viewBox="0 0 34 34" aria-hidden="true">
+        <rect x="1" y="1" width="32" height="32" rx="5" fill="none" stroke="var(--convivir)" stroke-width="2"/>
+        <rect x="8" y="8" width="7" height="7" fill="var(--convivir)"/>
+        <rect x="19" y="8" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="8" y="19" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="19" y="19" width="7" height="7" fill="var(--convivir)"/>
+      </svg>
+      <span>CONVIVIR</span>
+    </span>
+    <h1>Cómo está hecho Convivir y cómo lo levantamos</h1>
+    <p class="grande" style="color:var(--acero)">Una guía para el equipo: las herramientas, las tecnologías, en qué va el proyecto y cómo correrlo en tu computador. No hace falta saber programar para seguirla.</p>
+    <p class="guia">Ingeniería de Software II · Universidad Simón Bolívar · Grupo T02 · noviembre de 2026</p>
+    <p class="guia">Usa las flechas ← → del teclado, o los botones de abajo.</p>
+  </div>
+</section>
+
+<!-- 2. Agenda -->
+<section class="diapositiva" data-titulo="Qué vamos a ver">
+  <div class="dentro">
+    <div class="antetitulo">Agenda</div>
+    <h2>Qué vamos a ver</h2>
+    <div class="rejilla r2">
+      <div class="caja marca"><h3>1. Qué es una aplicación web</h3><p>Las tres partes de Convivir y para qué sirve cada una.</p></div>
+      <div class="caja marca"><h3>2. Las tecnologías</h3><p>React, Spring Boot con Java, PostgreSQL. Qué es cada una en palabras simples.</p></div>
+      <div class="caja marca"><h3>3. Git y GitHub</h3><p>Cómo guardamos versiones del código y cómo lo compartimos.</p></div>
+      <div class="caja marca"><h3>4. Docker</h3><p>Cómo corremos todo sin instalar Java ni la base de datos.</p></div>
+      <div class="caja marca"><h3>5. Cómo se levanta</h3><p>Los pasos para tenerlo funcionando en tu computador.</p></div>
+      <div class="caja marca"><h3>6. En qué vamos</h3><p>Qué está hecho, qué falta y qué sigue.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Qué es Convivir -->
+<section class="diapositiva" data-titulo="Qué es Convivir">
+  <div class="dentro">
+    <div class="antetitulo">El proyecto</div>
+    <h2>Convivir, en una frase</h2>
+    <p>Una plataforma web para administrar un conjunto residencial: quién vive en cada apartamento, quién puede entrar, quién debe cuánto y quién reservó el salón.</p>
+    <div class="rejilla r4">
+      <div class="caja"><div class="icono">A</div><h3>Administrador</h3><p>Inmuebles, personas, cobros, pagos, reservas y reportes.</p></div>
+      <div class="caja"><div class="icono">V</div><h3>Vigilante</h3><p>Registra quién entra y sale, personas y vehículos.</p></div>
+      <div class="caja"><div class="icono">R</div><h3>Residente</h3><p>Autoriza visitas, paga, reserva zonas y reporta novedades.</p></div>
+      <div class="caja"><div class="icono">C</div><h3>Consejo</h3><p>Consulta la cartera y la auditoría.</p></div>
+    </div>
+    <div class="aviso"><b>La idea central:</b> toda la información se ancla al <b>inmueble</b>, no a la persona. Si cambia el dueño o el arrendatario, la historia del apartamento no se pierde.</div>
+  </div>
+</section>
+
+<!-- 4. Las tres partes -->
+<section class="diapositiva" data-titulo="Las tres partes de una aplicación web">
+  <div class="dentro">
+    <div class="antetitulo">Conceptos</div>
+    <h2>Toda aplicación web tiene tres partes</h2>
+    <p>Piénsalo como un restaurante: lo que ve el cliente, la cocina donde se prepara todo y la despensa donde se guarda.</p>
+    <div class="esquema">
+      <div class="pieza">
+        <div class="rol">Lo que ves · el salón</div>
+        <h3>Frontend</h3>
+        <p>Las pantallas, los botones y los formularios. Corre en tu navegador.</p>
+      </div>
+      <div class="flecha"><span>pide datos</span><small>→ ←</small></div>
+      <div class="pieza">
+        <div class="rol">Las reglas · la cocina</div>
+        <h3>Backend</h3>
+        <p>Decide qué se puede hacer. Por ejemplo: un arrendatario no puede pagar una multa. Corre en un servidor.</p>
+      </div>
+      <div class="flecha"><span>guarda y lee</span><small>→ ←</small></div>
+      <div class="pieza">
+        <div class="rol">La memoria · la despensa</div>
+        <h3>Base de datos</h3>
+        <p>Donde quedan guardados los inmuebles, las personas, los pagos. Si apagas todo, los datos siguen ahí.</p>
+      </div>
+    </div>
+    <p class="guia">El usuario nunca habla directo con la base de datos: siempre pasa por el backend, que revisa las reglas primero.</p>
+  </div>
+</section>
+
+<!-- 5. Tecnologías -->
+<section class="diapositiva" data-titulo="Nuestras tecnologías">
+  <div class="dentro">
+    <div class="antetitulo">Tecnologías</div>
+    <h2>Con qué está hecha cada parte</h2>
+    <div class="esquema">
+      <div class="pieza">
+        <div class="rol">Frontend</div>
+        <h3>React</h3>
+        <p>Una librería de JavaScript para armar pantallas con piezas reutilizables. Usamos <b>Vite</b> para correrlo y empaquetarlo.</p>
+        <div class="tec">JavaScript · React 19 · Vite</div>
+        <div class="puerto">localhost:3000</div>
+      </div>
+      <div class="flecha"><span>API REST</span><small>JSON</small></div>
+      <div class="pieza">
+        <div class="rol">Backend</div>
+        <h3>Spring Boot</h3>
+        <p>Un marco de trabajo para hacer servidores en <b>Java</b>. Aquí viven las clases del diagrama de clases.</p>
+        <div class="tec">Java 21 · Spring Boot 4 · JPA</div>
+        <div class="puerto">localhost:8080</div>
+      </div>
+      <div class="flecha"><span>SQL</span><small>JDBC</small></div>
+      <div class="pieza">
+        <div class="rol">Base de datos</div>
+        <h3>PostgreSQL</h3>
+        <p>Una base de datos relacional: guarda la información en tablas, como hojas de Excel conectadas entre sí.</p>
+        <div class="tec">PostgreSQL 17</div>
+        <div class="puerto">localhost:5435</div>
+      </div>
+    </div>
+    <p class="guia"><b>JPA</b> es lo que convierte una clase de Java en una tabla de la base, para no escribir SQL a mano.</p>
+  </div>
+</section>
+
+<!-- 6. Cómo se hablan -->
+<section class="diapositiva" data-titulo="Cómo se hablan las partes">
+  <div class="dentro">
+    <div class="antetitulo">Tecnologías</div>
+    <h2>Cómo se hablan: API REST y JSON</h2>
+    <p>El frontend le hace pedidos al backend por internet, como cuando escribes una dirección en el navegador. Esa lista de pedidos posibles es la <b>API</b>.</p>
+    <div class="rejilla r2">
+      <div class="caja">
+        <h3>El frontend pregunta</h3>
+        <div class="terminal" style="margin-top:var(--e3)">GET /api/estado</div>
+        <p><b>GET</b> es "dame". También hay <b>POST</b> (crea), <b>PUT</b> o <b>PATCH</b> (cambia) y <b>DELETE</b> (borra).</p>
+      </div>
+      <div class="caja">
+        <h3>El backend responde en JSON</h3>
+        <div class="terminal" style="margin-top:var(--e3)">{ "aplicacion": "ok",<br>&nbsp;&nbsp;"baseDeDatos": "ok" }</div>
+        <p><b>JSON</b> es un formato de texto con pares nombre y valor, fácil de leer para personas y programas.</p>
+      </div>
+    </div>
+    <div class="aviso">Ese pedido existe hoy: es lo único que ya hace nuestro backend. Confirma que la aplicación responde y que llega a la base de datos.</div>
+  </div>
+</section>
+
+<!-- 7. Git -->
+<section class="diapositiva" data-titulo="Qué es Git">
+  <div class="dentro">
+    <div class="antetitulo">Herramientas</div>
+    <h2>Git: el historial de versiones</h2>
+    <p>Git guarda fotos de una carpeta a lo largo del tiempo. Cada foto se llama <b>commit</b> y lleva un mensaje que dice qué cambió. Es como el control de cambios de Word, pero para todo un proyecto.</p>
+    <p class="guia" style="margin-bottom:calc(-1 * var(--e4))">Ejemplo de un historial, de izquierda a derecha:</p>
+    <div class="commits" aria-label="Ejemplo de historial">
+      <div class="commit"><i></i><code>a1f3</code><span>esqueleto del proyecto</span></div>
+      <div class="commit"><i></i><code>b7c2</code><span>diagramas UML y visor</span></div>
+      <div class="commit"><i></i><code>c9e4</code><span>sistema de diseño</span></div>
+      <div class="commit"><i></i><code>d2a8</code><span>vistas de la aplicación</span></div>
+    </div>
+    <div class="rejilla r3">
+      <div class="caja"><h3>Se puede volver atrás</h3><p>Si algo se daña, regresamos a una foto anterior.</p></div>
+      <div class="caja"><h3>Se sabe quién y por qué</h3><p>Cada cambio dice su autor, su fecha y su mensaje.</p></div>
+      <div class="caja"><h3>Varios a la vez</h3><p>Cada uno trabaja en su copia y luego se juntan los cambios.</p></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. Comandos de Git -->
+<section class="diapositiva" data-titulo="Los comandos de Git que vamos a usar">
+  <div class="dentro">
+    <div class="antetitulo">Herramientas</div>
+    <h2>Los seis comandos que vamos a usar</h2>
+    <table>
+      <thead><tr><th>Comando</th><th>Qué hace</th><th>Cuándo</th></tr></thead>
+      <tbody>
+        <tr><td><code>git clone &lt;dirección&gt;</code></td><td>Descarga el repositorio completo a tu PC.</td><td>Una sola vez, al empezar.</td></tr>
+        <tr><td><code>git pull</code></td><td>Trae los cambios que subieron los demás.</td><td>Siempre antes de empezar a trabajar.</td></tr>
+        <tr><td><code>git status</code></td><td>Muestra qué archivos cambiaste.</td><td>Cuando quieras revisar.</td></tr>
+        <tr><td><code>git add &lt;archivo&gt;</code></td><td>Elige qué cambios van en la próxima foto.</td><td>Antes de cada commit.</td></tr>
+        <tr><td><code>git commit -m "mensaje"</code></td><td>Toma la foto con un mensaje.</td><td>Cuando terminas algo que funciona.</td></tr>
+        <tr><td><code>git push</code></td><td>Sube tus fotos a GitHub para que los demás las vean.</td><td>Después de hacer commit.</td></tr>
+      </tbody>
+    </table>
+    <p class="guia">Los mensajes van en inglés y en minúsculas, con un prefijo: <code>feat: ...</code> algo nuevo, <code>fix: ...</code> una corrección, <code>docs: ...</code> documentación.</p>
+  </div>
+</section>
+
+<!-- 9. GitHub -->
+<section class="diapositiva" data-titulo="Qué es GitHub">
+  <div class="dentro">
+    <div class="antetitulo">Herramientas</div>
+    <h2>GitHub: donde vive el código en internet</h2>
+    <p><b>Git</b> es el programa que guarda las versiones en tu PC. <b>GitHub</b> es la página web donde subimos esas versiones para compartirlas. Git es la cámara; GitHub es el álbum compartido.</p>
+    <div class="rejilla r3">
+      <div class="caja marca"><h3>convivir-frontend</h3><p>Las pantallas en React.</p><p class="cuando">carpeta frontend/</p></div>
+      <div class="caja marca"><h3>convivir-backend</h3><p>El servidor en Spring Boot con Java.</p><p class="cuando">carpeta backend/</p></div>
+      <div class="caja marca"><h3>convivir-diagramas</h3><p>Los diagramas UML, el sistema de diseño, las vistas y esta guía.</p><p class="cuando">carpeta diagramas/</p></div>
+    </div>
+    <p class="guia">Un <b>repositorio</b> es una carpeta con su historial de Git. Tenemos tres, públicos, en la cuenta de GitHub <code>EstebanGutierrezPolo</code>. Para subir cambios hay que ser colaborador del repositorio.</p>
+  </div>
+</section>
+
+<!-- 10. Docker -->
+<section class="diapositiva" data-titulo="Qué es Docker">
+  <div class="dentro">
+    <div class="antetitulo">Herramientas</div>
+    <h2>Docker: cada pieza en su caja</h2>
+    <p>Un <b>contenedor</b> es como una lonchera: trae adentro todo lo que la pieza necesita para funcionar (su Java, su Node, su base de datos). Así corre igual en cualquier computador.</p>
+    <div class="rejilla r2">
+      <div class="caja"><h3>Imagen</h3><p>La receta: dice qué va dentro de la caja. Se escribe en un archivo llamado <code>Dockerfile</code>.</p></div>
+      <div class="caja"><h3>Contenedor</h3><p>La caja ya armada y funcionando, hecha a partir de la imagen.</p></div>
+      <div class="caja"><h3>Docker Compose</h3><p>Levanta varios contenedores juntos con un solo comando, según el archivo <code>docker-compose.yml</code>.</p></div>
+      <div class="caja"><h3>Volumen</h3><p>Un espacio donde la base de datos guarda sus datos, para que no se borren al apagar.</p></div>
+    </div>
+    <div class="aviso"><b>Por qué lo usamos:</b> nadie tiene que instalar Java, Maven ni PostgreSQL en su PC. Solo Docker Desktop. Y se acaba el "en mi computador sí funcionaba".</div>
+  </div>
+</section>
+
+<!-- 11. Docker en Convivir -->
+<section class="diapositiva" data-titulo="Docker en Convivir">
+  <div class="dentro">
+    <div class="antetitulo">Herramientas</div>
+    <h2>Cómo usamos Docker en Convivir</h2>
+    <div class="anfitrion">
+      <div class="rotulo">Tu computador, con Docker Desktop abierto</div>
+      <div class="contenedores">
+        <div class="contenedor"><b>frontend</b><span class="dato">Node 24 · compila React y lo sirve</span><br><span class="puerto">puerto 3000</span></div>
+        <div class="contenedor"><b>backend</b><span class="dato">Compila Java 21 con Maven y lo corre</span><br><span class="puerto">puerto 8080</span></div>
+        <div class="contenedor"><b>db</b><span class="dato">PostgreSQL 17 · datos en el volumen convivir_db</span><br><span class="puerto">puerto 5435</span></div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>Palabra</th><th>Qué significa aquí</th></tr></thead>
+      <tbody>
+        <tr><td><b>Puerto</b></td><td>La puerta por donde se entra a cada pieza. <code>localhost:3000</code> es la puerta 3000 de tu propio computador.</td></tr>
+        <tr><td><b>.env</b></td><td>Un archivo con el usuario y la contraseña de la base de datos. Nunca se sube a GitHub; cada uno tiene el suyo a partir de <code>.env.example</code>.</td></tr>
+        <tr><td><b>Orden de arranque</b></td><td>Primero la base de datos. Cuando responde, arranca el backend. Después el frontend.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 12. Cómo se levanta -->
+<section class="diapositiva" data-titulo="Cómo se levanta el proyecto">
+  <div class="dentro">
+    <div class="antetitulo">Paso a paso</div>
+    <h2>Cómo tenerlo funcionando en tu PC</h2>
+    <div class="rejilla r2">
+      <div class="caja"><h3>1. Instala dos programas</h3><p><b>Git</b> y <b>Docker Desktop</b>. Abre Docker Desktop y espera a que diga que está corriendo.</p></div>
+      <div class="caja"><h3>2. Arma la carpeta</h3><p>Crea una carpeta <code>convivir</code> con <code>docker-compose.yml</code> y <code>.env.example</code>, y clona ahí los tres repositorios.</p></div>
+    </div>
+    <div class="terminal">
+      <span class="c"># 2. Dentro de la carpeta convivir</span><br>
+      <span class="p">&gt; </span>git clone https://github.com/EstebanGutierrezPolo/convivir-frontend.git frontend<br>
+      <span class="p">&gt; </span>git clone https://github.com/EstebanGutierrezPolo/convivir-backend.git backend<br>
+      <span class="p">&gt; </span>git clone https://github.com/EstebanGutierrezPolo/convivir-diagramas.git diagramas<br>
+      <span class="c"># 3. Copia .env.example como .env y pon tu propia contraseña</span><br>
+      <span class="c"># 4. Levanta todo (la primera vez tarda unos minutos)</span><br>
+      <span class="p">&gt; </span>docker compose up -d --build<br>
+      <span class="c"># 5. Abre http://localhost:3000 en el navegador</span><br>
+      <span class="c"># Para apagarlo</span><br>
+      <span class="p">&gt; </span>docker compose down
+    </div>
+    <div class="aviso al"><b>Ojo:</b> <code>docker-compose.yml</code>, <code>.env.example</code> y el README de la carpeta raíz todavía no están en un repositorio. Por ahora se comparten aparte; pídeselos a Esteban.</div>
+  </div>
+</section>
+
+<!-- 13. Diagramas y visor -->
+<section class="diapositiva" data-titulo="Los diagramas y el visor">
+  <div class="dentro">
+    <div class="antetitulo">Diseño</div>
+    <h2>Los diagramas son la fuente de verdad</h2>
+    <p>Los diagramas UML están escritos como texto en <b>Mermaid</b>, así se guardan en Git como el código. Tienen su propio visor y editor.</p>
+    <div class="terminal">
+      <span class="p">&gt; </span>cd diagramas<br>
+      <span class="p">&gt; </span>npm install <span class="c"># solo la primera vez; necesita Node 22 o superior</span><br>
+      <span class="p">&gt; </span>npm start<br>
+      <span class="c"># Abre http://localhost:4000</span>
+    </div>
+    <div class="rejilla r3">
+      <div class="caja"><h3>Diagramas</h3><p>Casos de uso, clases, componentes, despliegue y uno de secuencia por caso de uso. Se editan y se descargan en SVG para Word.</p></div>
+      <div class="caja"><h3>Sistema de diseño</h3><p>Colores, letras y componentes que siguen todas las pantallas, en tema claro y oscuro.</p></div>
+      <div class="caja"><h3>Vistas</h3><p>Las pantallas definitivas de la aplicación, una por caso de uso, para cada tipo de usuario.</p></div>
+    </div>
+    <div class="aviso"><b>Regla del proyecto: el diagrama es el código.</b> Cada clase del diagrama existe en Java con el mismo nombre, atributos y métodos. Si el código necesita algo distinto, primero se cambia el diagrama.</div>
+  </div>
+</section>
+
+<!-- 14. Estado -->
+<section class="diapositiva" data-titulo="En qué vamos">
+  <div class="dentro">
+    <div class="antetitulo">Estado al 14 de noviembre</div>
+    <h2>En qué vamos</h2>
+    <table>
+      <thead><tr><th>Pieza</th><th>Estado</th><th>Detalle</th></tr></thead>
+      <tbody>
+        <tr><td>Docker con las tres piezas</td><td><span class="pildora p-ok">Hecho</span></td><td>Levanta frontend, backend y base con un comando.</td></tr>
+        <tr><td>Diagrama de clases</td><td><span class="pildora p-ok">Hecho</span></td><td>Del equipo. Tiene 10 decisiones abiertas por cerrar.</td></tr>
+        <tr><td>Sistema de diseño</td><td><span class="pildora p-ok">Hecho</span></td><td>Marca, colores, tipografía y componentes.</td></tr>
+        <tr><td>Vistas de la aplicación</td><td><span class="pildora p-al">Casi listas</span></td><td>Faltan 3 pantallas del administrador: detalle del inmueble, registrar pago y estado de cartera.</td></tr>
+        <tr><td>Casos de uso, componentes y secuencia</td><td><span class="pildora p-al">Por revisar</span></td><td>Borradores; el equipo tiene que revisarlos.</td></tr>
+        <tr><td>Backend con las clases del dominio</td><td><span class="pildora p-ne">Por hacer</span></td><td>Hoy solo responde <code>/api/estado</code>. No hay tablas ni inicio de sesión real.</td></tr>
+        <tr><td>Frontend en React</td><td><span class="pildora p-ne">Por hacer</span></td><td>Hoy solo muestra el estado. Las vistas se llevan a React.</td></tr>
+        <tr><td>Metodología</td><td><span class="pildora p-ne">Por hacer</span></td><td>Sección pendiente del documento.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 15. Qué sigue -->
+<section class="diapositiva" data-titulo="Qué sigue">
+  <div class="dentro">
+    <div class="antetitulo">Siguientes pasos</div>
+    <h2>Qué sigue y cómo pueden ayudar</h2>
+    <div class="rejilla r2">
+      <div class="caja ok"><h3>1. Revisar los diagramas</h3><p>Cada uno toma unos casos de uso y revisa su diagrama de casos de uso y de secuencia en el visor. Lo que no cuadre con el documento v1.2, se anota.</p></div>
+      <div class="caja ok"><h3>2. Cerrar las decisiones abiertas</h3><p>Están en la pestaña Proyecto del visor. Ejemplo: ¿un apartamento puede tener varios propietarios?</p></div>
+      <div class="caja ok"><h3>3. Programar caso por caso</h3><p>Cada caso de uso se programa siguiendo su diagrama de secuencia: primero las clases del dominio, luego la API y luego la pantalla.</p></div>
+      <div class="caja ok"><h3>4. Escribir la metodología</h3><p>Cómo trabajamos, cómo repartimos y cómo revisamos. También la califican.</p></div>
+    </div>
+    <p class="guia">Lo que califican: los diagramas, la aplicación funcionando, la metodología y cómo se llevaron las relaciones del diagrama al código.</p>
+  </div>
+</section>
+
+<!-- 16. Glosario -->
+<section class="diapositiva" data-titulo="Glosario">
+  <div class="dentro">
+    <div class="antetitulo">Para tener a mano</div>
+    <h2>Glosario rápido</h2>
+    <table>
+      <tbody>
+        <tr><td><b>Repositorio</b></td><td>Carpeta del proyecto con su historial de Git.</td><td><b>Commit</b></td><td>Una foto de los cambios, con mensaje.</td></tr>
+        <tr><td><b>Rama</b></td><td>Una línea de trabajo paralela para no dañar la principal.</td><td><b>Clonar</b></td><td>Descargar un repositorio a tu PC.</td></tr>
+        <tr><td><b>Frontend</b></td><td>Lo que ve el usuario en el navegador.</td><td><b>Backend</b></td><td>El servidor que aplica las reglas.</td></tr>
+        <tr><td><b>API</b></td><td>La lista de pedidos que el backend sabe atender.</td><td><b>JSON</b></td><td>Formato de texto para enviar datos.</td></tr>
+        <tr><td><b>Contenedor</b></td><td>Una pieza corriendo aislada con todo lo que necesita.</td><td><b>Imagen</b></td><td>La receta de un contenedor.</td></tr>
+        <tr><td><b>localhost</b></td><td>Tu propio computador.</td><td><b>Puerto</b></td><td>La puerta de entrada a cada programa.</td></tr>
+        <tr><td><b>Variable de entorno</b></td><td>Un dato de configuración, como la contraseña de la base, que vive fuera del código.</td><td><b>UML</b></td><td>El lenguaje de los diagramas: clases, casos de uso, secuencia.</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 17. Cierre -->
+<section class="diapositiva portada" data-titulo="Preguntas">
+  <div class="dentro">
+    <div class="antetitulo">Cierre</div>
+    <h1>¿Preguntas?</h1>
+    <div class="rejilla r3">
+      <div class="caja"><h3>Visor de diagramas</h3><p><code>localhost:4000</code></p></div>
+      <div class="caja"><h3>Vistas</h3><p><code>localhost:4000/vistas/</code></p></div>
+      <div class="caja"><h3>Sistema de diseño</h3><p><code>localhost:4000/sistema</code></p></div>
+    </div>
+    <p class="guia">Esta guía está en el repositorio de diagramas como <code>guia-equipo.html</code> y en el visor en <code>localhost:4000/guia</code>.</p>
+  </div>
+</section>
+
+<nav class="controles" aria-label="Diapositivas">
+  <div class="progreso" id="progreso"></div>
+  <button class="btn" type="button" id="anterior" aria-label="Diapositiva anterior">← Anterior</button>
+  <span class="contador" id="contador" aria-live="polite"></span>
+  <button class="btn principal" type="button" id="siguiente" aria-label="Diapositiva siguiente">Siguiente →</button>
+  <span class="titulo-actual" id="titulo-actual"></span>
+  <button class="btn" type="button" id="boton-indice" aria-expanded="false" aria-controls="indice">Índice</button>
+  <button class="btn" type="button" id="tema" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar tema">◐</button>
+</nav>
+<div class="indice" id="indice" hidden></div>
+
+<script>
+(function () {
+  var diapositivas = Array.prototype.slice.call(document.querySelectorAll('.diapositiva'))
+  var total = diapositivas.length
+  var actual = 0
+  var indice = document.getElementById('indice')
+  var botonIndice = document.getElementById('boton-indice')
+
+  diapositivas.forEach(function (d, i) {
+    var b = document.createElement('button')
+    b.type = 'button'
+    b.innerHTML = '<span class="dato"></span><span></span>'
+    b.firstChild.textContent = i + 1
+    b.lastChild.textContent = d.dataset.titulo
+    b.addEventListener('click', function () { ir(i); cerrarIndice() })
+    indice.appendChild(b)
+    var ante = d.querySelector('.antetitulo')
+    if (ante && i > 0) {
+      var n = document.createElement('span')
+      n.className = 'n'
+      n.textContent = (i + 1) + ' / ' + total
+      ante.appendChild(n)
+    }
+  })
+
+  function ir(i) {
+    actual = Math.max(0, Math.min(total - 1, i))
+    diapositivas.forEach(function (d, j) { d.classList.toggle('activa', j === actual) })
+    diapositivas[actual].scrollTop = 0
+    document.getElementById('contador').textContent = (actual + 1) + ' / ' + total
+    document.getElementById('titulo-actual').textContent = diapositivas[actual].dataset.titulo
+    document.getElementById('progreso').style.width = ((actual + 1) / total * 100) + '%'
+    document.getElementById('anterior').disabled = actual === 0
+    document.getElementById('siguiente').disabled = actual === total - 1
+    Array.prototype.forEach.call(indice.children, function (b, j) { b.setAttribute('aria-current', String(j === actual)) })
+    history.replaceState(null, '', '#' + (actual + 1))
+  }
+
+  function cerrarIndice() { indice.hidden = true; botonIndice.setAttribute('aria-expanded', 'false') }
+
+  document.getElementById('anterior').addEventListener('click', function () { ir(actual - 1) })
+  document.getElementById('siguiente').addEventListener('click', function () { ir(actual + 1) })
+  botonIndice.addEventListener('click', function () {
+    indice.hidden = !indice.hidden
+    botonIndice.setAttribute('aria-expanded', String(!indice.hidden))
+  })
+  document.getElementById('tema').addEventListener('click', function () {
+    var raiz = document.documentElement
+    var oscuro = raiz.getAttribute('data-theme') === 'dark' ||
+      (!raiz.hasAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches)
+    var nuevo = oscuro ? 'light' : 'dark'
+    raiz.setAttribute('data-theme', nuevo)
+    try { localStorage.setItem('convivir-tema', nuevo) } catch (e) {}
+  })
+
+  document.addEventListener('keydown', function (e) {
+    if (e.target.closest && e.target.closest('input, textarea')) return
+    if (['ArrowRight', 'PageDown', ' '].indexOf(e.key) >= 0) { e.preventDefault(); ir(actual + 1) }
+    else if (['ArrowLeft', 'PageUp'].indexOf(e.key) >= 0) { e.preventDefault(); ir(actual - 1) }
+    else if (e.key === 'Home') ir(0)
+    else if (e.key === 'End') ir(total - 1)
+    else if (e.key === 'Escape') cerrarIndice()
+  })
+
+  // Deslizar con el dedo en celular o tableta
+  var inicioX = null
+  document.addEventListener('touchstart', function (e) { inicioX = e.touches[0].clientX }, { passive: true })
+  document.addEventListener('touchend', function (e) {
+    if (inicioX === null) return
+    var dx = e.changedTouches[0].clientX - inicioX
+    if (Math.abs(dx) > 60) ir(actual + (dx < 0 ? 1 : -1))
+    inicioX = null
+  })
+
+  function desdeEnlace() {
+    var n = parseInt(location.hash.slice(1), 10)
+    return n > 0 ? n - 1 : 0
+  }
+  window.addEventListener('hashchange', function () { if (desdeEnlace() !== actual) ir(desdeEnlace()) })
+  ir(desdeEnlace())
+})()
+</script>
+</body>
+</html>

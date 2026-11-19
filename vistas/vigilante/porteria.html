@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portería · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-07 Registrar ingreso y salida de visitantes y autorizados
+     AutorizacionAcceso.validarVigenciaDeLaAutorizacion(), validarDiaYHorarioPermitido() (RF-043)
+     MovimientoAcceso.registrarIngresoAlConjunto(), registrarSalidaDelConjunto()
+     Ingreso sin autorización previa con motivoExcepcion (RF-035, RN-12) -->
+<body class="porteria" data-rol="vigilante" data-seccion="personas">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>¿Quién llega?</h1>
+      <p class="guia">Portería principal · 23 personas dentro del conjunto · 4 parqueaderos de visitantes libres</p>
+    </div>
+  </div>
+
+  <div class="lado">
+    <div class="pila" style="gap:var(--e5)">
+      <form class="buscador-grande" id="buscar" role="search" novalidate>
+        <label class="solo-lectores" for="documento">Número de documento</label>
+        <input id="documento" class="identificador" inputmode="numeric" autocomplete="off" placeholder="Número de documento" autofocus>
+        <button class="btn grande" type="submit">Buscar</button>
+      </form>
+      <p class="guia" style="margin-top:calc(-1 * var(--e3))">
+        Sin puntos ni espacios. Ejemplos de esta vista:
+        <button class="btn texto chico identificador" type="button" data-ejemplo="1045887332">1045887332</button>
+        <button class="btn texto chico identificador" type="button" data-ejemplo="8772104">8772104</button>
+        <button class="btn texto chico identificador" type="button" data-ejemplo="52114877">52114877</button>
+        <button class="btn texto chico identificador" type="button" data-ejemplo="79881230">79881230</button>
+      </p>
+
+      <!-- Estado inicial -->
+      <div class="superficie" id="r-inicio">
+        <div class="vacio">
+          <svg class="simbolo" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="6" y="9" width="28" height="22" rx="3"/><circle cx="15" cy="19" r="4"/><path d="M10 27c1.5-3 3-4 5-4s3.5 1 5 4M24 17h6M24 22h6"/></svg>
+          <h3>Escribe el documento de quien llega</h3>
+          <p>Convivir revisa si tiene una visita o una autorización vigente para hoy y a esta hora.</p>
+        </div>
+      </div>
+
+      <!-- Tiene autorización vigente -->
+      <section class="pila" id="r-autorizada" hidden aria-live="polite">
+        <div class="veredicto v-ok">
+          <div class="palabra">Puede entrar</div>
+          <div class="quien">Camila Restrepo Ariza</div>
+          <div class="donde">CC 1 045 887 332 · Torre B · Apto 302</div>
+          <div class="porque">Visita autorizada por Lucía Mendoza, vigente hasta hoy a las 11:59 p. m. Pidió parqueadero de visitantes.</div>
+        </div>
+        <div class="superficie relleno">
+          <div class="formulario dos">
+            <label class="campo">
+              <span>Placa del vehículo <span class="opcional">(si llega en carro o moto)</span></span>
+              <input class="identificador placa" id="placa-ingreso" placeholder="BQA 47F" autocomplete="off">
+            </label>
+            <label class="campo">
+              <span>Parqueadero de visitantes</span>
+              <select id="parqueadero-ingreso">
+                <option>V-04 · libre</option>
+                <option>V-07 · libre</option>
+                <option>V-09 · libre</option>
+                <option>V-12 · libre</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="fila">
+          <button class="btn grande exito" type="button" data-registrar="Camila Restrepo Ariza|Torre B · Apto 302">Registrar ingreso</button>
+          <button class="btn grande segundo" type="button" data-otra>Buscar otra persona</button>
+        </div>
+      </section>
+
+      <!-- Recurrente fuera de su día u horario -->
+      <section class="pila" id="r-fuera" hidden aria-live="polite">
+        <div class="veredicto v-no">
+          <div class="palabra">Fuera de su horario</div>
+          <div class="quien">Rosa Elvira Pineda</div>
+          <div class="donde">CC 52 114 877 · Torre A · Apto 0401</div>
+          <div class="porque">Autorización recurrente de lunes a viernes, de 7:00 a. m. a 5:00 p. m., otorgada por Gloria Ariza. Hoy es sábado. Puedes llamar al apartamento y, si lo confirman, registrar el ingreso como excepción.</div>
+        </div>
+        <div class="fila">
+          <button class="btn grande segundo" type="button" data-excepcion="Rosa Elvira Pineda|A-0401">Registrar como excepción</button>
+          <button class="btn grande segundo" type="button" data-otra>Buscar otra persona</button>
+        </div>
+      </section>
+
+      <!-- Sin autorización: se puede registrar como excepción con motivo -->
+      <section class="pila" id="r-sin" hidden aria-live="polite">
+        <div class="veredicto v-no">
+          <div class="palabra">No tiene autorización</div>
+          <div class="quien" id="sin-nombre">Persona sin registro</div>
+          <div class="donde" id="sin-documento">CC 8 772 104 · sin registro para hoy</div>
+          <div class="porque">Puedes registrar el ingreso como excepción indicando el motivo y la unidad de destino. Queda en auditoría.</div>
+        </div>
+        <form class="superficie relleno" id="form-excepcion" novalidate>
+          <h2 style="font-size:var(--t-md);font-weight:600;margin-bottom:var(--e4)">Ingreso como excepción</h2>
+          <div class="formulario dos">
+            <label class="campo">
+              <span>Nombre de quien llega</span>
+              <input id="exc-nombre" required data-error="Escribe el nombre como aparece en el documento.">
+            </label>
+            <label class="campo">
+              <span>Unidad de destino</span>
+              <input id="exc-unidad" class="identificador" required placeholder="A-1104" data-error="Escribe la unidad a la que va, por ejemplo A-1104.">
+            </label>
+            <label class="campo completo">
+              <span>Motivo</span>
+              <textarea id="exc-motivo" required placeholder="Domicilio de farmacia. Lo confirmó por citófono Marta Oviedo." data-error="Escribe el motivo. Es obligatorio cuando no hay autorización previa."></textarea>
+              <span class="ayuda">Di quién lo confirmó si llamaste al apartamento.</span>
+            </label>
+            <label class="campo">
+              <span>Placa <span class="opcional">(opcional)</span></span>
+              <input class="identificador placa" placeholder="BQA 47F" autocomplete="off">
+            </label>
+          </div>
+          <div class="fila" style="margin-top:var(--e5)">
+            <button class="btn grande" type="submit">Registrar como excepción</button>
+            <button class="btn grande segundo" type="button" data-otra>Buscar otra persona</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Ya está dentro: lo que corresponde es la salida -->
+      <section class="pila" id="r-dentro" hidden aria-live="polite">
+        <div class="veredicto v-ok">
+          <div class="palabra">Está dentro del conjunto</div>
+          <div class="quien">Mauricio León Gaitán</div>
+          <div class="donde">CC 79 881 230 · Torre C · Apto 0705</div>
+          <div class="porque">Entró hoy a las 7:52 p. m. como visita de Andrés Caicedo, en el vehículo <span class="identificador">JKT 512</span>, parqueadero V-02.</div>
+        </div>
+        <div class="fila">
+          <button class="btn grande" type="button" data-salida="Mauricio León Gaitán">Registrar salida</button>
+          <button class="btn grande segundo" type="button" data-otra>Buscar otra persona</button>
+        </div>
+      </section>
+    </div>
+
+    <aside class="superficie" aria-labelledby="titulo-movimientos">
+      <div class="cabeza">
+        <h2 id="titulo-movimientos">Últimos movimientos</h2>
+        <a class="btn texto chico" href="presentes.html">Ver quién está dentro</a>
+      </div>
+      <ul class="lista" id="movimientos">
+        <li><div class="principal"><b>Mauricio León Gaitán</b><span><span class="identificador">C-0705</span> · visita</span></div><span class="etiqueta">Ingreso <span class="dato">7:52 p. m.</span></span></li>
+        <li><div class="principal"><b>Domicilio Rappi</b><span><span class="identificador">A-0902</span> · excepción</span></div><span class="etiqueta">Salida <span class="dato">7:31 p. m.</span></span></li>
+        <li><div class="principal"><b>Domicilio Rappi</b><span><span class="identificador">A-0902</span> · excepción</span></div><span class="etiqueta">Ingreso <span class="dato">7:24 p. m.</span></span></li>
+        <li><div class="principal"><b>Sofía Restrepo</b><span><span class="identificador">A-0401</span> · residente autorizada</span></div><span class="etiqueta">Ingreso <span class="dato">7:02 p. m.</span></span></li>
+        <li><div class="principal"><b>Técnico Claro</b><span><span class="identificador">B-0302</span> · visita</span></div><span class="etiqueta">Salida <span class="dato">6:40 p. m.</span></span></li>
+      </ul>
+    </aside>
+  </div>
+</main>
+
+<script>
+(function () {
+  var resultados = ['r-inicio', 'r-autorizada', 'r-fuera', 'r-sin', 'r-dentro']
+  var documento = document.getElementById('documento')
+
+  function mostrar(id) {
+    resultados.forEach(function (r) { document.getElementById(r).hidden = r !== id })
+  }
+
+  function agrupar(numero) {
+    return numero.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  }
+
+  function buscar() {
+    var numero = documento.value.replace(/\D/g, '')
+    if (!numero) { documento.focus(); return }
+    if (numero === '1045887332') mostrar('r-autorizada')
+    else if (numero === '52114877') mostrar('r-fuera')
+    else if (numero === '79881230') mostrar('r-dentro')
+    else {
+      document.getElementById('sin-nombre').textContent = 'Persona sin registro'
+      document.getElementById('sin-documento').textContent = 'CC ' + agrupar(numero) + ' · sin registro para hoy'
+      document.getElementById('form-excepcion').reset()
+      mostrar('r-sin')
+      document.getElementById('exc-nombre').focus()
+    }
+  }
+
+  function hora() {
+    var d = new Date()
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+
+  function anotar(nombre, unidad, detalle, sentido) {
+    var li = document.createElement('li')
+    li.innerHTML = '<div class="principal"><b></b><span><span class="identificador"></span> · </span></div><span class="etiqueta"> <span class="dato"></span></span>'
+    li.querySelector('b').textContent = nombre
+    li.querySelector('.identificador').textContent = unidad
+    li.querySelector('.principal > span').append(detalle)
+    li.querySelector('.etiqueta').prepend(sentido)
+    li.querySelector('.dato').textContent = hora()
+    document.getElementById('movimientos').prepend(li)
+  }
+
+  function reiniciar() {
+    documento.value = ''
+    mostrar('r-inicio')
+    documento.focus()
+  }
+
+  document.getElementById('buscar').addEventListener('submit', function (e) { e.preventDefault(); buscar() })
+
+  document.addEventListener('click', function (e) {
+    var ejemplo = e.target.closest('[data-ejemplo]')
+    if (ejemplo) { documento.value = ejemplo.dataset.ejemplo; buscar() }
+
+    if (e.target.closest('[data-otra]')) reiniciar()
+
+    var registrar = e.target.closest('[data-registrar]')
+    if (registrar) {
+      var partes = registrar.dataset.registrar.split('|')
+      anotar(partes[0], 'B-0302', 'visita', 'Ingreso')
+      Convivir.confirmar('Ingreso registrado: ' + partes[0] + ', ' + hora() + '.')
+      reiniciar()
+    }
+
+    var excepcion = e.target.closest('[data-excepcion]')
+    if (excepcion) {
+      var datos = excepcion.dataset.excepcion.split('|')
+      mostrar('r-sin')
+      document.getElementById('sin-nombre').textContent = datos[0]
+      document.getElementById('sin-documento').textContent = 'CC 52 114 877 · fuera de su horario'
+      document.getElementById('exc-nombre').value = datos[0]
+      document.getElementById('exc-unidad').value = datos[1]
+      document.getElementById('exc-motivo').focus()
+    }
+
+    var salida = e.target.closest('[data-salida]')
+    if (salida) {
+      anotar(salida.dataset.salida, 'C-0705', 'visita', 'Salida')
+      Convivir.confirmar('Salida registrada: ' + salida.dataset.salida + ', ' + hora() + '.')
+      reiniciar()
+    }
+  })
+
+  document.getElementById('form-excepcion').addEventListener('submit', function (e) {
+    e.preventDefault()
+    if (!Convivir.validar(this)) return
+    var nombre = document.getElementById('exc-nombre').value.trim()
+    var unidad = document.getElementById('exc-unidad').value.trim().toUpperCase()
+    anotar(nombre, unidad, 'excepción', 'Ingreso')
+    Convivir.confirmar('Ingreso registrado como excepción: ' + nombre + '. Queda en auditoría.')
+    reiniciar()
+  })
+})()
+</script>
+</body>
+</html>

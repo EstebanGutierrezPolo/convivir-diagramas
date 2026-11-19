@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inicio · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- Inicio del residente: resume lo que le toca a Lucía en Torre B · Apto 302
+     CU-12 obligación vigente y saldo (Inmueble.calcularSaldoPendienteDelInmueble(), RF-072)
+     CU-05 y CU-06 autorizaciones VIGENTES · CU-20 reservas SOLICITADA y CONFIRMADA · CU-15 reportes ABIERTO y EN_PROCESO
+     CU-09 cesión de uso de P-022 que vence pronto -->
+<body data-rol="residente" data-seccion="inicio">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Hola, Lucía</h1>
+      <p class="guia">Sábado 14 de noviembre · Torre B · Apto 302 · Villa Campestre</p>
+    </div>
+  </div>
+
+  <div class="lado">
+    <div class="pila">
+      <!-- Estado de cuenta: lo que debe pagar y cuándo vence -->
+      <section class="ficha ok" aria-labelledby="titulo-cuenta">
+        <div class="fila entre" style="align-items:flex-start">
+          <h2 id="titulo-cuenta" style="font-size:var(--t-base);font-weight:600;letter-spacing:0">Tu estado de cuenta</h2>
+          <span class="pildora p-ok">Al día</span>
+        </div>
+        <div class="cifra" style="padding:0;margin-top:var(--e3)">
+          <div class="etiqueta">Cuota de administración de noviembre</div>
+          <div class="valor">$&nbsp;412&nbsp;000</div>
+          <div class="meta">Vence el 30 de noviembre, en 16 días. No tienes nada vencido.</div>
+        </div>
+        <div class="fila" style="margin-top:var(--e4);gap:var(--e2)">
+          <a class="btn" href="pagos.html">Pagar cuota</a>
+          <a class="btn texto" href="pagos.html#historial">Ver historial de pagos</a>
+        </div>
+        <p class="guia" style="margin-top:var(--e4);padding-top:var(--e3);border-top:1px solid var(--borde-f)">
+          La multa de <span class="num">$&nbsp;150&nbsp;000</span> por ruido de octubre está a cargo del propietario, Ernesto Vargas. No tienes que pagarla tú.
+        </p>
+      </section>
+
+      <div class="aviso al">
+        <p><b>La cesión del parqueadero <span class="identificador">P-022</span> vence el 30 de noviembre.</b></p>
+        <p>Si lo vas a seguir usando, pídele a Ernesto Vargas que la renueve con la administración. <a href="vehiculos.html">Ver vehículos y parqueadero</a></p>
+      </div>
+    </div>
+
+    <!-- Accesos rápidos -->
+    <aside class="superficie" aria-labelledby="titulo-accesos">
+      <div class="cabeza"><h2 id="titulo-accesos">Qué quieres hacer</h2></div>
+      <ul class="lista">
+        <li><a class="renglon" href="visitas.html#registrar">
+          <span class="principal"><b>Registrar visita</b><span>Para que portería deje entrar a tu invitado</span></span>
+          <span aria-hidden="true" class="guia">›</span></a></li>
+        <li><a class="renglon" href="reservas.html">
+          <span class="principal"><b>Reservar zona común</b><span>Salón social, zona BBQ o cancha</span></span>
+          <span aria-hidden="true" class="guia">›</span></a></li>
+        <li><a class="renglon" href="reportes.html#crear">
+          <span class="principal"><b>Reportar novedad</b><span>Un daño, ruido o algo de seguridad</span></span>
+          <span aria-hidden="true" class="guia">›</span></a></li>
+      </ul>
+    </aside>
+  </div>
+
+  <div class="rejilla r3 seccion">
+    <!-- Próximas visitas autorizadas -->
+    <section class="superficie" aria-labelledby="titulo-visitas">
+      <div class="cabeza"><h2 id="titulo-visitas">Próximas visitas</h2></div>
+      <ul class="lista">
+        <li>
+          <div class="principal"><b>Camila Restrepo Ariza</b><span>Hoy, 6:00 p. m. a 11:59 p. m. · con parqueadero</span></div>
+          <span class="pildora p-ok">Vigente</span>
+        </li>
+        <li>
+          <div class="principal"><b>Julián Mendoza Torres</b><span>Domingo 15 de noviembre, 12:00 m. a 6:00 p. m.</span></div>
+          <span class="pildora p-ok">Vigente</span>
+        </li>
+        <li>
+          <div class="principal"><b>Martha Lucía Cárdenas</b><span>Empleada doméstica · martes y viernes, 7:00 a. m. a 4:00 p. m.</span></div>
+          <span class="pildora p-ok">Vigente</span>
+        </li>
+        <li>
+          <div class="principal"><b>Daniel Ospina Rueda</b><span>Profesor de inglés · lunes y miércoles, hasta el 20 de noviembre</span></div>
+          <span class="pildora p-al">Vence en 6 días</span>
+        </li>
+      </ul>
+      <div class="pie"><a class="btn texto chico" href="visitas.html">Ver todas las visitas</a></div>
+    </section>
+
+    <!-- Sus reservas -->
+    <section class="superficie" aria-labelledby="titulo-reservas">
+      <div class="cabeza"><h2 id="titulo-reservas">Tus reservas</h2></div>
+      <ul class="lista">
+        <li>
+          <div class="principal"><b>Cancha múltiple</b><span>Domingo 15 de noviembre, 7:00 a. m. a 8:00 a. m. · sin costo</span></div>
+          <span class="pildora p-ok">Confirmada</span>
+        </li>
+        <li>
+          <div class="principal"><b>Zona BBQ</b><span>Sábado 28 de noviembre, 3:00 p. m. a 6:00 p. m. · <span class="num">$&nbsp;75&nbsp;000</span></span></div>
+          <span class="pildora p-al">Por confirmar</span>
+        </li>
+      </ul>
+      <div class="pie"><a class="btn texto chico" href="reservas.html">Reservar o ver tus reservas</a></div>
+    </section>
+
+    <!-- Sus reportes abiertos -->
+    <section class="superficie" aria-labelledby="titulo-reportes">
+      <div class="cabeza"><h2 id="titulo-reportes">Tus reportes abiertos</h2></div>
+      <ul class="lista">
+        <li>
+          <div class="principal"><b>Daños e infraestructura <span class="identificador guia">R-0412</span></b><span>Sale agua del techo del baño principal…</span><span>Último seguimiento: el plomero viene el martes 17 de noviembre a las 9:00 a. m.</span></div>
+          <span class="pildora p-al">En proceso</span>
+        </li>
+        <li>
+          <div class="principal"><b>Daños e infraestructura <span class="identificador guia">R-0437</span></b><span>La luminaria del sótano 1, frente al P-022, está apagada…</span><span>Creado el 12 de noviembre · sin responsable todavía</span></div>
+          <span class="pildora p-al">Abierto</span>
+        </li>
+      </ul>
+      <div class="pie"><a class="btn texto chico" href="reportes.html">Ver el seguimiento</a></div>
+    </section>
+  </div>
+</main>
+</body>
+</html>

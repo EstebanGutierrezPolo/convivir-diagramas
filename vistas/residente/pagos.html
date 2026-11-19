@@ -1,0 +1,436 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pagos · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* Renglón de obligación con casilla, valor y abono editable. Solo tokens. */
+  .obligacion { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--e2) var(--e4); padding: var(--e4) var(--e5); border-bottom: 1px solid var(--borde-f); }
+  .obligacion:last-child { border-bottom: 0; }
+  .obligacion .opcion b { display: block; font-size: var(--t-base); font-weight: 600; }
+  .obligacion .monto { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .obligacion .monto small { display: block; font-weight: 400; color: var(--acero); font-size: var(--t-xs); }
+  .obligacion .debajo { grid-column: 1 / -1; padding-left: calc(18px + var(--e3)); }
+  .obligacion.bloqueada .opcion { cursor: not-allowed; }
+  .obligacion.bloqueada .opcion input { opacity: .45; }
+  .obligacion .campo { max-width: 16rem; }
+  @media (max-width: 40rem) {
+    .obligacion { padding-left: var(--e4); padding-right: var(--e4); }
+    .obligacion .debajo { padding-left: 0; }
+    .obligacion .campo { max-width: none; }
+  }
+  /* Al descargar el comprobante solo se imprime el documento. */
+  @media print {
+    body:has(#dialogo-comprobante[open]) > :not(#dialogo-comprobante) { display: none !important; }
+    #dialogo-comprobante[open] { position: static; display: block; width: auto; max-height: none; border: 0; overflow: visible; }
+    #dialogo-comprobante .cabeza, #dialogo-comprobante .pie { display: none; }
+    #dialogo-comprobante .cuerpo { padding: 0; overflow: visible; }
+  }
+</style>
+</head>
+<!-- CU-12 Consultar obligación y pagar
+     Inmueble.calcularSaldoPendienteDelInmueble() (RF-070 a RF-073)
+     Obligacion.determinarSiHaySolidaridadDelArrendatario(): el arrendatario solo paga CUOTA_ORDINARIA (RN-22, 422)
+     Pago(valor, PASARELA, EN_LINEA), asignarPasarela(), procesarPagoDeLaObligacion() → PENDIENTE (RF-074, RF-075, RF-123)
+     Pago.validarResultadoDeLaPasarela() → CONFIRMADO: Obligacion.registrarAbonoALaObligacion(), Pago.generarComprobanteDePago() (RF-076, RF-077, RN-23, RN-42)
+     Decisión abierta 9: la pasarela es simulada detrás de PasarelaPago / AdaptadorPasarelaExterna. -->
+<body data-rol="residente" data-seccion="pagos">
+
+<main class="pagina media">
+  <div class="encabezado">
+    <div>
+      <h1>Pagos</h1>
+      <p class="guia">Torre B · Apto 302 · periodo de noviembre de 2026</p>
+    </div>
+  </div>
+
+  <ol class="pasos" id="pasos" aria-label="Pasos del pago">
+    <li data-paso="elegir" aria-current="step">Elige qué pagar</li>
+    <li data-paso="pasarela">Paga en la pasarela</li>
+    <li data-paso="resultado">Resultado</li>
+  </ol>
+
+  <!-- Paso 1: obligaciones y saldo -->
+  <section id="etapa-elegir" class="lado" aria-label="Elige qué pagar">
+    <div class="superficie">
+      <div class="cabeza">
+        <h2>Obligaciones del apartamento</h2>
+        <span class="guia">Saldo pendiente del inmueble <b class="num" id="saldo-inmueble">$&nbsp;562&nbsp;000</b></span>
+      </div>
+      <div id="obligaciones">
+        <!-- CUOTA_ORDINARIA: la puede pagar o abonar la arrendataria -->
+        <div class="obligacion" id="obl-cuota">
+          <label class="opcion">
+            <input type="checkbox" id="casilla-cuota" checked>
+            <span>
+              <b>Cuota de administración de noviembre</b>
+              <small id="cuota-meta">Vence el 30 de noviembre, en 16 días</small>
+            </span>
+          </label>
+          <div class="monto">
+            <span id="cuota-saldo">$&nbsp;412&nbsp;000</span>
+            <small id="cuota-estado-texto">de $&nbsp;412&nbsp;000</small>
+          </div>
+          <div class="debajo pila chica">
+            <div><span class="pildora p-ok" id="cuota-pildora">Al día</span></div>
+            <label class="campo" id="campo-valor">
+              <span>Valor a pagar</span>
+              <span class="con-prefijo"><span>$</span><input id="valor" class="num" inputmode="numeric" autocomplete="off" value="412 000" aria-describedby="ayuda-valor"></span>
+              <span class="ayuda" id="ayuda-valor">Puedes abonar una parte. Lo que falte sigue pendiente con el mismo vencimiento.</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- MULTA: a cargo exclusivo del propietario (RN-22) -->
+        <div class="obligacion bloqueada" id="obl-multa">
+          <label class="opcion">
+            <input type="checkbox" id="casilla-multa" aria-disabled="true" aria-describedby="porque-multa">
+            <span>
+              <b>Multa por ruido de octubre</b>
+              <small>Impuesta el 24 de octubre · vence el 30 de noviembre</small>
+            </span>
+          </label>
+          <div class="monto">$&nbsp;150&nbsp;000<small>a cargo del propietario</small></div>
+          <div class="debajo pila chica">
+            <div><span class="etiqueta">La paga Ernesto Vargas</span></div>
+            <p class="guia" id="porque-multa">Como arrendataria solo puedes pagar la cuota de administración. Las multas, las cuotas extraordinarias y los intereses de mora los paga el propietario.</p>
+            <div class="aviso no" id="error-multa" role="alert" hidden>
+              <p><b>No puedes pagar esta multa.</b></p>
+              <p>Quien vive en arriendo solo paga expensas comunes ordinarias, es decir, la cuota de administración. Esta multa le corresponde a Ernesto Vargas, propietario de Torre B · Apto 302.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <aside class="superficie" aria-labelledby="titulo-resumen">
+      <div class="cabeza"><h2 id="titulo-resumen">Resumen</h2></div>
+      <div class="cuerpo pila">
+        <dl class="datos fila-unica">
+          <div><dt>Pagas</dt><dd id="resumen-concepto">Cuota de administración de noviembre</dd></div>
+          <div><dt>Medio</dt><dd>Pasarela en línea: PSE o tarjeta</dd></div>
+          <div><dt>Queda pendiente</dt><dd class="num" id="resumen-queda">$&nbsp;0</dd></div>
+        </dl>
+        <button class="btn ancho" type="button" id="pagar">Pagar $&nbsp;412&nbsp;000</button>
+        <p class="guia">Te llevamos a la pasarela. El pago queda en firme cuando tu banco lo confirma.</p>
+      </div>
+    </aside>
+  </section>
+
+  <!-- Paso 2: pago PENDIENTE en la pasarela -->
+  <section id="etapa-pasarela" class="pila" style="gap:var(--e5)" hidden aria-live="polite">
+    <div class="veredicto v-al">
+      <div class="palabra">Esperando a tu banco</div>
+      <div class="quien" id="pendiente-valor">$&nbsp;412&nbsp;000 · cuota de noviembre</div>
+      <div class="donde" id="pendiente-referencia">Referencia PSE-2611-84213</div>
+      <div class="porque">Termina el pago en la ventana de la pasarela. No pagues otra vez mientras este pago esté pendiente.</div>
+    </div>
+    <div class="superficie">
+      <div class="cabeza">
+        <h2>Pasarela de pagos</h2>
+        <span class="etiqueta">Simulada para pruebas</span>
+      </div>
+      <div class="cuerpo pila">
+        <p class="guia">Aquí iría la página del banco. Elige qué responde la pasarela para ver cada resultado.</p>
+        <div class="fila">
+          <button class="btn exito" type="button" data-resultado="CONFIRMADO">Aprobar pago</button>
+          <button class="btn riesgo" type="button" data-resultado="RECHAZADO">Rechazar pago</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Paso 3: resultado de la transacción -->
+  <section id="etapa-confirmado" class="pila" style="gap:var(--e4)" hidden aria-live="polite">
+    <div class="veredicto v-ok">
+      <div class="palabra">Pago confirmado</div>
+      <div class="quien" id="confirmado-valor"></div>
+      <div class="donde" id="confirmado-comprobante"></div>
+      <div class="porque" id="confirmado-porque"></div>
+    </div>
+    <div class="fila">
+      <button class="btn" type="button" data-comprobante="nuevo">Ver comprobante</button>
+      <button class="btn segundo" type="button" data-volver>Volver a mis pagos</button>
+    </div>
+  </section>
+
+  <section id="etapa-rechazado" class="pila" style="gap:var(--e4)" hidden aria-live="polite">
+    <div class="veredicto v-no">
+      <div class="palabra">Pago rechazado</div>
+      <div class="quien" id="rechazado-valor"></div>
+      <div class="donde" id="rechazado-referencia"></div>
+      <div class="porque" id="rechazado-porque"></div>
+    </div>
+    <div class="fila">
+      <button class="btn" type="button" data-reintentar>Intentar de nuevo</button>
+      <button class="btn segundo" type="button" data-volver>Volver a mis pagos</button>
+    </div>
+  </section>
+
+  <!-- Historial de pagos del inmueble -->
+  <section class="seccion">
+    <div class="encabezado"><h2>Historial de pagos</h2></div>
+    <div class="superficie">
+      <ul class="lista" id="historial"></ul>
+    </div>
+  </section>
+</main>
+
+<!-- Comprobante: Pago.generarComprobanteDePago() (RF-077) -->
+<dialog class="dialogo ancho" id="dialogo-comprobante" aria-labelledby="titulo-comprobante">
+  <div class="contenido">
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-comprobante">Comprobante de pago</h2>
+        <p class="guia">Para descargarlo, elige Guardar como PDF en la ventana de impresión.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <article class="documento-impreso">
+        <div class="encabezado-doc">
+          <div>
+            <div class="fuerte">Copropiedad Villa Campestre</div>
+            <div class="guia">NIT <span class="identificador">900 456 789-1</span></div>
+            <div class="guia">Comprobante de pago en línea</div>
+          </div>
+          <div style="text-align:right">
+            <div class="identificador fuerte" id="doc-numero"></div>
+            <div class="guia" id="doc-fecha"></div>
+          </div>
+        </div>
+        <dl class="datos">
+          <div><dt>Inmueble</dt><dd>Torre B · Apto 302 <span class="identificador guia">B-0302</span></dd></div>
+          <div><dt>Pagó</dt><dd>Lucía Mendoza, arrendataria</dd></div>
+          <div><dt>Medio y canal</dt><dd>Pasarela, en línea</dd></div>
+          <div><dt>Referencia de la pasarela</dt><dd class="identificador" id="doc-referencia"></dd></div>
+          <div><dt>Concepto</dt><dd id="doc-concepto"></dd></div>
+          <div><dt>Saldo de la obligación después del pago</dt><dd class="num" id="doc-saldo"></dd></div>
+        </dl>
+        <div class="total">
+          <span class="fuerte">Total pagado</span>
+          <span class="valor" id="doc-total"></span>
+        </div>
+        <p class="guia" style="margin-top:var(--e4)">Este comprobante acredita el pago de la obligación indicada. No reemplaza el paz y salvo, que expide la administración.</p>
+      </article>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cerrar</button>
+      <button class="btn" type="button" id="descargar">Descargar comprobante</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+  // Obligacion de CUOTA_ORDINARIA de noviembre. La multa no cambia en esta pantalla.
+  var cuota = { descripcion: 'Cuota de administración de noviembre', valor: 412000, saldoPendiente: 412000, estado: 'PENDIENTE' }
+  var MULTA = 150000
+
+  var historial = [
+    { fecha: '28 de octubre de 2026', hora: '7:15 p. m.', concepto: 'Cuota de administración de octubre', valor: 412000, saldo: 0, estado: 'CONFIRMADO', comprobante: 'CP-2026-003977', referencia: 'PSE-2610-77341' },
+    { fecha: '28 de octubre de 2026', hora: '7:09 p. m.', concepto: 'Cuota de administración de octubre', valor: 412000, saldo: 412000, estado: 'RECHAZADO', referencia: 'PSE-2610-77322' },
+    { fecha: '29 de septiembre de 2026', hora: '9:40 a. m.', concepto: 'Cuota de administración de septiembre', valor: 212000, saldo: 0, estado: 'CONFIRMADO', comprobante: 'CP-2026-003112', referencia: 'PSE-2609-60218' },
+    { fecha: '15 de septiembre de 2026', hora: '8:05 p. m.', concepto: 'Cuota de administración de septiembre', valor: 200000, saldo: 212000, estado: 'CONFIRMADO', comprobante: 'CP-2026-002874', referencia: 'PSE-2609-55107' },
+    { fecha: '27 de agosto de 2026', hora: '12:31 p. m.', concepto: 'Cuota de administración de agosto', valor: 412000, saldo: 0, estado: 'CONFIRMADO', comprobante: 'CP-2026-002240', referencia: 'PSE-2608-41876' },
+  ]
+  var consecutivo = { comprobante: 4821, referencia: 84213 }
+  var pagoEnCurso = null
+
+  var $ = function (id) { return document.getElementById(id) }
+  var casilla = $('casilla-cuota')
+  var campoValor = $('valor')
+
+  function horaActual() {
+    var d = new Date()
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  function sinSigno(n) { return Convivir.pesos(n).replace(/^\$\s/, '') }
+  function leerValor() { return parseInt(campoValor.value.replace(/\D/g, ''), 10) || 0 }
+
+  // ---------- Paso actual ----------
+  function irA(etapa) {
+    ;['elegir', 'pasarela', 'confirmado', 'rechazado'].forEach(function (e) { $('etapa-' + e).hidden = e !== etapa })
+    var paso = etapa === 'confirmado' || etapa === 'rechazado' ? 'resultado' : etapa
+    var pasado = true
+    document.querySelectorAll('#pasos li').forEach(function (li) {
+      var actual = li.dataset.paso === paso
+      if (actual) pasado = false
+      li.classList.toggle('hecho', pasado && !actual)
+      if (actual) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current')
+    })
+    $('pasos').scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }
+
+  // ---------- Obligación y resumen ----------
+  function pintarCuota() {
+    var pagada = cuota.saldoPendiente === 0
+    $('cuota-saldo').textContent = Convivir.pesos(cuota.saldoPendiente)
+    $('cuota-estado-texto').textContent = pagada ? 'pagada' : (cuota.saldoPendiente < cuota.valor ? 'pendiente de ' + Convivir.pesos(cuota.valor) : 'de ' + Convivir.pesos(cuota.valor))
+    var pildora = $('cuota-pildora')
+    if (pagada) { pildora.className = 'pildora p-ok'; pildora.textContent = 'Pagada' }
+    else if (cuota.estado === 'PAGADA_PARCIALMENTE') { pildora.className = 'pildora p-al'; pildora.textContent = 'Pagada en parte' }
+    else { pildora.className = 'pildora p-ok'; pildora.textContent = 'Al día' }
+    $('cuota-meta').textContent = pagada ? 'Pagada el 14 de noviembre' : 'Vence el 30 de noviembre, en 16 días'
+    casilla.checked = !pagada
+    casilla.disabled = pagada
+    $('campo-valor').hidden = pagada
+    campoValor.value = sinSigno(cuota.saldoPendiente)
+    $('saldo-inmueble').textContent = Convivir.pesos(cuota.saldoPendiente + MULTA)
+    resumir()
+  }
+
+  function resumir() {
+    var valor = casilla.checked ? leerValor() : 0
+    var pagada = cuota.saldoPendiente === 0
+    $('resumen-concepto').textContent = pagada ? 'Nada pendiente a tu cargo' : (casilla.checked ? cuota.descripcion : 'Elige la cuota para pagarla')
+    $('resumen-queda').textContent = Convivir.pesos(casilla.checked ? Math.max(cuota.saldoPendiente - valor, 0) : cuota.saldoPendiente)
+    var boton = $('pagar')
+    boton.textContent = pagada ? 'Estás al día' : 'Pagar ' + Convivir.pesos(valor)
+    boton.disabled = pagada || !casilla.checked || valor <= 0
+  }
+
+  function errorValor(mensaje) {
+    var contenedor = $('campo-valor')
+    var previo = contenedor.querySelector('.error')
+    if (previo) previo.remove()
+    campoValor.removeAttribute('aria-invalid')
+    if (!mensaje) return
+    campoValor.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.textContent = mensaje
+    contenedor.appendChild(error)
+  }
+
+  campoValor.addEventListener('input', function () { errorValor(''); resumir() })
+  campoValor.addEventListener('blur', function () { var v = leerValor(); if (v) campoValor.value = sinSigno(v) })
+  casilla.addEventListener('change', function () { $('campo-valor').hidden = !casilla.checked; resumir() })
+
+  // El arrendatario no puede seleccionar la multa: es la respuesta 422 de RN-22, a la vista.
+  $('casilla-multa').addEventListener('click', function (e) {
+    e.preventDefault()
+    $('error-multa').hidden = false
+  })
+
+  // ---------- Iniciar pago: POST /api/pagos → 202 PENDIENTE ----------
+  $('pagar').addEventListener('click', function () {
+    var valor = leerValor()
+    errorValor('')
+    if (valor > cuota.saldoPendiente) {
+      errorValor('El valor no puede pasar del saldo de la cuota, ' + Convivir.pesos(cuota.saldoPendiente) + '. Si quieres pagarla completa, escribe ' + sinSigno(cuota.saldoPendiente) + '.')
+      campoValor.focus()
+      return
+    }
+    if (valor <= 0) {
+      errorValor('Escribe cuánto quieres pagar, por ejemplo ' + sinSigno(cuota.saldoPendiente) + ' para la cuota completa.')
+      campoValor.focus()
+      return
+    }
+    pagoEnCurso = {
+      valor: valor,
+      concepto: cuota.descripcion,
+      referencia: 'PSE-2611-' + consecutivo.referencia++,
+      estado: 'PENDIENTE',
+    }
+    $('pendiente-valor').textContent = Convivir.pesos(valor) + ' · ' + (valor < cuota.saldoPendiente ? 'abono a la ' : '') + 'cuota de noviembre'
+    $('pendiente-referencia').textContent = 'Referencia ' + pagoEnCurso.referencia
+    irA('pasarela')
+  })
+
+  // ---------- Resultado: GET /api/pagos/id → CONFIRMADO o RECHAZADO (RN-23) ----------
+  document.querySelectorAll('[data-resultado]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var p = pagoEnCurso
+      if (!p) return
+      p.estado = b.dataset.resultado
+      p.fecha = '14 de noviembre de 2026'
+      p.hora = horaActual()
+      if (p.estado === 'CONFIRMADO') {
+        // Obligacion.registrarAbonoALaObligacion(valorAbono) → PAGADA o PAGADA_PARCIALMENTE (RN-42)
+        cuota.saldoPendiente -= p.valor
+        cuota.estado = cuota.saldoPendiente === 0 ? 'PAGADA' : 'PAGADA_PARCIALMENTE'
+        p.saldo = cuota.saldoPendiente
+        p.comprobante = 'CP-2026-00' + consecutivo.comprobante++
+        $('confirmado-valor').textContent = Convivir.pesos(p.valor) + ' · ' + p.concepto.toLowerCase()
+        $('confirmado-comprobante').textContent = 'Comprobante ' + p.comprobante + ' · ' + p.referencia
+        $('confirmado-porque').textContent = cuota.saldoPendiente === 0
+          ? 'La cuota de noviembre quedó pagada. No tienes nada más pendiente a tu cargo.'
+          : 'Abonaste ' + Convivir.pesos(p.valor) + '. De la cuota de noviembre quedan ' + Convivir.pesos(cuota.saldoPendiente) + ', que vencen el 30 de noviembre.'
+        historial.unshift(p)
+        pintarCuota()
+        irA('confirmado')
+      } else {
+        p.saldo = cuota.saldoPendiente
+        $('rechazado-valor').textContent = Convivir.pesos(p.valor) + ' · ' + p.concepto.toLowerCase()
+        $('rechazado-referencia').textContent = 'Referencia ' + p.referencia
+        $('rechazado-porque').textContent = 'Tu banco no aprobó la transacción y no se descontó nada. La cuota sigue pendiente por ' +
+          Convivir.pesos(cuota.saldoPendiente) + '. Revisa el saldo o el cupo con tu banco e inténtalo de nuevo, o paga con otra cuenta o tarjeta.'
+        historial.unshift(p)
+        irA('rechazado')
+      }
+      pintarHistorial()
+    })
+  })
+
+  document.addEventListener('click', function (e) {
+    if (e.target.closest('[data-volver]') || e.target.closest('[data-reintentar]')) {
+      pagoEnCurso = null
+      $('error-multa').hidden = true
+      pintarCuota()
+      irA('elegir')
+    }
+    var ver = e.target.closest('[data-comprobante]')
+    if (ver) {
+      var cual = ver.dataset.comprobante
+      var pago = cual === 'nuevo' ? historial[0] : historial.filter(function (h) { return h.comprobante === cual })[0]
+      abrirComprobante(pago)
+    }
+  })
+
+  // ---------- Comprobante (RF-077) ----------
+  function abrirComprobante(p) {
+    $('doc-numero').textContent = p.comprobante
+    $('doc-fecha').textContent = p.fecha + ', ' + p.hora
+    $('doc-referencia').textContent = p.referencia
+    $('doc-concepto').textContent = p.concepto
+    $('doc-saldo').textContent = Convivir.pesos(p.saldo)
+    $('doc-total').textContent = Convivir.pesos(p.valor)
+    Convivir.abrir('dialogo-comprobante')
+  }
+  $('descargar').addEventListener('click', function () { window.print() })
+
+  // ---------- Historial ----------
+  function pintarHistorial() {
+    $('historial').innerHTML = historial.map(function (p) {
+      var confirmado = p.estado === 'CONFIRMADO'
+      return '<li>' +
+        '<div class="principal">' +
+          '<b>' + p.concepto + '</b>' +
+          '<span>' + p.fecha + ', ' + p.hora + ' · pasarela en línea</span>' +
+          '<span class="identificador">' + (confirmado ? p.comprobante + ' · ' : '') + p.referencia + '</span>' +
+        '</div>' +
+        '<div class="fila" style="gap:var(--e3)">' +
+          '<span class="num fuerte">' + Convivir.pesos(p.valor) + '</span>' +
+          (confirmado ? '<span class="pildora p-ok">Confirmado</span>' : '<span class="pildora p-no">Rechazado</span>') +
+          (confirmado ? '<button class="btn texto chico" type="button" data-comprobante="' + p.comprobante + '">Comprobante</button>' : '') +
+        '</div>' +
+      '</li>'
+    }).join('')
+  }
+
+  pintarCuota()
+  pintarHistorial()
+})()
+</script>
+</body>
+</html>

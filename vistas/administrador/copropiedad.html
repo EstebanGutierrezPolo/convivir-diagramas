@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Copropiedad · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- RF-106 Configurar los datos de la copropiedad · PropiedadHorizontal.configurarDatosGeneralesDeLaCopropiedad(nit, nombre, direccion, correoContacto, telefonoContacto)
+     Resumen en solo lectura: PropiedadHorizontal "1" o-- "*" Inmueble : administra -->
+<body data-rol="administrador" data-seccion="administracion" data-sub="copropiedad">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Datos de la copropiedad</h1>
+      <p class="guia">Salen en los recibos de caja, el paz y salvo, los informes de cartera y los correos que envía Convivir.</p>
+    </div>
+  </div>
+
+  <div class="lado">
+    <form class="superficie" id="form-copropiedad" novalidate>
+      <div class="cabeza">
+        <h2>Identificación y contacto</h2>
+        <span class="pildora p-ok">Activa</span>
+      </div>
+      <div class="cuerpo">
+        <div class="formulario dos">
+          <label class="campo completo">
+            <span>Nombre</span>
+            <input id="nombre" required value="Conjunto Residencial Villa Campestre" autocomplete="organization"
+                   data-error="Escribe el nombre como aparece en el certificado de existencia y representación legal.">
+          </label>
+          <label class="campo">
+            <span>NIT</span>
+            <input id="nit" class="identificador" required value="900482317-1" inputmode="numeric" autocomplete="off"
+                   data-error="Escribe el NIT con su dígito de verificación, por ejemplo 900482317-1.">
+            <span class="ayuda">Sin puntos y con el dígito de verificación después del guion.</span>
+          </label>
+          <label class="campo">
+            <span>Teléfono de contacto</span>
+            <input id="telefono" required value="605 385 4410" inputmode="tel" autocomplete="tel"
+                   data-error="Escribe un teléfono de la administración, fijo o celular.">
+            <span class="ayuda">Fijo con indicativo, por ejemplo 605 385 4410, o celular.</span>
+          </label>
+          <label class="campo completo">
+            <span>Dirección</span>
+            <input id="direccion" required value="Calle 98 # 52-115, Barranquilla, Atlántico" autocomplete="street-address"
+                   data-error="Escribe la dirección de la copropiedad con la ciudad.">
+          </label>
+          <label class="campo completo">
+            <span>Correo de contacto</span>
+            <input id="correo" type="email" required value="administracion@villacampestre.co" autocomplete="email"
+                   data-error="Escribe el correo de la administración. Desde ahí se responden los avisos.">
+            <span class="ayuda">Los residentes responden a este correo cuando reciben un aviso.</span>
+          </label>
+        </div>
+      </div>
+      <div class="pie">
+        <span id="estado-cambios">Sin cambios por guardar</span>
+        <div class="fila" style="gap:var(--e2)">
+          <button class="btn segundo" type="button" id="descartar" disabled>Descartar cambios</button>
+          <button class="btn" type="submit">Guardar datos de la copropiedad</button>
+        </div>
+      </div>
+    </form>
+
+    <aside class="superficie" aria-labelledby="titulo-administra">
+      <div class="cabeza">
+        <h2 id="titulo-administra">Lo que administra</h2>
+        <a class="btn texto chico" href="inmuebles.html">Ver inmuebles</a>
+      </div>
+      <ul class="lista">
+        <li><div class="principal"><b>Torres</b><span>A, B y C</span></div><span class="num fuerte">3</span></li>
+        <li><div class="principal"><b>Sótanos</b><span>Sótano 1 y sótano 2</span></div><span class="num fuerte">2</span></li>
+        <li><div class="principal"><b>Unidades privadas activas</b><span>1 desactivada por remodelación</span></div><span class="num fuerte">184</span></li>
+        <li><div class="principal"><b>Parqueaderos privados</b><span><span class="identificador">P-001</span> a <span class="identificador">P-180</span></span></div><span class="num fuerte">180</span></li>
+        <li><div class="principal"><b>Parqueaderos de visitantes</b><span><span class="identificador">V-01</span> a <span class="identificador">V-12</span></span></div><span class="num fuerte">12</span></li>
+        <li><div class="principal"><b>Zonas comunes</b><span>4 se reservan: salón social, zona BBQ, cancha y habitación de huéspedes</span></div><span class="num fuerte">9</span></li>
+      </ul>
+      <div class="pie"><span>Se calcula con los inmuebles registrados. Para cambiarlo, registra o desactiva inmuebles.</span></div>
+    </aside>
+  </div>
+</main>
+
+<script>
+(function () {
+  var formulario = document.getElementById('form-copropiedad')
+  var campos = ['nombre', 'nit', 'telefono', 'direccion', 'correo'].map(function (id) { return document.getElementById(id) })
+  var guardados = {}
+
+  function recordar() { campos.forEach(function (c) { guardados[c.id] = c.value }) }
+  function hayCambios() { return campos.some(function (c) { return c.value !== guardados[c.id] }) }
+  function actualizarEstado() {
+    var cambios = hayCambios()
+    document.getElementById('descartar').disabled = !cambios
+    document.getElementById('estado-cambios').textContent = cambios ? 'Tienes cambios sin guardar' : 'Sin cambios por guardar'
+  }
+
+  // Dígito de verificación del NIT (DIAN, módulo 11).
+  function digitoVerificacion(numero) {
+    var pesos = [3, 7, 13, 17, 19, 23, 29, 37, 41, 43, 47, 53, 59, 67, 71]
+    var suma = 0
+    numero.split('').reverse().forEach(function (d, i) { suma += Number(d) * pesos[i] })
+    var resto = suma % 11
+    return resto > 1 ? 11 - resto : resto
+  }
+
+  function error(campo, mensaje) {
+    campo.setAttribute('aria-invalid', 'true')
+    var e = document.createElement('span')
+    e.className = 'error'
+    e.setAttribute('data-generado', '')
+    e.textContent = mensaje
+    campo.closest('.campo').appendChild(e)
+  }
+
+  function validarFormatos() {
+    var nit = document.getElementById('nit')
+    var correo = document.getElementById('correo')
+    var telefono = document.getElementById('telefono')
+    var valido = true
+    var partes = nit.value.replace(/[.\s]/g, '').match(/^(\d{9})-?(\d)$/)
+    if (!partes) {
+      error(nit, 'El NIT lleva 9 dígitos y el dígito de verificación, por ejemplo 900482317-1.')
+      valido = false
+    } else if (digitoVerificacion(partes[1]) !== Number(partes[2])) {
+      error(nit, 'El dígito de verificación no corresponde. Para ' + partes[1] + ' es ' + digitoVerificacion(partes[1]) + '. Revísalo en el RUT.')
+      valido = false
+    } else {
+      nit.value = partes[1] + '-' + partes[2]
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo.value.trim())) {
+      error(correo, 'Ese correo no está completo. Escríbelo como administracion@villacampestre.co.')
+      valido = false
+    }
+    var digitos = telefono.value.replace(/\D/g, '')
+    if (digitos.length !== 10) {
+      error(telefono, 'El teléfono lleva 10 dígitos: fijo con indicativo, como 605 385 4410, o celular, como 300 555 0142.')
+      valido = false
+    }
+    var primero = formulario.querySelector('[aria-invalid="true"]')
+    if (primero) primero.focus()
+    return valido
+  }
+
+  formulario.addEventListener('submit', function (e) {
+    e.preventDefault()
+    if (!Convivir.validar(formulario)) return
+    if (!validarFormatos()) return
+    if (!hayCambios()) { Convivir.confirmar('No hay cambios por guardar. Los datos ya están así.', 'al'); return }
+    recordar()
+    actualizarEstado()
+    Convivir.confirmar('Datos de la copropiedad guardados. Desde ahora salen así en recibos, paz y salvo y correos.')
+  })
+
+  formulario.addEventListener('input', actualizarEstado)
+
+  document.getElementById('descartar').addEventListener('click', function () {
+    campos.forEach(function (c) {
+      c.value = guardados[c.id]
+      c.removeAttribute('aria-invalid')
+      var e = c.closest('.campo').querySelector('.error[data-generado]')
+      if (e) e.remove()
+    })
+    actualizarEstado()
+    Convivir.confirmar('Cambios descartados.', 'al')
+  })
+
+  window.addEventListener('beforeunload', function (e) { if (hayCambios()) { e.preventDefault(); e.returnValue = '' } })
+
+  recordar()
+})()
+</script>
+</body>
+</html>

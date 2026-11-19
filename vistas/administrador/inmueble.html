@@ -1,0 +1,918 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>B-0302 · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-02 Gestionar inmuebles, extensión Consultar historial del inmueble (RF-013)
+       Inmueble.modificarDatosDelInmueble(), desactivarInmueblePorMotivo(motivo), reactivarInmuebleDesactivado(),
+       consultarHistorialDeVinculaciones/Obligaciones/Pagos/Reportes/MovimientosDelInmueble(),
+       calcularSaldoPendienteDelInmueble(), calcularCuotaDelInmueble(valorBaseCuota)
+     CU-04 Gestionar vinculación · new Vinculacion(esResidente, porcentajePropiedad, fechaInicio), vincularIntegranteAlInmueble(),
+       finalizarVinculacion(fechaFin), corregirDatosDeLaVinculacion(esResidente, porcentajePropiedad, motivo),
+       asignarPermisoParaAutorizarAccesos(autoriza). Una sola propiedad vigente por inmueble (RN-03).
+     Con ?estado=desactivado la página abre como se ve un inmueble desactivado. -->
+<body data-rol="administrador" data-seccion="inmuebles" data-sub="inmuebles">
+
+<main class="pagina">
+  <nav class="migas" aria-label="Ruta">
+    <a href="inmuebles.html">Inmuebles</a>
+    <span aria-hidden="true">›</span>
+    <span class="identificador" aria-current="page">B-0302</span>
+  </nav>
+
+  <div class="encabezado">
+    <div>
+      <div class="fila" style="gap:var(--e3)">
+        <h1 class="identificador">B-0302</h1>
+        <span class="etiqueta" id="tipo-encabezado">Apartamento</span>
+        <span class="pildora p-ok" id="estado-inmueble">Activo</span>
+      </div>
+      <p class="guia" id="guia-encabezado">Torre B, piso 3 · Lucía Mendoza, arrendataria residente · registrado el 20 de noviembre de 2018</p>
+    </div>
+    <div class="acciones">
+      <button class="btn segundo" type="button" id="accion-modificar" data-abrir="dialogo-modificar">Modificar datos</button>
+      <button class="btn riesgo" type="button" id="accion-desactivar">Desactivar inmueble</button>
+      <button class="btn" type="button" id="accion-reactivar" hidden>Reactivar inmueble</button>
+    </div>
+  </div>
+
+  <div class="aviso" id="aviso-desactivado" hidden style="margin-bottom:var(--e5)">
+    <p><b id="titulo-desactivado">Inmueble desactivado.</b> <span id="motivo-desactivado"></span></p>
+    <p>No aparece en el listado de inmuebles activos ni se le generan cuotas. Su historial se conserva completo.</p>
+  </div>
+
+  <!-- Datos del inmueble -->
+  <section class="superficie" aria-labelledby="titulo-datos">
+    <div class="cabeza">
+      <h2 id="titulo-datos">Datos del inmueble</h2>
+      <span class="guia">Coeficiente y área según la escritura 4512 de 2018</span>
+    </div>
+    <div class="cuerpo">
+      <dl class="datos">
+        <div><dt>Identificación</dt><dd class="identificador">B-0302</dd></div>
+        <div><dt>Tipo</dt><dd id="d-tipo">Apartamento</dd></div>
+        <div><dt>Naturaleza</dt><dd id="d-naturaleza">Bien privado</dd></div>
+        <div><dt>Dentro de</dt><dd id="d-contenedor">Torre B</dd></div>
+        <div><dt>Coeficiente de copropiedad</dt><dd class="num" id="d-coeficiente">0,0052</dd></div>
+        <div><dt>Área privada</dt><dd class="num" id="d-area">68,4 m²</dd></div>
+        <div><dt>Cuota de noviembre</dt><dd><span class="num" id="d-cuota">$&nbsp;312&nbsp;000</span><span class="guia" style="display:block">Coeficiente por el presupuesto de $&nbsp;60&nbsp;000&nbsp;000</span></dd></div>
+        <div><dt>Saldo pendiente</dt><dd><span class="num">$&nbsp;312&nbsp;000</span> <span class="pildora p-ok">Al día</span><span class="guia" style="display:block">La cuota de noviembre vence el 30 de noviembre</span></dd></div>
+        <div><dt>Parqueadero en uso</dt><dd><span class="identificador">P-022</span><span class="guia" style="display:block">Por cesión de Ernesto Vargas hasta el 30 de noviembre</span></dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <!-- Historial del inmueble (RF-013) -->
+  <section class="seccion" aria-labelledby="titulo-historial">
+    <div class="encabezado">
+      <div>
+        <h2 id="titulo-historial">Historial</h2>
+        <p class="guia">Todo queda anclado a B-0302, aunque cambien sus ocupantes.</p>
+      </div>
+    </div>
+
+    <div class="pestanas" role="tablist" aria-label="Historial del inmueble">
+      <button type="button" role="tab" aria-selected="true" aria-controls="panel-vinculaciones">Vinculaciones<span class="cuenta-pestana" id="n-vinculaciones">5</span></button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="panel-obligaciones">Obligaciones<span class="cuenta-pestana">94</span></button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="panel-pagos">Pagos<span class="cuenta-pestana">71</span></button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="panel-vehiculos">Vehículos<span class="cuenta-pestana">2</span></button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="panel-cesiones">Parqueaderos y cesiones<span class="cuenta-pestana">2</span></button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="panel-reportes">Reportes<span class="cuenta-pestana">3</span></button>
+      <button type="button" role="tab" aria-selected="false" aria-controls="panel-movimientos">Movimientos de acceso<span class="cuenta-pestana">412</span></button>
+    </div>
+
+    <!-- Vinculaciones -->
+    <div id="panel-vinculaciones" role="tabpanel" class="pila" style="gap:var(--e5)">
+      <div class="superficie">
+        <div class="cabeza">
+          <div>
+            <h3>Quién está vinculado hoy</h3>
+            <p class="guia">Solo puede haber una propiedad vigente a la vez.</p>
+          </div>
+          <button class="btn chico" type="button" id="abrir-vincular">Vincular persona</button>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla" id="tabla-vigentes">
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Vínculo</th>
+                <th class="num">Propiedad</th>
+                <th>Desde</th>
+                <th>Autoriza accesos</th>
+                <th>Estado</th>
+                <th><span class="solo-lectores">Acciones</span></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="vacio" id="sin-vigentes" hidden>
+          <h3>Nadie está vinculado a B-0302</h3>
+          <p>Vincula a su propietario y, si alguien vive aquí, a quien lo ocupa. Portería lo necesita para saber a quién llamar.</p>
+          <button class="btn" type="button" data-abrir-vincular>Vincular persona</button>
+        </div>
+      </div>
+
+      <div class="superficie">
+        <div class="cabeza">
+          <h3>Vinculaciones finalizadas</h3>
+          <span class="guia">Quedan como historial del inmueble</span>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla" id="tabla-finalizadas">
+            <thead>
+              <tr>
+                <th>Persona</th>
+                <th>Vínculo</th>
+                <th class="num">Propiedad</th>
+                <th>Desde</th>
+                <th>Hasta</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Obligaciones -->
+    <div id="panel-obligaciones" role="tabpanel" hidden>
+      <div class="superficie">
+        <div class="cabeza">
+          <h3>Obligaciones</h3>
+          <a class="btn texto chico" href="obligaciones.html">Ir a Cartera</a>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr><th>Concepto</th><th>Detalle</th><th>Vence</th><th class="num">Valor</th><th class="num">Saldo</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Cuota ordinaria</td><td>Noviembre de 2026</td><td>30 de noviembre</td><td class="num">312&nbsp;000</td><td class="num">312&nbsp;000</td><td><span class="pildora p-al">Vence en 16 días</span></td></tr>
+              <tr><td>Cuota ordinaria</td><td>Octubre de 2026</td><td>31 de octubre</td><td class="num">312&nbsp;000</td><td class="num">0</td><td><span class="pildora p-ok">Pagada</span></td></tr>
+              <tr><td>Alquiler de zona común</td><td>Salón social, 24 de octubre</td><td>31 de octubre</td><td class="num">180&nbsp;000</td><td class="num">0</td><td><span class="pildora p-ok">Pagada</span></td></tr>
+              <tr><td>Cuota ordinaria</td><td>Septiembre de 2026</td><td>30 de septiembre</td><td class="num">312&nbsp;000</td><td class="num">0</td><td><span class="pildora p-ok">Pagada</span></td></tr>
+              <tr><td>Multa</td><td>Ruido después de las 10:00 p. m., 16 de agosto</td><td>15 de septiembre</td><td class="num">150&nbsp;000</td><td class="num">0</td><td><span class="pildora p-ok">Pagada</span></td></tr>
+              <tr><td>Cuota ordinaria</td><td>Agosto de 2026</td><td>31 de agosto</td><td class="num">312&nbsp;000</td><td class="num">0</td><td><span class="pildora p-ok">Pagada</span></td></tr>
+              <tr><td>Cuota extraordinaria</td><td>Impermeabilización de fachada, cuota 2 de 3</td><td>31 de agosto</td><td class="num">420&nbsp;000</td><td class="num">0</td><td><span class="pildora p-ok">Pagada</span></td></tr>
+              <tr><td>Interés de mora</td><td>Cuota de julio, 4 días<span class="sub">Anulado: el cheque se entregó a tiempo</span></td><td>4 de agosto</td><td class="num">2&nbsp;900</td><td class="num">0</td><td><span class="pildora p-ne">Anulada</span></td></tr>
+              <tr><td>Cuota ordinaria</td><td>Julio de 2026</td><td>31 de julio</td><td class="num">312&nbsp;000</td><td class="num">0</td><td><span class="pildora p-ok">Pagada</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pie">
+          <span>Las 9 más recientes de 94, desde noviembre de 2018</span>
+          <span>Saldo pendiente <span class="dato">$&nbsp;312&nbsp;000</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pagos -->
+    <div id="panel-pagos" role="tabpanel" hidden>
+      <div class="superficie">
+        <div class="cabeza">
+          <h3>Pagos</h3>
+          <a class="btn texto chico" href="pago-presencial.html">Registrar pago</a>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr><th>Fecha</th><th>Comprobante</th><th>Medio</th><th>Canal</th><th class="num">Valor</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>28 de octubre<span class="sub">4:12 p. m.</span></td><td class="mono">PSE-88213907</td><td>Pasarela de pagos</td><td>En línea</td><td class="num">492&nbsp;000</td><td><span class="pildora p-ok">Confirmado</span></td></tr>
+              <tr><td>27 de octubre<span class="sub">9:47 p. m.</span></td><td class="mono">PSE-88213410</td><td>Pasarela de pagos</td><td>En línea</td><td class="num">492&nbsp;000</td><td><span class="pildora p-no">Rechazado</span><span class="sub">El banco no autorizó la transacción</span></td></tr>
+              <tr><td>29 de septiembre<span class="sub">10:05 a. m.</span></td><td class="mono">RC-2026-0841</td><td>Transferencia</td><td>Presencial</td><td class="num">312&nbsp;000</td><td><span class="pildora p-ok">Confirmado</span></td></tr>
+              <tr><td>12 de septiembre<span class="sub">11:30 a. m.</span></td><td class="mono">RC-2026-0790</td><td>Efectivo</td><td>Presencial</td><td class="num">150&nbsp;000</td><td><span class="pildora p-ok">Confirmado</span></td></tr>
+              <tr><td>30 de agosto<span class="sub">8:21 p. m.</span></td><td class="mono">PSE-87001244</td><td>Pasarela de pagos</td><td>En línea</td><td class="num">732&nbsp;000</td><td><span class="pildora p-ok">Confirmado</span></td></tr>
+              <tr><td>4 de agosto<span class="sub">9:10 a. m.</span></td><td class="mono">RC-2026-0702</td><td>Transferencia</td><td>Presencial</td><td class="num">312&nbsp;000</td><td><span class="pildora p-ok">Confirmado</span></td></tr>
+              <tr><td>31 de julio<span class="sub">3:45 p. m.</span></td><td class="mono">RC-2026-0655</td><td>Cheque</td><td>Presencial</td><td class="num">312&nbsp;000</td><td><span class="pildora p-ne">Anulado</span><span class="sub">El banco devolvió el cheque</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pie">
+          <span>Los 7 más recientes de 71</span>
+          <div class="fila" style="gap:var(--e1)">
+            <button class="btn segundo chico" type="button" disabled>Anterior</button>
+            <button class="btn segundo chico" type="button">Siguiente</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vehículos -->
+    <div id="panel-vehiculos" role="tabpanel" hidden>
+      <div class="superficie">
+        <div class="cabeza">
+          <h3>Vehículos</h3>
+          <a class="btn texto chico" href="vehiculos.html">Gestionar vehículos</a>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr><th>Placa</th><th>Tipo</th><th>Marca y color</th><th>Responsable</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">BQA 47F</td><td>Carro</td><td>Mazda 2, gris</td><td>Lucía Mendoza</td><td><span class="pildora p-ok">Activo</span></td></tr>
+              <tr><td class="mono">UVW 913</td><td>Carro</td><td>Chevrolet Spark, rojo</td><td>Carlos Ibáñez</td><td><span class="pildora p-ne">Dado de baja</span><span class="sub">Se fue con el arrendatario anterior en febrero de 2026</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Parqueaderos y cesiones -->
+    <div id="panel-cesiones" role="tabpanel" hidden>
+      <div class="superficie">
+        <div class="cabeza">
+          <div>
+            <h3>Parqueaderos y cesiones</h3>
+            <p class="guia">B-0302 no tiene parqueadero propio. Usa uno cedido por su propietario.</p>
+          </div>
+          <a class="btn texto chico" href="parqueaderos.html">Gestionar cesiones</a>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr><th>Parqueadero</th><th>Lo cede</th><th>Desde</th><th>Hasta</th><th>Vehículo amparado</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+              <tr><td class="mono">P-022</td><td>Ernesto Vargas<span class="sub">Propietario de P-022</span></td><td>1 de septiembre de 2026</td><td>30 de noviembre de 2026</td><td class="mono">BQA 47F</td><td><span class="pildora p-al">Vence en 16 días</span></td></tr>
+              <tr><td class="mono">P-022</td><td>Ernesto Vargas<span class="sub">Propietario de P-022</span></td><td>1 de marzo de 2026</td><td>31 de agosto de 2026</td><td class="mono">BQA 47F</td><td><span class="pildora p-ne">Finalizada</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reportes -->
+    <div id="panel-reportes" role="tabpanel" hidden>
+      <div class="superficie">
+        <div class="cabeza">
+          <h3>Reportes</h3>
+          <a class="btn texto chico" href="reportes.html">Ir a Reportes</a>
+        </div>
+        <ul class="lista">
+          <li>
+            <div class="principal">
+              <b>Filtración en el techo del baño principal</b>
+              <span><span class="etiqueta">Humedad y filtraciones</span> · Lucía Mendoza, 9 de noviembre · El plomero revisa B-0402 el martes</span>
+            </div>
+            <span class="pildora p-al">En proceso</span>
+          </li>
+          <li>
+            <div class="principal">
+              <b>Bombillo dañado en el pasillo del piso 3</b>
+              <span><span class="etiqueta">Zonas comunes</span> · Lucía Mendoza, 2 de octubre · Se cambió el 3 de octubre</span>
+            </div>
+            <span class="pildora p-ok">Resuelto</span>
+          </li>
+          <li>
+            <div class="principal">
+              <b>Ruido en B-0402 después de las 11:00 p. m.</b>
+              <span><span class="etiqueta">Convivencia</span> · Carlos Ibáñez, 18 de enero · Llamado de atención por escrito</span>
+            </div>
+            <span class="pildora p-ok">Resuelto</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Movimientos de acceso -->
+    <div id="panel-movimientos" role="tabpanel" hidden>
+      <div class="superficie">
+        <div class="cabeza">
+          <h3>Movimientos de acceso</h3>
+          <span class="guia">Visitas y autorizados que entraron a B-0302</span>
+        </div>
+        <div class="tabla-envoltura">
+          <table class="tabla">
+            <thead>
+              <tr><th>Fecha y hora</th><th>Persona</th><th>Cómo entró</th><th>Movimiento</th><th>Placa</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>Hoy<span class="sub">6:40 p. m.</span></td><td>Técnico Claro<span class="sub">Juan Pablo Ortiz</span></td><td><span class="etiqueta">Visita</span></td><td>Salida</td><td><span class="guia">—</span></td></tr>
+              <tr><td>Hoy<span class="sub">4:58 p. m.</span></td><td>Técnico Claro<span class="sub">Juan Pablo Ortiz</span></td><td><span class="etiqueta">Visita</span></td><td>Ingreso</td><td><span class="guia">—</span></td></tr>
+              <tr><td>13 de noviembre<span class="sub">8:31 p. m.</span></td><td>Domicilio Rappi</td><td><span class="etiqueta">Excepción</span></td><td>Salida</td><td class="mono">QWE 45D</td></tr>
+              <tr><td>13 de noviembre<span class="sub">8:15 p. m.</span></td><td>Domicilio Rappi<span class="sub">Lo confirmó Lucía Mendoza por citófono</span></td><td><span class="etiqueta">Excepción</span></td><td>Ingreso</td><td class="mono">QWE 45D</td></tr>
+              <tr><td>12 de noviembre<span class="sub">7:05 p. m.</span></td><td>Natalia Mendoza Ríos</td><td><span class="etiqueta">Autorización recurrente</span></td><td>Ingreso</td><td><span class="guia">—</span></td></tr>
+              <tr><td>10 de noviembre<span class="sub">5:48 p. m.</span></td><td>Camila Restrepo Ariza</td><td><span class="etiqueta">Visita</span></td><td>Salida</td><td class="mono">EFR 330</td></tr>
+              <tr><td>10 de noviembre<span class="sub">2:20 p. m.</span></td><td>Camila Restrepo Ariza</td><td><span class="etiqueta">Visita</span></td><td>Ingreso</td><td class="mono">EFR 330</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="pie">
+          <span>Los 7 más recientes de 412</span>
+          <div class="fila" style="gap:var(--e1)">
+            <button class="btn segundo chico" type="button" disabled>Anterior</button>
+            <button class="btn segundo chico" type="button">Siguiente</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Modificar datos: Inmueble.modificarDatosDelInmueble() -->
+<dialog class="dialogo" id="dialogo-modificar" aria-labelledby="titulo-modificar">
+  <form id="form-modificar" data-confirmar="Datos de B-0302 modificados" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-modificar">Modificar datos de B-0302</h2>
+        <p class="guia">Cambiar el coeficiente cambia la cuota desde el próximo periodo.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario dos">
+        <label class="campo">
+          <span>Identificación</span>
+          <input class="identificador" value="B-0302" disabled>
+          <span class="ayuda">No cambia: es la que ancla el historial.</span>
+        </label>
+        <label class="campo">
+          <span>Tipo de inmueble</span>
+          <select id="m-tipo" required data-error="Elige el tipo. Define si paga cuota, si se puede ceder y si se reserva.">
+            <option>Apartamento</option>
+            <option>Parqueadero</option>
+            <option>Depósito</option>
+          </select>
+        </label>
+        <fieldset class="completo">
+          <legend class="rotulo">Naturaleza</legend>
+          <div class="elecciones">
+            <label class="eleccion"><input type="radio" name="naturaleza" value="Bien privado" checked><span><b>Bien privado</b><small>Unidad de un propietario</small></span></label>
+            <label class="eleccion"><input type="radio" name="naturaleza" value="Uso exclusivo"><span><b>Uso exclusivo</b><small>Común, asignado a una unidad</small></span></label>
+            <label class="eleccion"><input type="radio" name="naturaleza" value="Uso general"><span><b>Uso general</b><small>Común, para todos</small></span></label>
+          </div>
+        </fieldset>
+        <label class="campo">
+          <span>Coeficiente de copropiedad</span>
+          <input id="m-coeficiente" inputmode="decimal" class="num" required value="0,0052"
+                 data-error="Escribe el coeficiente. Sale de la escritura y define cuánto paga de cuota.">
+          <span class="ayuda">Entre 0 y 1. Para 0,52 por ciento escribe 0,0052.</span>
+        </label>
+        <label class="campo">
+          <span>Área en m²</span>
+          <input id="m-area" inputmode="decimal" class="num" required value="68,4"
+                 data-error="Escribe el área privada en metros cuadrados, por ejemplo 68,4.">
+        </label>
+        <label class="campo completo">
+          <span>Dentro de</span>
+          <select id="m-contenedor">
+            <option value="">No está dentro de otro inmueble</option>
+            <option>Torre A</option>
+            <option selected>Torre B</option>
+            <option>Torre C</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Guardar cambios</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Desactivar: Inmueble.desactivarInmueblePorMotivo(motivo). El historial se conserva (RN-04). -->
+<dialog class="dialogo" id="dialogo-desactivar" aria-labelledby="titulo-desactivar">
+  <form id="form-desactivar" data-confirmar="Inmueble desactivado. Su historial se conserva." novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-desactivar">Desactivar B-0302</h2>
+        <p class="guia">Deja de aparecer en el listado y no se le generan cuotas. No se borra nada.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario">
+        <div class="aviso al" id="aviso-vigentes"></div>
+        <label class="campo">
+          <span>Motivo</span>
+          <textarea id="d-motivo" required placeholder="Se unió a B-0301 por remodelación aprobada en la asamblea de marzo."
+                    data-error="Escribe el motivo. Queda en el historial y explica por qué el inmueble no está activo."></textarea>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn riesgo" type="submit">Desactivar inmueble</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Vincular persona: VinculacionServicio.vincularIntegrante(datos). 422 si ya hay una propiedad vigente (RN-03). -->
+<dialog class="dialogo" id="dialogo-vincular" aria-labelledby="titulo-vincular">
+  <form id="form-vincular" data-confirmar="Persona vinculada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-vincular">Vincular persona a B-0302</h2>
+        <p class="guia">Búscala por su documento. Si no está registrada, regístrala primero en Personas.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="pila">
+        <div class="fila" style="align-items:flex-end;flex-wrap:nowrap">
+          <label class="campo" style="flex:1">
+            <span>Número de documento</span>
+            <input id="v-documento" class="identificador" inputmode="numeric" required autocomplete="off" placeholder="1032556908"
+                   data-error="Escribe el documento de la persona, sin puntos ni espacios, y búscala.">
+          </label>
+          <button class="btn segundo" type="button" id="v-buscar">Buscar</button>
+        </div>
+        <p class="guia" style="margin-top:calc(-1 * var(--e2))">
+          Ejemplos:
+          <button class="btn texto chico identificador" type="button" data-ejemplo="1032556908">1032556908</button>
+          <button class="btn texto chico identificador" type="button" data-ejemplo="79640215">79640215</button>
+          <button class="btn texto chico identificador" type="button" data-ejemplo="52001877">52001877</button>
+        </p>
+
+        <div class="aviso no" id="v-no-existe" hidden role="alert">
+          <p><b>No hay ninguna persona registrada con el documento <span class="identificador" id="v-doc-buscado"></span>.</b></p>
+          <p>Revisa el número o <a href="integrantes.html">regístrala en Personas</a> y vuelve a buscarla.</p>
+        </div>
+
+        <div class="ficha az" id="v-persona" hidden>
+          <div class="titular" id="v-nombre"></div>
+          <div class="meta" id="v-meta"></div>
+        </div>
+
+        <div class="aviso no" id="v-rn03" hidden role="alert">
+          <p><b>B-0302 ya tiene un propietario vigente:</b> <span id="v-rn03-quien"></span></p>
+          <p>Si vendió el inmueble, finaliza primero su vinculación con la fecha de la venta y luego vincula al nuevo propietario.</p>
+          <div class="fila" style="margin-top:var(--e3)">
+            <button class="btn segundo chico" type="button" id="v-finalizar-propietario">Finalizar la vinculación de Ernesto Vargas</button>
+          </div>
+        </div>
+
+        <div class="formulario dos" id="v-campos" hidden>
+          <fieldset class="completo">
+            <legend class="rotulo">¿Vive en B-0302?</legend>
+            <div class="elecciones">
+              <label class="eleccion"><input type="radio" name="v-residente" value="si" checked><span><b>Vive aquí</b><small>Portería la reconoce como residente</small></span></label>
+              <label class="eleccion"><input type="radio" name="v-residente" value="no"><span><b>No vive aquí</b><small>Solo tiene relación con el inmueble</small></span></label>
+            </div>
+          </fieldset>
+          <label class="campo" id="v-campo-porcentaje" hidden>
+            <span>Porcentaje de propiedad</span>
+            <span class="con-prefijo"><span>%</span><input id="v-porcentaje" class="num" inputmode="decimal" required value="100"
+                 data-error="Escribe qué parte del inmueble le pertenece según la escritura, por ejemplo 100."></span>
+            <span class="ayuda">Según la escritura. Si es el único dueño, 100.</span>
+          </label>
+          <label class="campo">
+            <span>Desde</span>
+            <input id="v-inicio" type="date" required value="2026-11-14" data-error="Elige desde cuándo está vinculada al inmueble.">
+          </label>
+          <div class="completo">
+            <label class="opcion">
+              <input type="checkbox" id="v-autoriza">
+              <span>Puede autorizar visitas a B-0302<small>Registra visitas y autorizaciones que portería verifica al llegar.</small></span>
+            </label>
+          </div>
+          <p class="guia completo" id="v-resultado"></p>
+        </div>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Vincular persona</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Finalizar vinculación: Vinculacion.finalizarVinculacion(fechaFin). Queda como historial (RN-04). -->
+<dialog class="dialogo" id="dialogo-finalizar" aria-labelledby="titulo-finalizar">
+  <form id="form-finalizar" data-confirmar="Vinculación finalizada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-finalizar">Finalizar vinculación</h2>
+        <p class="guia" id="guia-finalizar"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario">
+        <label class="campo">
+          <span>Fecha de fin</span>
+          <input id="f-fecha" type="date" required value="2026-11-14" max="2026-11-14" data-error="Elige el día en que terminó la relación con el inmueble.">
+          <span class="ayuda">El día de la venta, de la entrega del apartamento o de la salida.</span>
+        </label>
+        <div class="aviso" id="aviso-finalizar"></div>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn riesgo" type="submit">Finalizar vinculación</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Corregir datos: Vinculacion.corregirDatosDeLaVinculacion(esResidente, porcentajePropiedad, motivo) -->
+<dialog class="dialogo" id="dialogo-corregir" aria-labelledby="titulo-corregir">
+  <form id="form-corregir" data-confirmar="Vinculación corregida" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-corregir">Corregir datos</h2>
+        <p class="guia">Para errores de registro. Si la persona se fue, finaliza la vinculación.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario dos">
+        <fieldset class="completo">
+          <legend class="rotulo">¿Vive en B-0302?</legend>
+          <div class="elecciones">
+            <label class="eleccion"><input type="radio" name="c-residente" value="si"><span><b>Vive aquí</b></span></label>
+            <label class="eleccion"><input type="radio" name="c-residente" value="no"><span><b>No vive aquí</b></span></label>
+          </div>
+        </fieldset>
+        <label class="campo" id="c-campo-porcentaje">
+          <span>Porcentaje de propiedad</span>
+          <span class="con-prefijo"><span>%</span><input id="c-porcentaje" class="num" inputmode="decimal" required
+               data-error="Escribe qué parte del inmueble le pertenece según la escritura, por ejemplo 100."></span>
+        </label>
+        <label class="campo completo">
+          <span>Motivo de la corrección</span>
+          <textarea id="c-motivo" required placeholder="Se registró como no residente, pero vive en el apartamento desde marzo."
+                    data-error="Escribe por qué corriges los datos. Queda en el historial del inmueble."></textarea>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Corregir datos</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var HOY = '2026-11-14'
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  var VALOR_BASE_CUOTA = 60000000
+
+  // Inmueble.consultarHistorialDeVinculacionesDelInmueble(). El vínculo no se guarda: se deduce del rol
+  // de la persona (su subclase de Integrante) y de esResidente.
+  var vinculaciones = [
+    { id: 1, persona: 'Ernesto Vargas Pinedo', documento: 'CC 79 312 554', rol: 'PROPIETARIO', rolTexto: 'Propietario', esResidente: false, porcentaje: 100, inicio: '2019-03-12', autoriza: false, estado: 'VIGENTE' },
+    { id: 2, persona: 'Lucía Mendoza Ríos', documento: 'CC 1 032 418 765', rol: 'ARRENDATARIO', rolTexto: 'Arrendataria', detalle: 'Contrato ARR-2026-0187', esResidente: true, inicio: '2026-03-01', autoriza: true, estado: 'VIGENTE' },
+    { id: 3, persona: 'Carlos Ibáñez Rueda', documento: 'CC 80 112 976', rol: 'ARRENDATARIO', rolTexto: 'Arrendatario', detalle: 'Contrato ARR-2023-0044', esResidente: true, inicio: '2023-02-01', fin: '2026-02-28', autoriza: true, estado: 'FINALIZADA', motivo: 'Se registró como no residente por error.' },
+    { id: 4, persona: 'Valeria Ibáñez Torres', documento: 'TI 1 043 129 870', rol: 'RESIDENTE', rolTexto: 'Residente autorizada', detalle: 'Hija de Carlos Ibáñez', esResidente: true, inicio: '2023-02-01', fin: '2026-02-28', autoriza: false, estado: 'FINALIZADA' },
+    { id: 5, persona: 'Constructora Altamar S.A.S.', documento: 'NIT 900 118 452-3', rol: 'PROPIETARIO', rolTexto: 'Propietario', esResidente: false, porcentaje: 100, inicio: '2018-11-20', fin: '2019-03-11', autoriza: false, estado: 'FINALIZADA' },
+  ]
+
+  // Personas registradas que se pueden buscar para vincular (IntegranteRepositorio.findById).
+  var REGISTRADAS = {
+    '1032556908': { persona: 'Natalia Mendoza Ríos', documento: 'CC 1 032 556 908', rol: 'RESIDENTE', rolTexto: 'Residente autorizada', detalle: 'Hermana de Lucía Mendoza', meta: 'Registrada el 10 de noviembre de 2026 · todavía sin inmuebles' },
+    '79640215': { persona: 'Ricardo Lozano Pérez', documento: 'CC 79 640 215', rol: 'PROPIETARIO', rolTexto: 'Propietario', meta: 'Propietario residente de C-0402 · compró B-0302 en noviembre' },
+  }
+
+  var actual = null
+  var encontrada = null
+
+  // ---------- Utilidades ----------
+  function esc(texto) {
+    return String(texto == null ? '' : texto).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] })
+  }
+  function fecha(iso, conAnio) {
+    var p = iso.split('-')
+    var texto = Number(p[2]) + ' de ' + MESES[Number(p[1]) - 1]
+    return conAnio || p[0] !== HOY.slice(0, 4) ? texto + ' de ' + p[0] : texto
+  }
+  function decimal(texto) { return parseFloat(String(texto).replace(/\s/g, '').replace(',', '.')) }
+  function coma(n, d) { return n.toFixed(d).replace('.', ',') }
+  function vinculo(v) { return '<span class="etiqueta">' + v.rolTexto + '</span><span class="sub">' + (v.esResidente ? 'Residente' : 'No residente') + '</span>' }
+  function nombreCorto(v) { return v.persona.split(' ').slice(0, 2).join(' ') }
+  function buscarVinculacion(id) { return vinculaciones.filter(function (v) { return v.id === id })[0] }
+  function marcarError(campo, mensaje) {
+    var contenedor = campo.closest('.campo')
+    var previo = contenedor.querySelector('.error[data-generado]')
+    if (previo) previo.remove()
+    campo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-generado', '')
+    error.textContent = mensaje
+    contenedor.appendChild(error)
+    campo.focus()
+  }
+  function limpiar(form) {
+    form.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    form.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+  }
+
+  // ---------- Vinculaciones ----------
+  function pintarVinculaciones() {
+    var vigentes = vinculaciones.filter(function (v) { return v.estado === 'VIGENTE' })
+    var finalizadas = vinculaciones.filter(function (v) { return v.estado === 'FINALIZADA' })
+    finalizadas.sort(function (a, b) { return a.fin < b.fin ? 1 : -1 })
+
+    document.querySelector('#tabla-vigentes tbody').innerHTML = vigentes.map(function (v) {
+      var sub = [v.documento, v.detalle, v.motivo ? 'Corregida: ' + v.motivo : ''].filter(Boolean).map(esc).join(' · ')
+      return '<tr>' +
+        '<td><span class="fuerte">' + esc(v.persona) + '</span><span class="sub">' + sub + '</span></td>' +
+        '<td>' + vinculo(v) + '</td>' +
+        '<td class="num">' + (v.rol === 'PROPIETARIO' ? coma(v.porcentaje, 0) + ' %' : '—') + '</td>' +
+        '<td>' + fecha(v.inicio, true) + '</td>' +
+        '<td><label class="interruptor"><input type="checkbox" data-permiso="' + v.id + '"' + (v.autoriza ? ' checked' : '') + '><span>' + (v.autoriza ? 'Sí' : 'No') + '</span></label></td>' +
+        '<td><span class="pildora p-ok">Vigente</span></td>' +
+        '<td class="acciones-fila"><button class="btn texto chico" type="button" data-corregir="' + v.id + '">Corregir datos</button>' +
+        '<button class="btn texto chico" type="button" data-finalizar="' + v.id + '">Finalizar</button></td></tr>'
+    }).join('')
+
+    document.querySelector('#tabla-finalizadas tbody').innerHTML = finalizadas.map(function (v) {
+      var sub = [v.documento, v.detalle, v.motivo ? 'Corregida: ' + v.motivo : ''].filter(Boolean).map(esc).join(' · ')
+      return '<tr>' +
+        '<td><span class="fuerte">' + esc(v.persona) + '</span><span class="sub">' + sub + '</span></td>' +
+        '<td>' + vinculo(v) + '</td>' +
+        '<td class="num">' + (v.rol === 'PROPIETARIO' ? coma(v.porcentaje, 0) + ' %' : '—') + '</td>' +
+        '<td>' + fecha(v.inicio, true) + '</td><td>' + fecha(v.fin, true) + '</td>' +
+        '<td><span class="pildora p-ne">Finalizada</span></td></tr>'
+    }).join('')
+
+    document.getElementById('sin-vigentes').hidden = vigentes.length > 0
+    document.querySelector('#tabla-vigentes').closest('.tabla-envoltura').hidden = vigentes.length === 0
+    document.getElementById('n-vinculaciones').textContent = vinculaciones.length
+
+    // Quién ocupa el inmueble, para el encabezado.
+    var ocupante = vigentes.filter(function (v) { return v.esResidente })[0]
+    document.getElementById('guia-encabezado').textContent = 'Torre B, piso 3 · ' +
+      (ocupante ? nombreCorto(ocupante) + ', ' + (ocupante.rolTexto + ' residente').toLowerCase() : 'sin ocupante') +
+      ' · registrado el 20 de noviembre de 2018'
+  }
+
+  // Vinculacion.asignarPermisoParaAutorizarAccesos(autoriza)
+  document.getElementById('tabla-vigentes').addEventListener('change', function (e) {
+    var casilla = e.target.closest('[data-permiso]')
+    if (!casilla) return
+    var v = buscarVinculacion(Number(casilla.dataset.permiso))
+    v.autoriza = casilla.checked
+    casilla.nextElementSibling.textContent = v.autoriza ? 'Sí' : 'No'
+    Convivir.confirmar(nombreCorto(v) + (v.autoriza ? ' ya puede autorizar visitas a B-0302.' : ' ya no puede autorizar visitas a B-0302.'))
+  })
+
+  // ---------- Vincular persona ----------
+  var formVincular = document.getElementById('form-vincular')
+  var campoDoc = document.getElementById('v-documento')
+
+  function reiniciarVincular() {
+    formVincular.reset()
+    limpiar(formVincular)
+    encontrada = null
+    ;['v-no-existe', 'v-persona', 'v-rn03', 'v-campos'].forEach(function (id) { document.getElementById(id).hidden = true })
+  }
+
+  function propietarioVigente() { return vinculaciones.filter(function (v) { return v.estado === 'VIGENTE' && v.rol === 'PROPIETARIO' })[0] }
+
+  function mostrarResultadoVinculo() {
+    if (!encontrada) return
+    var reside = formVincular.querySelector('[name="v-residente"]:checked').value === 'si'
+    document.getElementById('v-resultado').innerHTML = 'Quedará en B-0302 como <span class="etiqueta">' + encontrada.rolTexto + '</span> ' + (reside ? 'residente' : 'no residente') + '.'
+  }
+
+  function buscarPersona() {
+    limpiar(formVincular)
+    document.getElementById('v-rn03').hidden = true
+    var numero = campoDoc.value.replace(/\D/g, '')
+    if (!numero) { marcarError(campoDoc, 'Escribe el documento de la persona, sin puntos ni espacios, y búscala.'); return }
+    encontrada = REGISTRADAS[numero] || null
+    document.getElementById('v-no-existe').hidden = !!encontrada
+    document.getElementById('v-persona').hidden = !encontrada
+    document.getElementById('v-campos').hidden = !encontrada
+    if (!encontrada) {
+      document.getElementById('v-doc-buscado').textContent = numero.replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+      return
+    }
+    document.getElementById('v-nombre').textContent = encontrada.persona
+    document.getElementById('v-meta').innerHTML = '<span class="etiqueta">' + encontrada.rolTexto + '</span> · <span class="identificador">' + encontrada.documento + '</span> · ' + esc(encontrada.meta)
+    var esPropietario = encontrada.rol === 'PROPIETARIO'
+    document.getElementById('v-campo-porcentaje').hidden = !esPropietario
+    formVincular.querySelector('[name="v-residente"][value="' + (esPropietario ? 'no' : 'si') + '"]').checked = true
+    document.getElementById('v-autoriza').checked = !esPropietario
+    mostrarResultadoVinculo()
+  }
+
+  document.getElementById('v-buscar').addEventListener('click', buscarPersona)
+  campoDoc.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); buscarPersona() } })
+  campoDoc.addEventListener('input', function () {
+    encontrada = null
+    ;['v-no-existe', 'v-persona', 'v-rn03', 'v-campos'].forEach(function (id) { document.getElementById(id).hidden = true })
+  })
+  formVincular.addEventListener('change', function (e) { if (e.target.name === 'v-residente') mostrarResultadoVinculo() })
+  formVincular.addEventListener('click', function (e) {
+    var ejemplo = e.target.closest('[data-ejemplo]')
+    if (ejemplo) { campoDoc.value = ejemplo.dataset.ejemplo; buscarPersona() }
+  })
+
+  function abrirVincular() { reiniciarVincular(); Convivir.abrir('dialogo-vincular'); campoDoc.focus() }
+  document.getElementById('abrir-vincular').addEventListener('click', abrirVincular)
+  document.querySelector('[data-abrir-vincular]').addEventListener('click', abrirVincular)
+
+  formVincular.addEventListener('confirmado', function (e) {
+    var rn03 = document.getElementById('v-rn03')
+    rn03.hidden = true
+    if (!encontrada) {
+      e.preventDefault()
+      buscarPersona()
+      if (!encontrada) marcarError(campoDoc, 'Busca a la persona antes de vincularla. Debe estar registrada en Personas.')
+      return
+    }
+    var esPropietario = encontrada.rol === 'PROPIETARIO'
+    var porcentaje = esPropietario ? decimal(document.getElementById('v-porcentaje').value) : 0
+    if (esPropietario && !(porcentaje > 0 && porcentaje <= 100)) {
+      e.preventDefault()
+      marcarError(document.getElementById('v-porcentaje'), 'El porcentaje va de 1 a 100. Si es el único dueño, escribe 100.')
+      return
+    }
+    // RN-03: VinculacionRepositorio.existeVinculacionDePropiedadVigente(inmueble) → 422
+    var vigente = propietarioVigente()
+    if (esPropietario && vigente) {
+      e.preventDefault()
+      document.getElementById('v-rn03-quien').textContent = vigente.persona + ', desde el ' + fecha(vigente.inicio, true) + '.'
+      document.getElementById('v-finalizar-propietario').textContent = 'Finalizar la vinculación de ' + nombreCorto(vigente)
+      document.getElementById('v-finalizar-propietario').dataset.id = vigente.id
+      rn03.hidden = false
+      rn03.scrollIntoView({ block: 'nearest' })
+      return
+    }
+    var inicio = document.getElementById('v-inicio').value
+    var nueva = {
+      id: vinculaciones.length + 1, persona: encontrada.persona, documento: encontrada.documento,
+      rol: encontrada.rol, rolTexto: encontrada.rolTexto, detalle: encontrada.detalle,
+      esResidente: formVincular.querySelector('[name="v-residente"]:checked').value === 'si',
+      porcentaje: esPropietario ? porcentaje : null, inicio: inicio,
+      autoriza: document.getElementById('v-autoriza').checked, estado: 'VIGENTE',
+    }
+    vinculaciones.push(nueva)
+    formVincular.setAttribute('data-confirmar', nombreCorto(nueva) + ' quedó vinculada a B-0302 como ' + (nueva.rolTexto + (nueva.esResidente ? ' residente' : ' no residente')).toLowerCase() + '.')
+    pintarVinculaciones()
+  })
+
+  document.getElementById('v-finalizar-propietario').addEventListener('click', function () {
+    document.getElementById('dialogo-vincular').close()
+    abrirFinalizar(buscarVinculacion(Number(this.dataset.id)), true)
+  })
+
+  // ---------- Finalizar vinculación ----------
+  var formFinalizar = document.getElementById('form-finalizar')
+  var volverAVincular = false
+  function abrirFinalizar(v, desdeVincular) {
+    actual = v
+    volverAVincular = !!desdeVincular
+    formFinalizar.reset()
+    limpiar(formFinalizar)
+    var campo = document.getElementById('f-fecha')
+    campo.min = v.inicio
+    document.getElementById('titulo-finalizar').textContent = 'Finalizar la vinculación de ' + nombreCorto(v)
+    document.getElementById('guia-finalizar').textContent = (v.rolTexto + (v.esResidente ? ' residente' : ' no residente')) + ' de B-0302 desde el ' + fecha(v.inicio, true) + '.'
+    document.getElementById('aviso-finalizar').textContent = 'Queda como historial del inmueble.' + (v.autoriza ? ' Desde esa fecha ya no podrá autorizar visitas.' : '') +
+      (v.rol === 'PROPIETARIO' ? ' Después podrás vincular al nuevo propietario.' : '')
+    Convivir.abrir('dialogo-finalizar')
+  }
+  formFinalizar.addEventListener('confirmado', function (e) {
+    var campo = document.getElementById('f-fecha')
+    if (campo.value < actual.inicio) {
+      e.preventDefault()
+      marcarError(campo, 'La vinculación empezó el ' + fecha(actual.inicio, true) + '. Elige esa fecha o una posterior.')
+      return
+    }
+    if (campo.value > HOY) {
+      e.preventDefault()
+      marcarError(campo, 'Esa fecha todavía no llega. Finaliza la vinculación el día que la persona deje el inmueble.')
+      return
+    }
+    actual.fin = campo.value
+    actual.estado = 'FINALIZADA'
+    actual.autoriza = false
+    formFinalizar.setAttribute('data-confirmar', 'Vinculación de ' + nombreCorto(actual) + ' finalizada el ' + fecha(actual.fin) + '. Queda en el historial de B-0302.')
+    pintarVinculaciones()
+    if (volverAVincular) setTimeout(function () { Convivir.abrir('dialogo-vincular'); document.getElementById('v-rn03').hidden = true }, 0)
+  })
+
+  // ---------- Corregir datos ----------
+  var formCorregir = document.getElementById('form-corregir')
+  function abrirCorregir(v) {
+    actual = v
+    formCorregir.reset()
+    limpiar(formCorregir)
+    document.getElementById('titulo-corregir').textContent = 'Corregir la vinculación de ' + nombreCorto(v)
+    formCorregir.querySelector('[name="c-residente"][value="' + (v.esResidente ? 'si' : 'no') + '"]').checked = true
+    var esPropietario = v.rol === 'PROPIETARIO'
+    document.getElementById('c-campo-porcentaje').hidden = !esPropietario
+    document.getElementById('c-porcentaje').value = esPropietario ? coma(v.porcentaje, 0) : ''
+    Convivir.abrir('dialogo-corregir')
+  }
+  formCorregir.addEventListener('confirmado', function (e) {
+    var esPropietario = actual.rol === 'PROPIETARIO'
+    var porcentaje = esPropietario ? decimal(document.getElementById('c-porcentaje').value) : null
+    if (esPropietario && !(porcentaje > 0 && porcentaje <= 100)) {
+      e.preventDefault()
+      marcarError(document.getElementById('c-porcentaje'), 'El porcentaje va de 1 a 100. Si es el único dueño, escribe 100.')
+      return
+    }
+    actual.esResidente = formCorregir.querySelector('[name="c-residente"]:checked').value === 'si'
+    if (esPropietario) actual.porcentaje = porcentaje
+    actual.motivo = document.getElementById('c-motivo').value.trim()
+    formCorregir.setAttribute('data-confirmar', 'Vinculación de ' + nombreCorto(actual) + ' corregida. El motivo queda en el historial.')
+    pintarVinculaciones()
+  })
+
+  document.getElementById('tabla-vigentes').addEventListener('click', function (e) {
+    var boton = e.target.closest('[data-corregir], [data-finalizar]')
+    if (!boton) return
+    var v = buscarVinculacion(Number(boton.dataset.corregir || boton.dataset.finalizar))
+    if (boton.dataset.corregir) abrirCorregir(v)
+    else abrirFinalizar(v, false)
+  })
+
+  // ---------- Modificar datos del inmueble ----------
+  var formModificar = document.getElementById('form-modificar')
+  formModificar.addEventListener('confirmado', function (e) {
+    limpiar(formModificar)
+    var campo = document.getElementById('m-coeficiente')
+    var valor = decimal(campo.value)
+    if (!(valor > 0 && valor < 1)) {
+      e.preventDefault()
+      marcarError(campo, 'El coeficiente va entre 0 y 1. Para ' + campo.value + ' por ciento escribe ' + coma(valor / 100, 4) + '.')
+      return
+    }
+    var area = decimal(document.getElementById('m-area').value)
+    if (!(area > 0)) {
+      e.preventDefault()
+      marcarError(document.getElementById('m-area'), 'Escribe el área en metros cuadrados, solo el número, por ejemplo 68,4.')
+      return
+    }
+    var tipo = document.getElementById('m-tipo').value
+    var contenedor = document.getElementById('m-contenedor').value
+    document.getElementById('d-tipo').textContent = tipo
+    document.getElementById('tipo-encabezado').textContent = tipo
+    document.getElementById('d-naturaleza').textContent = formModificar.querySelector('[name="naturaleza"]:checked').value
+    document.getElementById('d-contenedor').textContent = contenedor || 'No está dentro de otro inmueble'
+    document.getElementById('d-coeficiente').textContent = coma(valor, 4)
+    document.getElementById('d-area').textContent = coma(area, 1) + ' m²'
+    // Inmueble.calcularCuotaDelInmueble(valorBaseCuota)
+    document.getElementById('d-cuota').textContent = Convivir.pesos(valor * VALOR_BASE_CUOTA)
+  })
+
+  // ---------- Desactivar y reactivar ----------
+  var formDesactivar = document.getElementById('form-desactivar')
+  document.getElementById('accion-desactivar').addEventListener('click', function () {
+    formDesactivar.reset()
+    limpiar(formDesactivar)
+    var vigentes = vinculaciones.filter(function (v) { return v.estado === 'VIGENTE' })
+    var aviso = document.getElementById('aviso-vigentes')
+    aviso.hidden = false
+    aviso.textContent = (vigentes.length
+      ? 'Tiene ' + (vigentes.length === 1 ? '1 vinculación vigente' : vigentes.length + ' vinculaciones vigentes') + ' (' + vigentes.map(nombreCorto).join(', ') + ') y'
+      : 'Tiene') + ' una cesión vigente de P-022. Siguen en el historial; finalízalas si ya no aplican.'
+    Convivir.abrir('dialogo-desactivar')
+    document.getElementById('d-motivo').focus()
+  })
+
+  function verDesactivado(motivo, cuando) {
+    document.getElementById('estado-inmueble').className = 'pildora p-ne'
+    document.getElementById('estado-inmueble').textContent = 'Desactivado'
+    document.getElementById('titulo-desactivado').textContent = 'Inmueble desactivado el ' + fecha(cuando, true) + '.'
+    document.getElementById('motivo-desactivado').textContent = 'Motivo: ' + motivo
+    document.getElementById('aviso-desactivado').hidden = false
+    document.getElementById('accion-modificar').hidden = true
+    document.getElementById('accion-desactivar').hidden = true
+    document.getElementById('accion-reactivar').hidden = false
+  }
+  function verActivo() {
+    document.getElementById('estado-inmueble').className = 'pildora p-ok'
+    document.getElementById('estado-inmueble').textContent = 'Activo'
+    document.getElementById('aviso-desactivado').hidden = true
+    document.getElementById('accion-modificar').hidden = false
+    document.getElementById('accion-desactivar').hidden = false
+    document.getElementById('accion-reactivar').hidden = true
+  }
+
+  formDesactivar.addEventListener('confirmado', function () {
+    verDesactivado(document.getElementById('d-motivo').value.trim(), HOY)
+  })
+  // Inmueble.reactivarInmuebleDesactivado()
+  document.getElementById('accion-reactivar').addEventListener('click', function () {
+    verActivo()
+    Convivir.confirmar('Inmueble reactivado. Vuelve al listado y se le generan cuotas desde el próximo periodo.')
+  })
+
+  pintarVinculaciones()
+  if (new URLSearchParams(location.search).get('estado') === 'desactivado') {
+    verDesactivado('Se unió a B-0301 por remodelación aprobada en la asamblea de marzo de 2026.', '2026-04-06')
+  }
+})()
+</script>
+</body>
+</html>

@@ -16,12 +16,29 @@ const ARCHIVOS_FIJOS = {
   '/app.js': [join(WEB, 'app.js'), 'text/javascript; charset=utf-8'],
   '/estilos.css': [join(WEB, 'estilos.css'), 'text/css; charset=utf-8'],
   '/sistema': [join(RAIZ, 'convivir_sistema.html'), 'text/html; charset=utf-8'],
+  '/guia': [join(RAIZ, 'guia-equipo.html'), 'text/html; charset=utf-8'],
   '/vendor/mermaid.js': [join(RAIZ, 'node_modules', 'mermaid', 'dist', 'mermaid.min.js'), 'text/javascript; charset=utf-8'],
   '/vendor/marked.js': [join(RAIZ, 'node_modules', 'marked', 'lib', 'marked.umd.js'), 'text/javascript; charset=utf-8'],
 }
 
 // Una ruta valida es "carpeta/archivo.mmd" o "carpeta/archivo.md", en minusculas y sin subir de carpeta.
 const RUTA_VALIDA = /^[a-z0-9-]+\/[a-z0-9-]+\.(mmd|md)$/
+
+// Vistas (interfaces de la aplicación): /vistas/archivo.ext o /vistas/rol/archivo.ext, solo lectura.
+const VISTAS = join(RAIZ, 'vistas')
+const RUTA_VISTA = /^\/vistas\/(?:[a-z0-9-]+\/)?[a-z0-9-]+\.(html|css|js)$/
+const TIPOS_VISTA = {
+  '.html': 'text/html; charset=utf-8',
+  '.css': 'text/css; charset=utf-8',
+  '.js': 'text/javascript; charset=utf-8',
+}
+
+function vistaEnDisco(pathname) {
+  if (pathname === '/vistas' || pathname === '/vistas/') pathname = '/vistas/index.html'
+  if (!RUTA_VISTA.test(pathname)) return null
+  const completa = resolve(RAIZ, '.' + pathname)
+  return completa.startsWith(VISTAS + sep) ? completa : null
+}
 
 function rutaEnDisco(ruta) {
   if (!RUTA_VALIDA.test(ruta || '')) return null
@@ -76,6 +93,16 @@ const servidor = createServer(async (req, res) => {
     if (req.method === 'GET' && ARCHIVOS_FIJOS[url.pathname]) {
       const [archivo, tipo] = ARCHIVOS_FIJOS[url.pathname]
       return responder(res, 200, await readFile(archivo), tipo)
+    }
+
+    if (req.method === 'GET' && url.pathname.startsWith('/vistas')) {
+      if (url.pathname === '/vistas') {
+        res.writeHead(301, { Location: '/vistas/' })
+        return res.end()
+      }
+      const archivo = vistaEnDisco(url.pathname)
+      if (!archivo) return responder(res, 404, { error: 'No encontrado' })
+      return responder(res, 200, await readFile(archivo), TIPOS_VISTA[extname(archivo)])
     }
 
     if (req.method === 'GET' && url.pathname === '/api/indice') {

@@ -1,0 +1,552 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Visitas · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-05 Registrar visita ocasional · AutorizacionAcceso(nombreVisitante, documentoVisitante, OCASIONAL),
+       registrarAutorizacionDeAcceso(), validarQueElAutorizanteTengaPermiso() (RN-08), cancelarAutorizacionOcasional() (RF-030)
+       Parqueaderos de visitantes disponibles (RF-064)
+     CU-06 Registrar autorización recurrente · AutorizacionAcceso(…, RECURRENTE), revocarAutorizacionRecurrente() (RF-042)
+       Decisión abierta 10: diasPermitidos y horarios son texto. La pantalla los guarda como el diagrama:
+       diasPermitidos = nombres de DiaSemana separados por coma ("MARTES,VIERNES") y horarios = "HH:mm-HH:mm". -->
+<body data-rol="residente" data-seccion="visitas">
+
+<main class="pagina media">
+  <div class="encabezado">
+    <div>
+      <h1>Visitas</h1>
+      <p class="guia">Portería ve lo que registras aquí cuando busca el documento de quien llega a Torre B · Apto 302.</p>
+    </div>
+    <div class="acciones">
+      <button class="btn" type="button" data-abrir="dialogo-visita">Registrar visita</button>
+      <button class="btn segundo" type="button" data-abrir="dialogo-recurrente">Registrar autorización recurrente</button>
+    </div>
+  </div>
+
+  <div class="pestanas" role="tablist" aria-label="Tipo de autorización">
+    <button type="button" role="tab" id="pestana-visitas" aria-selected="true" aria-controls="panel-visitas">Visitas<span class="cuenta-pestana" id="cuenta-visitas"></span></button>
+    <button type="button" role="tab" id="pestana-recurrentes" aria-selected="false" aria-controls="panel-recurrentes">Autorizaciones recurrentes<span class="cuenta-pestana" id="cuenta-recurrentes"></span></button>
+  </div>
+
+  <!-- Visitas ocasionales (RF-029) -->
+  <section id="panel-visitas" role="tabpanel" aria-labelledby="pestana-visitas" class="pila" style="gap:var(--e5)">
+    <div class="superficie">
+      <div class="cabeza">
+        <h2>Próximas</h2>
+        <span class="guia">Puedes cancelar una visita mientras no haya entrado.</span>
+      </div>
+      <ul class="lista" id="lista-proximas"></ul>
+      <div class="vacio" id="vacio-proximas" hidden>
+        <h3>No tienes visitas próximas</h3>
+        <p>Registra una visita para que portería deje entrar a tu invitado sin llamarte.</p>
+        <button class="btn segundo" type="button" data-abrir="dialogo-visita">Registrar visita</button>
+      </div>
+    </div>
+    <div class="superficie">
+      <div class="cabeza"><h2>Anteriores</h2></div>
+      <ul class="lista" id="lista-anteriores"></ul>
+    </div>
+  </section>
+
+  <!-- Autorizaciones recurrentes (RF-041) -->
+  <section id="panel-recurrentes" role="tabpanel" aria-labelledby="pestana-recurrentes" class="pila" style="gap:var(--e5)" hidden>
+    <div class="superficie">
+      <div class="cabeza">
+        <h2>Vigentes</h2>
+        <span class="guia">Al terminar su vigencia pasan solas a vencidas.</span>
+      </div>
+      <ul class="lista" id="lista-recurrentes-vigentes"></ul>
+      <div class="vacio" id="vacio-recurrentes" hidden>
+        <h3>No tienes autorizaciones recurrentes vigentes</h3>
+        <p>Si alguien viene cada semana, como la empleada doméstica o un profesor, autorízalo una vez con sus días y su horario.</p>
+        <button class="btn segundo" type="button" data-abrir="dialogo-recurrente">Registrar autorización recurrente</button>
+      </div>
+    </div>
+    <div class="superficie">
+      <div class="cabeza"><h2>Anteriores</h2></div>
+      <ul class="lista" id="lista-recurrentes-anteriores"></ul>
+    </div>
+  </section>
+</main>
+
+<footer class="pie-pagina no-imprimir">
+  Estados de esta vista:
+  <a href="visitas.html">con permiso para autorizar accesos</a> ·
+  <a href="visitas.html?estado=sin-permiso">sin vinculación vigente con permiso (RN-08)</a>
+</footer>
+
+<!-- Registrar visita: new AutorizacionAcceso(nombreVisitante, documentoVisitante, OCASIONAL) -->
+<dialog class="dialogo" id="dialogo-visita" aria-labelledby="titulo-visita">
+  <form id="form-visita" data-confirmar="Visita registrada. Portería ya la ve." data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-visita">Registrar visita</h2>
+        <p class="guia">Para alguien que viene una vez a Torre B · Apto 302.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="aviso no" data-sin-permiso role="alert" hidden style="margin-bottom:var(--e4)">
+        <p><b>No puedes autorizar visitas en Torre B · Apto 302.</b></p>
+        <p>Para autorizar accesos necesitas una vinculación vigente con permiso para hacerlo, y la tuya (contrato <span class="identificador">ARR-2026-0187</span>) no lo tiene en este momento. Pídele a la administración que revise tu vinculación.</p>
+      </div>
+      <div class="formulario dos">
+        <label class="campo completo">
+          <span>Nombre del visitante</span>
+          <input name="nombre" required autocomplete="off" placeholder="Camila Restrepo Ariza"
+                 data-error="Escribe el nombre como aparece en el documento. Portería lo compara al llegar.">
+        </label>
+        <label class="campo">
+          <span>Tipo de documento</span>
+          <select name="tipoDocumento">
+            <option value="CC">Cédula de ciudadanía</option>
+            <option value="CE">Cédula de extranjería</option>
+            <option value="TI">Tarjeta de identidad</option>
+            <option value="PA">Pasaporte</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span>Número de documento</span>
+          <input name="documento" class="identificador" inputmode="numeric" required autocomplete="off" placeholder="1045887332"
+                 data-error="Escribe el número de documento. Es lo que portería busca cuando llega.">
+          <span class="ayuda">Sin puntos ni espacios.</span>
+        </label>
+        <label class="campo completo">
+          <span>Día de la visita</span>
+          <input name="dia" type="date" min="2026-11-14" required
+                 data-error="Elige el día en que llega tu visita.">
+        </label>
+        <label class="campo">
+          <span>Desde</span>
+          <input name="desde" type="time" required data-error="Indica desde qué hora puede entrar.">
+        </label>
+        <label class="campo">
+          <span>Hasta</span>
+          <input name="hasta" type="time" required data-error="Indica hasta qué hora puede entrar.">
+        </label>
+        <label class="campo completo">
+          <span>Motivo <span class="opcional">(opcional)</span></span>
+          <input name="motivo" autocomplete="off" placeholder="Almuerzo familiar">
+        </label>
+        <div class="completo pila chica">
+          <label class="opcion">
+            <input type="checkbox" name="parqueadero" id="visita-parqueadero">
+            <span>Usará parqueadero de visitantes<small>Si llega en carro o moto.</small></span>
+          </label>
+          <div class="aviso" id="parqueaderos-libres" hidden aria-live="polite">
+            <p><b><span class="num">4</span> de <span class="num">12</span> parqueaderos de visitantes están libres en este momento.</b></p>
+            <p>No se apartan: portería le asigna uno libre cuando llegue.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Registrar visita</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Registrar autorización recurrente: new AutorizacionAcceso(nombreVisitante, documentoVisitante, RECURRENTE) -->
+<dialog class="dialogo" id="dialogo-recurrente" aria-labelledby="titulo-recurrente">
+  <form id="form-recurrente" data-confirmar="Autorización registrada. Portería la ve en los días y horas que elegiste." data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-recurrente">Registrar autorización recurrente</h2>
+        <p class="guia">Para quien viene a Torre B · Apto 302 los mismos días de cada semana.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="aviso no" data-sin-permiso role="alert" hidden style="margin-bottom:var(--e4)">
+        <p><b>No puedes autorizar accesos en Torre B · Apto 302.</b></p>
+        <p>Para autorizar accesos necesitas una vinculación vigente con permiso para hacerlo, y la tuya (contrato <span class="identificador">ARR-2026-0187</span>) no lo tiene en este momento. Pídele a la administración que revise tu vinculación.</p>
+      </div>
+      <div class="formulario dos">
+        <label class="campo completo">
+          <span>Nombre de la persona autorizada</span>
+          <input name="nombre" required autocomplete="off" placeholder="Martha Lucía Cárdenas"
+                 data-error="Escribe el nombre como aparece en el documento.">
+        </label>
+        <label class="campo">
+          <span>Tipo de documento</span>
+          <select name="tipoDocumento">
+            <option value="CC">Cédula de ciudadanía</option>
+            <option value="CE">Cédula de extranjería</option>
+            <option value="PA">Pasaporte</option>
+            <option value="PPT">Permiso por protección temporal</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span>Número de documento</span>
+          <input name="documento" class="identificador" inputmode="numeric" required autocomplete="off" placeholder="39654221"
+                 data-error="Escribe el número de documento. Es lo que portería busca cuando llega.">
+          <span class="ayuda">Sin puntos ni espacios.</span>
+        </label>
+        <label class="campo completo">
+          <span>Motivo</span>
+          <input name="motivo" list="motivos" required autocomplete="off" placeholder="Empleada doméstica"
+                 data-error="Escribe por qué viene, por ejemplo empleada doméstica o profesor de inglés.">
+          <datalist id="motivos">
+            <option value="Empleada doméstica">
+            <option value="Profesor particular">
+            <option value="Enfermera">
+            <option value="Paseador de perros">
+            <option value="Niñera">
+          </datalist>
+        </label>
+        <fieldset class="campo completo" id="campo-dias">
+          <legend class="rotulo">Días permitidos</legend>
+          <div class="chips" id="dias">
+            <label class="chip"><input type="checkbox" name="dia" value="LUNES"><span>Lun</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="MARTES"><span>Mar</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="MIERCOLES"><span>Mié</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="JUEVES"><span>Jue</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="VIERNES"><span>Vie</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="SABADO"><span>Sáb</span></label>
+            <label class="chip"><input type="checkbox" name="dia" value="DOMINGO"><span>Dom</span></label>
+          </div>
+        </fieldset>
+        <label class="campo">
+          <span>Puede entrar desde</span>
+          <input name="desde" type="time" required data-error="Indica desde qué hora puede entrar esos días.">
+        </label>
+        <label class="campo">
+          <span>Hasta</span>
+          <input name="hasta" type="time" required data-error="Indica hasta qué hora puede entrar esos días.">
+        </label>
+        <label class="campo">
+          <span>Vigente desde</span>
+          <input name="inicio" type="date" min="2026-11-14" required data-error="Elige el primer día en que la autorización vale.">
+        </label>
+        <label class="campo">
+          <span>Vigente hasta</span>
+          <input name="fin" type="date" min="2026-11-14" required data-error="Elige el último día. Después pasa sola a vencida.">
+        </label>
+        <label class="opcion completo">
+          <input type="checkbox" name="parqueadero">
+          <span>Puede usar parqueadero de visitantes<small>Una autorización recurrente no incluye parqueadero si no lo marcas.</small></span>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Registrar autorización</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Confirmación de cancelar visita (cancelarAutorizacionOcasional) o revocar autorización (revocarAutorizacionRecurrente) -->
+<dialog class="dialogo" id="dialogo-terminar" aria-labelledby="titulo-terminar">
+  <div class="contenido">
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-terminar">Cancelar visita</h2>
+        <p class="guia" id="texto-terminar"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar id="volver-terminar">Volver</button>
+      <button class="btn riesgo" type="button" id="confirmar-terminar">Cancelar visita</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  var HOY = '2026-11-14'
+  var sinPermiso = new URLSearchParams(location.search).get('estado') === 'sin-permiso'
+
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  var SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+  var DIAS = { LUNES: 'lunes', MARTES: 'martes', MIERCOLES: 'miércoles', JUEVES: 'jueves', VIERNES: 'viernes', SABADO: 'sábado', DOMINGO: 'domingo' }
+  var ORDEN_DIAS = ['LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO']
+
+  // AutorizacionAcceso tal como está en el diagrama: diasPermitidos y horarios son texto.
+  var autorizaciones = [
+    { id: 1, tipo: 'OCASIONAL', nombre: 'Camila Restrepo Ariza', documento: 'CC 1045887332', motivo: 'Visita familiar', parqueadero: true,
+      inicio: '2026-11-14', fin: '2026-11-14', horarios: '18:00-23:59', estado: 'VIGENTE' },
+    { id: 2, tipo: 'OCASIONAL', nombre: 'Julián Mendoza Torres', documento: 'CC 1032456781', motivo: 'Almuerzo familiar', parqueadero: false,
+      inicio: '2026-11-15', fin: '2026-11-15', horarios: '12:00-18:00', estado: 'VIGENTE' },
+    { id: 3, tipo: 'OCASIONAL', nombre: 'Edwin Suárez Mora', documento: 'CC 1143987650', motivo: 'Técnico de Claro, instalación de internet', parqueadero: false,
+      inicio: '2026-11-14', fin: '2026-11-14', horarios: '14:00-18:00', estado: 'UTILIZADA' },
+    { id: 4, tipo: 'OCASIONAL', nombre: 'Paola Herrera Díaz', documento: 'CC 52987114', motivo: 'Entrega de un pedido', parqueadero: false,
+      inicio: '2026-11-07', fin: '2026-11-07', horarios: '09:00-12:00', estado: 'CANCELADA' },
+    { id: 5, tipo: 'OCASIONAL', nombre: 'Andrés Felipe Gil', documento: 'CC 1018456230', motivo: 'Revisión del calentador', parqueadero: true,
+      inicio: '2026-11-03', fin: '2026-11-03', horarios: '08:00-12:00', estado: 'VENCIDA' },
+
+    { id: 6, tipo: 'RECURRENTE', nombre: 'Martha Lucía Cárdenas', documento: 'CC 39654221', motivo: 'Empleada doméstica', parqueadero: false,
+      inicio: '2026-08-01', fin: '2027-01-31', diasPermitidos: 'MARTES,VIERNES', horarios: '07:00-16:00', estado: 'VIGENTE' },
+    { id: 7, tipo: 'RECURRENTE', nombre: 'Daniel Ospina Rueda', documento: 'CC 1020745336', motivo: 'Profesor de inglés', parqueadero: false,
+      inicio: '2026-09-01', fin: '2026-11-20', diasPermitidos: 'LUNES,MIERCOLES', horarios: '17:00-19:00', estado: 'VIGENTE' },
+    { id: 8, tipo: 'RECURRENTE', nombre: 'Kevin Rojas Pardo', documento: 'CC 1001234567', motivo: 'Paseador de perros', parqueadero: false,
+      inicio: '2026-07-01', fin: '2026-12-31', diasPermitidos: 'LUNES,MARTES,MIERCOLES,JUEVES,VIERNES', horarios: '06:00-08:00', estado: 'REVOCADA' },
+    { id: 9, tipo: 'RECURRENTE', nombre: 'Natalia Prieto Gómez', documento: 'CC 1022334455', motivo: 'Fisioterapeuta', parqueadero: true,
+      inicio: '2026-09-01', fin: '2026-10-31', diasPermitidos: 'MARTES,JUEVES', horarios: '10:00-11:30', estado: 'VENCIDA' },
+  ]
+  var siguienteId = 10
+
+  // ---------- Formatos ----------
+  function esc(texto) {
+    return String(texto).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] })
+  }
+  function fecha(iso) { var p = iso.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]) }
+  function fechaLarga(iso, conDia) {
+    if (iso === HOY && conDia) return 'Hoy'
+    var d = fecha(iso)
+    var texto = d.getDate() + ' de ' + MESES[d.getMonth()] + (d.getFullYear() !== 2026 ? ' de ' + d.getFullYear() : '')
+    return conDia ? SEMANA[d.getDay()].charAt(0).toUpperCase() + SEMANA[d.getDay()].slice(1) + ' ' + texto : texto
+  }
+  function diasEntre(desde, hasta) { return Math.round((fecha(hasta) - fecha(desde)) / 86400000) }
+  function hora(hhmm) {
+    var p = hhmm.split(':'), h = +p[0]
+    if (h === 12 && p[1] === '00') return '12:00 m.'
+    return ((h % 12) || 12) + ':' + p[1] + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  function franja(horarios) { var p = horarios.split('-'); return hora(p[0]) + ' a ' + hora(p[1]) }
+  function documento(texto) {
+    var p = texto.split(' ')
+    return p[0] + ' ' + p[1].replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
+  }
+  function dias(texto) {
+    var lista = texto.split(',')
+    if (lista.length === 7) return 'Todos los días'
+    if (lista.join(',') === 'LUNES,MARTES,MIERCOLES,JUEVES,VIERNES') return 'Lunes a viernes'
+    var nombres = lista.map(function (d) { return DIAS[d] })
+    var texto2 = nombres.length > 1 ? nombres.slice(0, -1).join(', ') + ' y ' + nombres[nombres.length - 1] : nombres[0]
+    return texto2.charAt(0).toUpperCase() + texto2.slice(1)
+  }
+
+  function pildora(a) {
+    if (a.estado === 'VIGENTE') {
+      var faltan = diasEntre(HOY, a.fin)
+      if (a.tipo === 'RECURRENTE' && faltan <= 7) return '<span class="pildora p-al">Vence en ' + faltan + (faltan === 1 ? ' día' : ' días') + '</span>'
+      return '<span class="pildora p-ok">Vigente</span>'
+    }
+    var nombres = { UTILIZADA: 'Utilizada', CANCELADA: 'Cancelada', REVOCADA: 'Revocada', VENCIDA: 'Vencida' }
+    return '<span class="pildora p-ne">' + nombres[a.estado] + '</span>'
+  }
+
+  function renglon(a) {
+    var detalle
+    if (a.tipo === 'OCASIONAL') {
+      detalle = '<span>' + fechaLarga(a.inicio, true) + ', ' + franja(a.horarios) + '</span>'
+    } else {
+      detalle = '<span>' + dias(a.diasPermitidos) + ', ' + franja(a.horarios) + '</span>' +
+        '<span>Del ' + fechaLarga(a.inicio) + ' al ' + fechaLarga(a.fin) + '</span>'
+    }
+    var extra = []
+    if (a.motivo) extra.push(esc(a.motivo))
+    if (a.parqueadero) extra.push('con parqueadero de visitantes')
+    var accion = ''
+    if (a.estado === 'VIGENTE') {
+      accion = a.tipo === 'OCASIONAL'
+        ? '<button class="btn riesgo chico" type="button" data-cancelar="' + a.id + '">Cancelar visita</button>'
+        : '<button class="btn riesgo chico" type="button" data-revocar="' + a.id + '">Revocar</button>'
+    }
+    return '<li data-id="' + a.id + '">' +
+      '<div class="principal">' +
+        '<b>' + esc(a.nombre) + '</b>' +
+        '<span class="identificador">' + esc(documento(a.documento)) + '</span>' +
+        detalle +
+        (extra.length ? '<span>' + extra.join(' · ') + '</span>' : '') +
+      '</div>' +
+      '<div class="fila" style="gap:var(--e2)">' + pildora(a) + accion + '</div>' +
+    '</li>'
+  }
+
+  function pintar() {
+    var ocasionales = autorizaciones.filter(function (a) { return a.tipo === 'OCASIONAL' })
+    var recurrentes = autorizaciones.filter(function (a) { return a.tipo === 'RECURRENTE' })
+    var porFecha = function (a, b) { return (a.inicio + a.horarios).localeCompare(b.inicio + b.horarios) }
+
+    var proximas = ocasionales.filter(function (a) { return a.estado === 'VIGENTE' }).sort(porFecha)
+    var anteriores = ocasionales.filter(function (a) { return a.estado !== 'VIGENTE' }).sort(porFecha).reverse()
+    var vigentes = recurrentes.filter(function (a) { return a.estado === 'VIGENTE' }).sort(function (a, b) { return a.fin.localeCompare(b.fin) })
+    var pasadas = recurrentes.filter(function (a) { return a.estado !== 'VIGENTE' })
+
+    document.getElementById('lista-proximas').innerHTML = proximas.map(renglon).join('')
+    document.getElementById('lista-anteriores').innerHTML = anteriores.map(renglon).join('')
+    document.getElementById('lista-recurrentes-vigentes').innerHTML = vigentes.map(renglon).join('')
+    document.getElementById('lista-recurrentes-anteriores').innerHTML = pasadas.map(renglon).join('')
+    document.getElementById('vacio-proximas').hidden = proximas.length > 0
+    document.getElementById('vacio-recurrentes').hidden = vigentes.length > 0
+    document.getElementById('lista-anteriores').closest('.superficie').hidden = anteriores.length === 0
+    document.getElementById('lista-recurrentes-anteriores').closest('.superficie').hidden = pasadas.length === 0
+    document.getElementById('cuenta-visitas').textContent = proximas.length
+    document.getElementById('cuenta-recurrentes').textContent = vigentes.length
+  }
+
+  // ---------- Errores propios de la regla, además de los required ----------
+  function marcarError(campo, mensaje) {
+    var contenedor = campo.closest('.campo')
+    campo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-generado', '')
+    error.textContent = mensaje
+    contenedor.appendChild(error)
+  }
+  function limpiarErrores(formulario) {
+    formulario.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    formulario.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+  }
+
+  // validarQueElAutorizanteTengaPermiso(): 403 cuando no hay vinculación vigente con permiso (RN-08)
+  function rechazarSinPermiso(formulario, e) {
+    if (!sinPermiso) return false
+    e.preventDefault()
+    var aviso = formulario.querySelector('[data-sin-permiso]')
+    aviso.hidden = false
+    aviso.scrollIntoView({ block: 'nearest' })
+    return true
+  }
+
+  // ---------- Registrar visita ocasional ----------
+  var formVisita = document.getElementById('form-visita')
+  var casillaParqueadero = document.getElementById('visita-parqueadero')
+
+  // GET /api/parqueaderos/visitantes/disponibles solo si usará parqueadero (RF-064)
+  casillaParqueadero.addEventListener('change', function () {
+    document.getElementById('parqueaderos-libres').hidden = !this.checked
+  })
+  formVisita.addEventListener('reset', function () { document.getElementById('parqueaderos-libres').hidden = true })
+
+  formVisita.addEventListener('confirmado', function (e) {
+    var f = formVisita.elements
+    limpiarErrores(formVisita)
+    if (f.hasta.value <= f.desde.value) {
+      e.preventDefault()
+      marcarError(f.hasta, 'La hora final debe ser después de las ' + hora(f.desde.value) + '. Si la visita pasa de medianoche, regístrala hasta las 11:59 p. m.')
+      f.hasta.focus()
+      return
+    }
+    if (rechazarSinPermiso(formVisita, e)) return
+    autorizaciones.push({
+      id: siguienteId++, tipo: 'OCASIONAL', nombre: f.nombre.value.trim(),
+      documento: f.tipoDocumento.value + ' ' + f.documento.value.replace(/\D/g, ''),
+      motivo: f.motivo.value.trim(), parqueadero: f.parqueadero.checked,
+      inicio: f.dia.value, fin: f.dia.value, horarios: f.desde.value + '-' + f.hasta.value, estado: 'VIGENTE',
+    })
+    pintar()
+    document.getElementById('pestana-visitas').click()
+  })
+
+  // ---------- Registrar autorización recurrente ----------
+  var formRecurrente = document.getElementById('form-recurrente')
+
+  formRecurrente.addEventListener('confirmado', function (e) {
+    var f = formRecurrente.elements
+    limpiarErrores(formRecurrente)
+    var elegidos = Array.prototype.filter.call(formRecurrente.querySelectorAll('input[name="dia"]'), function (c) { return c.checked })
+      .map(function (c) { return c.value })
+    var valido = true
+    if (!elegidos.length) {
+      var error = document.createElement('span')
+      error.className = 'error'
+      error.setAttribute('data-generado', '')
+      error.textContent = 'Elige al menos un día de la semana en que puede entrar.'
+      document.getElementById('campo-dias').appendChild(error)
+      valido = false
+    }
+    if (f.hasta.value <= f.desde.value) {
+      marcarError(f.hasta, 'La hora final debe ser después de las ' + hora(f.desde.value) + '.')
+      valido = false
+    }
+    if (f.fin.value < f.inicio.value) {
+      marcarError(f.fin, 'La vigencia termina antes de empezar. Elige un día igual o posterior al ' + fechaLarga(f.inicio.value) + '.')
+      valido = false
+    }
+    if (!valido) {
+      e.preventDefault()
+      var primero = formRecurrente.querySelector('[aria-invalid="true"]') || formRecurrente.querySelector('input[name="dia"]')
+      primero.focus()
+      return
+    }
+    if (rechazarSinPermiso(formRecurrente, e)) return
+    autorizaciones.push({
+      id: siguienteId++, tipo: 'RECURRENTE', nombre: f.nombre.value.trim(),
+      documento: f.tipoDocumento.value + ' ' + f.documento.value.replace(/\D/g, ''),
+      motivo: f.motivo.value.trim(), parqueadero: f.parqueadero.checked,
+      inicio: f.inicio.value, fin: f.fin.value,
+      diasPermitidos: ORDEN_DIAS.filter(function (d) { return elegidos.indexOf(d) >= 0 }).join(','),
+      horarios: f.desde.value + '-' + f.hasta.value, estado: 'VIGENTE',
+    })
+    pintar()
+    document.getElementById('pestana-recurrentes').click()
+  })
+
+  document.getElementById('dias').addEventListener('change', function () {
+    var error = document.querySelector('#campo-dias .error')
+    if (error) error.remove()
+  })
+
+  // Al abrir un formulario, el aviso del 403 empieza oculto.
+  document.querySelectorAll('[data-abrir]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var d = document.getElementById(b.getAttribute('data-abrir'))
+      var aviso = d.querySelector('[data-sin-permiso]')
+      if (aviso) aviso.hidden = true
+    })
+  })
+
+  // ---------- Cancelar visita (RF-030) y revocar autorización (RF-042) ----------
+  var dialogoTerminar = document.getElementById('dialogo-terminar')
+  var pendiente = null
+
+  document.addEventListener('click', function (e) {
+    var cancelar = e.target.closest('[data-cancelar]')
+    var revocar = e.target.closest('[data-revocar]')
+    if (!cancelar && !revocar) return
+    var id = +(cancelar || revocar).getAttribute(cancelar ? 'data-cancelar' : 'data-revocar')
+    var a = autorizaciones.filter(function (x) { return x.id === id })[0]
+    pendiente = a
+    if (cancelar) {
+      document.getElementById('titulo-terminar').textContent = 'Cancelar la visita de ' + a.nombre
+      document.getElementById('texto-terminar').textContent = fechaLarga(a.inicio, true) + ', ' + franja(a.horarios) +
+        '. Si llega, portería no la dejará entrar sin llamarte. No se puede deshacer: tendrías que registrarla de nuevo.'
+      document.getElementById('confirmar-terminar').textContent = 'Cancelar visita'
+      document.getElementById('volver-terminar').textContent = 'Conservar visita'
+    } else {
+      document.getElementById('titulo-terminar').textContent = 'Revocar la autorización de ' + a.nombre
+      document.getElementById('texto-terminar').textContent = a.motivo + ', ' + dias(a.diasPermitidos).toLowerCase() + ', vigente hasta el ' +
+        fechaLarga(a.fin) + '. Desde ahora portería no la dejará entrar sin llamarte. No se puede deshacer.'
+      document.getElementById('confirmar-terminar').textContent = 'Revocar autorización'
+      document.getElementById('volver-terminar').textContent = 'Conservar autorización'
+    }
+    dialogoTerminar.showModal()
+  })
+
+  document.getElementById('confirmar-terminar').addEventListener('click', function () {
+    if (!pendiente) return
+    if (pendiente.tipo === 'OCASIONAL') {
+      pendiente.estado = 'CANCELADA'
+      Convivir.confirmar('Visita cancelada. Portería ya no la ve.')
+    } else {
+      pendiente.estado = 'REVOCADA'
+      Convivir.confirmar('Autorización revocada. ' + pendiente.nombre + ' ya no puede entrar sin que la anuncies.')
+    }
+    pendiente = null
+    dialogoTerminar.close()
+    pintar()
+  })
+
+  pintar()
+
+  // Desde Inicio, "Registrar visita" llega con #registrar. Espera a que marco.js active las pestañas.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (location.hash === '#registrar') Convivir.abrir('dialogo-visita')
+    if (location.hash === '#recurrentes') document.getElementById('pestana-recurrentes').click()
+  })
+})()
+</script>
+</body>
+</html>

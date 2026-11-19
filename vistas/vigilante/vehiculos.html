@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vehículos · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* Mapa de parqueaderos de visitantes: un puesto por celda, libre con regla verde y píldora */
+  .puestos {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5.5rem, 1fr));
+    gap: var(--e2);
+    padding: var(--e4) var(--e5);
+  }
+  .puesto {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    min-height: 4.5rem;
+    padding: var(--e2) var(--e3);
+    border: 1px solid var(--borde);
+    border-left: 4px solid var(--acero);
+    border-radius: var(--r-control);
+    background: var(--papel);
+    color: var(--tinta);
+    text-align: left;
+  }
+  button.puesto { cursor: pointer; }
+  button.puesto:hover { background: var(--concreto); }
+  .puesto.libre { border-left-color: var(--ok); }
+  .puesto .numero { font-family: var(--dato); font-weight: 600; letter-spacing: .04em; }
+  .puesto .ocupa { font-family: var(--dato); font-size: var(--t-xs); letter-spacing: .04em; color: var(--acero); }
+  @media (max-width: 40rem) { .puestos { padding-left: var(--e4); padding-right: var(--e4); } }
+</style>
+</head>
+<!-- CU-10 Registrar movimiento vehicular
+     Consultar vehículo por placa (RF-051): Vehiculo con el Inmueble que lo posee
+     Incluye "Consultar uso vigente del parqueadero" (RF-063, RN-19): Inmueble.obtenerInmuebleConUsoVigente()
+     MovimientoAcceso.registrarIngresoAlConjunto(), registrarSalidaDelConjunto() (RF-052, RF-053), ocupa parqueadero
+     Visita: AutorizacionAcceso.validarVigenciaDeLaAutorizacion() por documento, usaParqueaderoVisitantes, placaVisitante
+     Sin autorización: ingreso con motivoExcepcion (RF-035, RN-12) -->
+<body class="porteria" data-rol="vigilante" data-seccion="vehiculos">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>¿Qué vehículo llega?</h1>
+      <p class="guia">Portería vehicular · <span id="cuenta-visitas">8</span> vehículos de visitantes dentro · <span id="cuenta-libres">4</span> parqueaderos de visitantes libres</p>
+    </div>
+  </div>
+
+  <div class="lado">
+    <div class="pila" style="gap:var(--e5)">
+      <form class="buscador-grande" id="buscar" role="search" novalidate>
+        <label class="solo-lectores" for="placa">Placa del vehículo</label>
+        <input id="placa" class="identificador" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="8" placeholder="Placa del vehículo" autofocus>
+        <button class="btn grande" type="submit">Buscar</button>
+      </form>
+      <p class="aviso no" id="placa-error" role="alert" hidden style="margin-top:calc(-1 * var(--e3))"></p>
+      <p class="guia" style="margin-top:calc(-1 * var(--e3))">
+        Tres letras y tres caracteres. Ejemplos de esta vista:
+        <button class="btn texto chico identificador" type="button" data-ejemplo="BQA 47F">BQA 47F</button>
+        <button class="btn texto chico identificador" type="button" data-ejemplo="WEQ 731">WEQ 731</button>
+        <button class="btn texto chico identificador" type="button" data-ejemplo="JKT 512">JKT 512</button>
+        <button class="btn texto chico identificador" type="button" data-ejemplo="HZM 908">HZM 908</button>
+      </p>
+
+      <!-- Estado inicial -->
+      <div class="superficie" id="r-inicio">
+        <div class="vacio">
+          <svg class="simbolo" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M7 25v-6l4-8h18l4 8v6"/><rect x="5" y="19" width="30" height="8" rx="2"/><circle cx="11" cy="29" r="3"/><circle cx="29" cy="29" r="3"/><path d="M15 23h10"/></svg>
+          <h3>Escribe la placa del vehículo que llega</h3>
+          <p>Convivir revisa si es de un residente y qué parqueadero usa hoy, si ya está dentro o si viene de visita.</p>
+        </div>
+      </div>
+
+      <!-- Vehículo de un residente: Vehiculo → Inmueble que lo posee → parqueadero con uso vigente -->
+      <section class="pila" id="r-residente" hidden aria-live="polite">
+        <div class="veredicto v-ok">
+          <div class="palabra">Puede entrar</div>
+          <div class="quien" id="res-quien">Mazda 2 gris · Lucía Mendoza</div>
+          <div class="donde" id="res-donde">BQA 47F · Torre B · Apto 302</div>
+          <div class="porque" id="res-porque">Vehículo registrado en B-0302. Parquea en P-022.</div>
+        </div>
+        <div class="superficie">
+          <div class="cabeza">
+            <h2>Parqueadero que usa hoy</h2>
+            <span class="pildora p-ok" id="res-pildora">Cesión vigente</span>
+          </div>
+          <dl class="datos cuerpo">
+            <div><dt>Parqueadero</dt><dd><span class="identificador fuerte" id="res-parqueadero">P-022</span> <span class="guia" id="res-ubicacion">· Sótano 1</span></dd></div>
+            <div><dt>Quién tiene el uso</dt><dd id="res-uso">Torre B · Apto 302</dd></div>
+            <div><dt>Titular del parqueadero</dt><dd id="res-titular">Ernesto Vargas</dd></div>
+            <div><dt>Último movimiento</dt><dd id="res-ultimo">Salida hoy a las 5:20 p. m.</dd></div>
+          </dl>
+        </div>
+        <div class="fila">
+          <button class="btn grande exito" type="button" id="ingreso-residente">Registrar ingreso</button>
+          <button class="btn grande segundo" type="button" data-otra>Buscar otra placa</button>
+        </div>
+      </section>
+
+      <!-- Ya está dentro: lo que corresponde es la salida -->
+      <section class="pila" id="r-dentro" hidden aria-live="polite">
+        <div class="veredicto v-ok">
+          <div class="palabra">Está dentro del conjunto</div>
+          <div class="quien" id="den-quien">Mauricio León Gaitán</div>
+          <div class="donde" id="den-donde">JKT 512 · Torre C · Apto 0705</div>
+          <div class="porque" id="den-porque">Entró hoy a las 7:52 p. m. como visita de Andrés Caicedo y ocupa el parqueadero de visitantes V-02. Lo que corresponde es registrar la salida.</div>
+        </div>
+        <div class="fila">
+          <button class="btn grande" type="button" id="salida">Registrar salida</button>
+          <button class="btn grande segundo" type="button" data-otra>Buscar otra placa</button>
+        </div>
+      </section>
+
+      <!-- Placa sin registro: se busca la visita por el documento de quien conduce -->
+      <section class="pila" id="r-sin" hidden aria-live="polite">
+        <div class="veredicto v-al">
+          <div class="palabra">Placa sin registro</div>
+          <div class="quien identificador" id="sin-placa">HZM 908</div>
+          <div class="porque">No es el vehículo de ningún residente y no tiene un ingreso abierto. Si viene de visita, busca su autorización con el documento de quien conduce. Si no, puedes registrarlo como excepción.</div>
+        </div>
+        <form class="superficie relleno pila" id="buscar-visita" novalidate>
+          <h2 style="font-size:var(--t-md);font-weight:600">¿Viene de visita?</h2>
+          <div class="buscador-grande">
+            <label class="solo-lectores" for="documento">Documento de quien conduce</label>
+            <input id="documento" class="identificador" inputmode="numeric" autocomplete="off" placeholder="Documento de quien conduce">
+            <button class="btn grande" type="submit">Buscar visita</button>
+          </div>
+          <p class="guia">
+            Sin puntos ni espacios. Ejemplos:
+            <button class="btn texto chico identificador" type="button" data-documento="1045887332">1045887332</button>
+            <button class="btn texto chico identificador" type="button" data-documento="8772104">8772104</button>
+          </p>
+        </form>
+        <div class="fila">
+          <button class="btn grande segundo" type="button" id="ir-excepcion">Registrar como excepción</button>
+          <button class="btn grande segundo" type="button" data-otra>Buscar otra placa</button>
+        </div>
+      </section>
+
+      <!-- Vehículo de una visita autorizada que pidió parqueadero de visitantes -->
+      <section class="pila" id="r-visita" hidden aria-live="polite">
+        <div class="veredicto v-ok">
+          <div class="palabra">Puede entrar</div>
+          <div class="quien">Camila Restrepo Ariza</div>
+          <div class="donde" id="vis-donde">HZM 908 · CC 1 045 887 332 · Torre B · Apto 302</div>
+          <div class="porque">Visita autorizada por Lucía Mendoza, vigente hasta hoy a las 11:59 p. m. Pidió parqueadero de visitantes: asígnale uno libre.</div>
+        </div>
+        <div class="superficie relleno pila">
+          <label class="campo">
+            <span>Parqueadero de visitantes</span>
+            <select id="vis-parqueadero"></select>
+            <span class="ayuda">La placa queda guardada en el ingreso de la visita.</span>
+          </label>
+          <p class="aviso al" id="vis-lleno" hidden><b>Los 12 parqueaderos de visitantes están ocupados.</b> Pídele que parquee afuera y registra solo a la persona en <a href="porteria.html">Personas</a>.</p>
+        </div>
+        <div class="fila">
+          <button class="btn grande exito" type="button" id="ingreso-visita">Registrar ingreso</button>
+          <button class="btn grande segundo" type="button" data-otra>Buscar otra placa</button>
+        </div>
+      </section>
+
+      <!-- Sin autorización: ingreso como excepción con unidad de destino, motivo y parqueadero -->
+      <section class="pila" id="r-excepcion" hidden aria-live="polite">
+        <div class="veredicto v-no">
+          <div class="palabra">No tiene autorización</div>
+          <div class="quien identificador" id="exc-placa-titulo">HZM 908</div>
+          <div class="donde" id="exc-donde">Sin registro en el conjunto</div>
+          <div class="porque" id="exc-porque">Puedes registrar el ingreso como excepción indicando la unidad de destino, el motivo y el parqueadero de visitantes que ocupa. Queda en auditoría.</div>
+        </div>
+        <form class="superficie relleno" id="form-excepcion" novalidate>
+          <h2 style="font-size:var(--t-md);font-weight:600;margin-bottom:var(--e4)">Ingreso como excepción</h2>
+          <div class="formulario dos">
+            <label class="campo">
+              <span>Placa</span>
+              <input id="exc-placa" class="identificador placa" readonly>
+            </label>
+            <label class="campo">
+              <span>Unidad de destino</span>
+              <input id="exc-unidad" class="identificador" required autocomplete="off" placeholder="A-1104" data-error="Escribe la unidad a la que va, por ejemplo A-1104.">
+            </label>
+            <label class="campo">
+              <span>Parqueadero de visitantes</span>
+              <select id="exc-parqueadero" required data-error="Elige el parqueadero de visitantes donde va a quedar."></select>
+            </label>
+            <label class="campo completo">
+              <span>Motivo</span>
+              <textarea id="exc-motivo" required placeholder="Trae un mercado para A-1104. Lo confirmó por teléfono Jorge Peñaranda, propietario." data-error="Escribe el motivo. Es obligatorio cuando no hay autorización previa."></textarea>
+              <span class="ayuda">Di quién conduce y quién lo confirmó si llamaste al apartamento.</span>
+            </label>
+          </div>
+          <div class="fila" style="margin-top:var(--e5)">
+            <button class="btn grande" type="submit">Registrar como excepción</button>
+            <button class="btn grande segundo" type="button" data-otra>Buscar otra placa</button>
+          </div>
+        </form>
+      </section>
+    </div>
+
+    <div class="pila" style="gap:var(--e5)">
+      <section class="superficie" aria-labelledby="titulo-puestos">
+        <div class="cabeza">
+          <h2 id="titulo-puestos">Parqueaderos de visitantes</h2>
+          <span class="pildora p-ok" id="pildora-libres">4 libres</span>
+        </div>
+        <div class="puestos" id="puestos"></div>
+        <div class="pie">Toca uno ocupado para registrar su salida.</div>
+      </section>
+
+      <aside class="superficie" aria-labelledby="titulo-movimientos">
+        <div class="cabeza">
+          <h2 id="titulo-movimientos">Últimos movimientos</h2>
+          <a class="btn texto chico" href="presentes.html">Ver quién está dentro</a>
+        </div>
+        <ul class="lista" id="movimientos">
+          <li><div class="principal"><b class="identificador">HTM 390</b><span><span class="identificador">C-1201</span> · residente · <span class="identificador">P-157</span></span></div><span class="etiqueta">Ingreso <span class="dato">9:22 p. m.</span></span></li>
+          <li><div class="principal"><b class="identificador">WEQ 731</b><span><span class="identificador">A-0401</span> · residente · <span class="identificador">P-064</span></span></div><span class="etiqueta">Salida <span class="dato">8:47 p. m.</span></span></li>
+          <li><div class="principal"><b class="identificador">JKT 512</b><span><span class="identificador">C-0705</span> · visita · <span class="identificador">V-02</span></span></div><span class="etiqueta">Ingreso <span class="dato">7:52 p. m.</span></span></li>
+          <li><div class="principal"><b class="identificador">LPC 902</b><span><span class="identificador">B-0302</span> · visita · <span class="identificador">V-04</span></span></div><span class="etiqueta">Salida <span class="dato">6:40 p. m.</span></span></li>
+          <li><div class="principal"><b class="identificador">EYK 754</b><span><span class="identificador">B-1105</span> · visita · <span class="identificador">V-11</span></span></div><span class="etiqueta">Ingreso <span class="dato">6:30 p. m.</span></span></li>
+          <li><div class="principal"><b class="identificador">UFR 903</b><span><span class="identificador">C-0412</span> · visita · <span class="identificador">V-05</span></span></div><span class="etiqueta">Ingreso <span class="dato">6:20 p. m.</span></span></li>
+        </ul>
+      </aside>
+    </div>
+  </div>
+</main>
+
+<script>
+(function () {
+  // Vehículos registrados de residentes y el parqueadero que usa su inmueble hoy
+  // (Inmueble.obtenerInmuebleConUsoVigente(): devuelve quien tiene el uso, no el titular, RN-19).
+  var VEHICULOS = {
+    'BQA 47F': {
+      descripcion: 'Mazda 2 gris', responde: 'Lucía Mendoza', unidad: 'B-0302', unidadLarga: 'Torre B · Apto 302',
+      parqueadero: 'P-022', ubicacion: 'Sótano 1', titular: 'Ernesto Vargas, propietario no residente',
+      porque: 'Vehículo registrado en B-0302. Parquea en P-022: el uso lo tiene B-0302 por cesión de Ernesto Vargas hasta el 30 de noviembre.',
+      uso: 'Torre B · Apto 302, por cesión hasta el 30 de noviembre', pildora: 'Cesión vigente, quedan 16 días',
+      ultimo: 'Salida hoy a las 5:20 p. m.'
+    },
+    'WEQ 731': {
+      descripcion: 'Renault Duster blanca', responde: 'Gloria Ariza', unidad: 'A-0401', unidadLarga: 'Torre A · Apto 0401',
+      parqueadero: 'P-064', ubicacion: 'Sótano 1', titular: 'Gloria Ariza, propietaria residente',
+      porque: 'Vehículo registrado en A-0401. Parquea en P-064, que es de A-0401 y no está cedido.',
+      uso: 'Torre A · Apto 0401, su titular', pildora: 'Uso vigente',
+      ultimo: 'Salida hoy a las 8:47 p. m.'
+    },
+    'HTM 390': {
+      descripcion: 'Chevrolet Onix rojo', responde: 'Diana Salcedo', unidad: 'C-1201', unidadLarga: 'Torre C · Apto 1201',
+      parqueadero: 'P-157', ubicacion: 'Sótano 2', titular: 'Diana Salcedo, propietaria residente',
+      porque: 'Vehículo registrado en C-1201. Parquea en P-157, que es de C-1201.',
+      uso: 'Torre C · Apto 1201, su titular', pildora: 'Uso vigente',
+      ultimo: 'Ingreso hoy a las 9:22 p. m.'
+    }
+  }
+
+  // Ingresos vehiculares abiertos (MovimientoAcceso INGRESO sin su SALIDA)
+  var DENTRO = {
+    'HTM 390': { quien: 'Chevrolet Onix rojo · Diana Salcedo', unidad: 'C-1201', unidadLarga: 'Torre C · Apto 1201', tipo: 'residente', como: 'vehículo de residente', hora: '9:22 p. m.', pq: 'P-157' },
+    'KZT 418': { quien: 'Julián Salcedo Pardo y Natalia Gómez Rincón', unidad: 'C-1201', unidadLarga: 'Torre C · Apto 1201', tipo: 'visita', como: 'visita de Diana Salcedo', hora: '5:45 p. m.', pq: 'V-01' },
+    'JKT 512': { quien: 'Mauricio León Gaitán', unidad: 'C-0705', unidadLarga: 'Torre C · Apto 0705', tipo: 'visita', como: 'visita de Andrés Caicedo', hora: '7:52 p. m.', pq: 'V-02' },
+    'GBM 227': { quien: 'Hernando Ariza Camacho y Luz Marina Ospina', unidad: 'A-0401', unidadLarga: 'Torre A · Apto 0401', tipo: 'visita', como: 'visita de Gloria Ariza', hora: '4:30 p. m.', pq: 'V-03' },
+    'UFR 903': { quien: 'Paola Andrea Vélez', unidad: 'C-0412', unidadLarga: 'Torre C · Apto 0412', tipo: 'visita', como: 'visita de Mónica Ríos', hora: '6:20 p. m.', pq: 'V-05' },
+    'MXR 518': { quien: 'Héctor Oviedo Lara', unidad: 'A-0902', unidadLarga: 'Torre A · Apto 0902', tipo: 'excepción', como: 'excepción confirmada por Marta Oviedo', hora: '3:30 p. m.', pq: 'V-06' },
+    'NWX 145': { quien: 'Claudia Patricia Mejía', unidad: 'B-0807', unidadLarga: 'Torre B · Apto 0807', tipo: 'recurrente', como: 'autorización recurrente de Inés Calderón', hora: '6:02 p. m.', pq: 'V-08' },
+    'TPQ 380': { quien: 'Andrea Lozano Peña y Felipe Herrera Lozano', unidad: 'A-0603', unidadLarga: 'Torre A · Apto 0603', tipo: 'visita', como: 'visita de Ricardo Herrera', hora: '6:10 p. m.', pq: 'V-10' },
+    'EYK 754': { quien: 'Sebastián Mora Uribe', unidad: 'B-1105', unidadLarga: 'Torre B · Apto 1105', tipo: 'visita', como: 'visita de Carolina Uribe', hora: '6:30 p. m.', pq: 'V-11' }
+  }
+
+  // Parqueaderos de visitantes V-01 a V-12 y la placa que lo ocupa
+  var PUESTOS = {}
+  for (var n = 1; n <= 12; n++) PUESTOS['V-' + String(n).padStart(2, '0')] = null
+  Object.keys(DENTRO).forEach(function (p) { if (DENTRO[p].pq.indexOf('V-') === 0) PUESTOS[DENTRO[p].pq] = p })
+
+  // Autorización de visita que pidió parqueadero de visitantes (usaParqueaderoVisitantes)
+  var VISITA = { documento: '1045887332', usada: null }
+
+  var resultados = ['r-inicio', 'r-residente', 'r-dentro', 'r-sin', 'r-visita', 'r-excepcion']
+  var campoPlaca = document.getElementById('placa')
+  var error = document.getElementById('placa-error')
+  var placaActual = ''
+
+  function $(id) { return document.getElementById(id) }
+  function mostrar(id) { resultados.forEach(function (r) { $(r).hidden = r !== id }) }
+
+  function hora() {
+    var d = new Date()
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+
+  function agrupar(numero) { return numero.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
+
+  function normalizar(texto) {
+    var limpio = texto.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    return limpio.length > 3 ? limpio.slice(0, 3) + ' ' + limpio.slice(3) : limpio
+  }
+
+  function libres() { return Object.keys(PUESTOS).filter(function (p) { return !PUESTOS[p] }) }
+
+  function pintarPuestos() {
+    var cont = $('puestos')
+    cont.innerHTML = ''
+    Object.keys(PUESTOS).forEach(function (p) {
+      var placa = PUESTOS[p]
+      var nodo
+      if (placa) {
+        nodo = document.createElement('button')
+        nodo.type = 'button'
+        nodo.className = 'puesto'
+        nodo.dataset.placa = placa
+        nodo.setAttribute('aria-label', p + ' ocupado por ' + placa + ', registrar su salida')
+        nodo.innerHTML = '<span class="numero"></span><span class="ocupa"></span><span class="ocupa"></span>'
+        nodo.querySelectorAll('.ocupa')[0].textContent = placa
+        nodo.querySelectorAll('.ocupa')[1].textContent = DENTRO[placa].unidad
+      } else {
+        nodo = document.createElement('div')
+        nodo.className = 'puesto libre'
+        nodo.innerHTML = '<span class="numero"></span><span class="pildora p-ok">Libre</span>'
+      }
+      nodo.querySelector('.numero').textContent = p
+      cont.appendChild(nodo)
+    })
+    var cuantos = libres().length
+    var pildora = $('pildora-libres')
+    pildora.textContent = cuantos === 0 ? 'Ninguno libre' : cuantos === 1 ? '1 libre' : cuantos + ' libres'
+    pildora.className = 'pildora ' + (cuantos === 0 ? 'p-no' : cuantos <= 2 ? 'p-al' : 'p-ok')
+    $('cuenta-libres').textContent = cuantos
+    $('cuenta-visitas').textContent = Object.keys(DENTRO).filter(function (p) { return DENTRO[p].tipo !== 'residente' }).length
+  }
+
+  function llenarParqueaderos(select) {
+    var opciones = libres()
+    select.innerHTML = ''
+    if (!opciones.length) {
+      select.appendChild(new Option('Ningún parqueadero de visitantes libre', ''))
+      select.setAttribute('data-error', 'No quedan parqueaderos de visitantes libres. Pídele que parquee afuera y registra solo a la persona en Personas.')
+      return
+    }
+    select.setAttribute('data-error', 'Elige el parqueadero de visitantes donde va a quedar.')
+    opciones.forEach(function (p) { select.appendChild(new Option(p + ' · libre', p)) })
+  }
+
+  function anotar(placa, unidad, detalle, parqueadero, sentido) {
+    var li = document.createElement('li')
+    li.innerHTML = '<div class="principal"><b class="identificador"></b><span><span class="identificador u"></span> · <span class="d"></span> · <span class="identificador p"></span></span></div><span class="etiqueta"> <span class="dato"></span></span>'
+    li.querySelector('b').textContent = placa
+    li.querySelector('.u').textContent = unidad
+    li.querySelector('.d').textContent = detalle
+    li.querySelector('.p').textContent = parqueadero
+    li.querySelector('.etiqueta').prepend(sentido)
+    li.querySelector('.dato').textContent = hora()
+    $('movimientos').prepend(li)
+  }
+
+  function reiniciar() {
+    campoPlaca.value = ''
+    placaActual = ''
+    error.hidden = true
+    mostrar('r-inicio')
+    campoPlaca.focus()
+  }
+
+  // ---------- Consultar vehículo por placa (RF-051) ----------
+  function buscar() {
+    var placa = normalizar(campoPlaca.value)
+    error.hidden = true
+    if (!placa) { campoPlaca.focus(); return }
+    if (!/^[A-Z]{3} \d{2}[A-Z0-9]$/.test(placa)) {
+      error.textContent = placa + ' no es una placa completa. Escribe tres letras y luego tres caracteres, por ejemplo JKT 512 o, si es moto, RTY 22E.'
+      error.hidden = false
+      campoPlaca.focus()
+      return
+    }
+    campoPlaca.value = placa
+    placaActual = placa
+
+    if (DENTRO[placa]) return mostrarDentro(placa)
+    if (VEHICULOS[placa]) return mostrarResidente(placa)
+
+    $('sin-placa').textContent = placa
+    $('documento').value = ''
+    mostrar('r-sin')
+    $('documento').focus()
+  }
+
+  function mostrarResidente(placa) {
+    var v = VEHICULOS[placa]
+    $('res-quien').textContent = v.descripcion + ' · ' + v.responde
+    $('res-donde').textContent = placa + ' · ' + v.unidadLarga
+    $('res-porque').textContent = v.porque
+    $('res-parqueadero').textContent = v.parqueadero
+    $('res-ubicacion').textContent = '· ' + v.ubicacion
+    $('res-uso').textContent = v.uso
+    $('res-titular').textContent = v.titular
+    $('res-ultimo').textContent = v.ultimo
+    $('res-pildora').textContent = v.pildora
+    mostrar('r-residente')
+  }
+
+  function mostrarDentro(placa) {
+    var d = DENTRO[placa]
+    var esVisitante = d.pq.indexOf('V-') === 0
+    $('den-quien').textContent = d.quien
+    $('den-donde').textContent = placa + ' · ' + d.unidadLarga
+    $('den-porque').textContent = 'Entró hoy a las ' + d.hora + ' como ' + d.como + ' y ocupa el parqueadero ' +
+      (esVisitante ? 'de visitantes ' : '') + d.pq + '. Lo que corresponde es registrar la salida.'
+    mostrar('r-dentro')
+  }
+
+  // ---------- Visita: se busca la autorización por documento ----------
+  function buscarVisita() {
+    var numero = $('documento').value.replace(/\D/g, '')
+    if (!numero) { $('documento').focus(); return }
+    if (numero === VISITA.documento && !VISITA.usada) {
+      $('vis-donde').textContent = placaActual + ' · CC ' + agrupar(numero) + ' · Torre B · Apto 302'
+      var select = $('vis-parqueadero')
+      llenarParqueaderos(select)
+      var lleno = !libres().length
+      select.disabled = lleno
+      $('vis-lleno').hidden = !lleno
+      $('ingreso-visita').disabled = lleno
+      mostrar('r-visita')
+      return
+    }
+    var porque = numero === VISITA.documento
+      ? 'CC ' + agrupar(numero) + ' · su visita de hoy ya se usó a las ' + VISITA.usada
+      : 'CC ' + agrupar(numero) + ' · sin autorización para hoy'
+    mostrarExcepcion(porque)
+  }
+
+  function mostrarExcepcion(donde) {
+    var form = $('form-excepcion')
+    form.reset()
+    form.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    form.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+    $('exc-placa-titulo').textContent = placaActual
+    $('exc-donde').textContent = donde
+    $('exc-placa').value = placaActual
+    llenarParqueaderos($('exc-parqueadero'))
+    mostrar('r-excepcion')
+    $('exc-unidad').focus()
+  }
+
+  // ---------- Eventos ----------
+  campoPlaca.addEventListener('input', function () {
+    var pos = this.selectionStart
+    this.value = this.value.toUpperCase()
+    this.setSelectionRange(pos, pos)
+    error.hidden = true
+  })
+
+  $('buscar').addEventListener('submit', function (e) { e.preventDefault(); buscar() })
+  $('buscar-visita').addEventListener('submit', function (e) { e.preventDefault(); buscarVisita() })
+  $('ir-excepcion').addEventListener('click', function () { mostrarExcepcion('Sin registro en el conjunto') })
+
+  document.addEventListener('click', function (e) {
+    var ejemplo = e.target.closest('[data-ejemplo]')
+    if (ejemplo) { campoPlaca.value = ejemplo.dataset.ejemplo; buscar() }
+
+    var doc = e.target.closest('[data-documento]')
+    if (doc) { $('documento').value = doc.dataset.documento; buscarVisita() }
+
+    var puesto = e.target.closest('button.puesto')
+    if (puesto) {
+      campoPlaca.value = puesto.dataset.placa
+      buscar()
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+
+    if (e.target.closest('[data-otra]')) reiniciar()
+  })
+
+  // Registrar ingreso de un vehículo de residente (RF-052)
+  $('ingreso-residente').addEventListener('click', function () {
+    var v = VEHICULOS[placaActual]
+    DENTRO[placaActual] = { quien: v.descripcion + ' · ' + v.responde, unidad: v.unidad, unidadLarga: v.unidadLarga, tipo: 'residente', como: 'vehículo de residente', hora: hora(), pq: v.parqueadero }
+    v.ultimo = 'Ingreso hoy a las ' + hora()
+    anotar(placaActual, v.unidad, 'residente', v.parqueadero, 'Ingreso')
+    Convivir.confirmar('Ingreso registrado: ' + placaActual + ' a ' + v.parqueadero + ', ' + hora() + '.')
+    pintarPuestos()
+    reiniciar()
+  })
+
+  // Registrar ingreso de la visita con su parqueadero de visitantes
+  $('ingreso-visita').addEventListener('click', function () {
+    var pq = $('vis-parqueadero').value
+    if (!pq) return
+    DENTRO[placaActual] = { quien: 'Camila Restrepo Ariza', unidad: 'B-0302', unidadLarga: 'Torre B · Apto 302', tipo: 'visita', como: 'visita de Lucía Mendoza', hora: hora(), pq: pq }
+    PUESTOS[pq] = placaActual
+    VISITA.usada = hora()
+    anotar(placaActual, 'B-0302', 'visita', pq, 'Ingreso')
+    Convivir.confirmar('Ingreso registrado: ' + placaActual + ' en ' + pq + ', visita de B-0302, ' + hora() + '.')
+    pintarPuestos()
+    reiniciar()
+  })
+
+  // Registrar salida (RF-053): libera el parqueadero de visitantes si lo ocupaba
+  $('salida').addEventListener('click', function () {
+    var d = DENTRO[placaActual]
+    var libera = d.pq.indexOf('V-') === 0
+    if (libera) PUESTOS[d.pq] = null
+    delete DENTRO[placaActual]
+    if (VEHICULOS[placaActual]) VEHICULOS[placaActual].ultimo = 'Salida hoy a las ' + hora()
+    anotar(placaActual, d.unidad, d.tipo, d.pq, 'Salida')
+    Convivir.confirmar('Salida registrada: ' + placaActual + ', ' + hora() + '.' + (libera ? ' ' + d.pq + ' queda libre.' : ''))
+    pintarPuestos()
+    reiniciar()
+  })
+
+  // Ingreso como excepción (RF-035, RN-12)
+  $('form-excepcion').addEventListener('submit', function (e) {
+    e.preventDefault()
+    var campoUnidad = $('exc-unidad')
+    campoUnidad.value = campoUnidad.value.trim().toUpperCase()
+    if (!Convivir.validar(this)) return
+    if (!/^[ABC]-\d{4}$/.test(campoUnidad.value)) {
+      campoUnidad.setAttribute('aria-invalid', 'true')
+      var aviso = document.createElement('span')
+      aviso.className = 'error'
+      aviso.setAttribute('data-generado', '')
+      aviso.textContent = 'No encontramos la unidad ' + campoUnidad.value + '. Escríbela como torre y apartamento, por ejemplo A-1104.'
+      campoUnidad.closest('.campo').appendChild(aviso)
+      campoUnidad.focus()
+      return
+    }
+    var unidad = campoUnidad.value
+    var pq = $('exc-parqueadero').value
+    var torre = { A: 'Torre A', B: 'Torre B', C: 'Torre C' }[unidad.charAt(0)]
+    DENTRO[placaActual] = { quien: 'Ingreso por excepción', unidad: unidad, unidadLarga: torre + ' · Apto ' + unidad.slice(2), tipo: 'excepción', como: 'excepción', hora: hora(), pq: pq }
+    PUESTOS[pq] = placaActual
+    anotar(placaActual, unidad, 'excepción', pq, 'Ingreso')
+    Convivir.confirmar('Ingreso registrado como excepción: ' + placaActual + ' a ' + unidad + ', ' + pq + '. Queda en auditoría.')
+    pintarPuestos()
+    reiniciar()
+  })
+
+  pintarPuestos()
+})()
+</script>
+</body>
+</html>

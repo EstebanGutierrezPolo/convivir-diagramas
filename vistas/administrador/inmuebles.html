@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inmuebles · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-02 Gestionar inmuebles · Inmueble.registrarInmueble(), Inmueble.desactivarInmueblePorMotivo() -->
+<body data-rol="administrador" data-seccion="inmuebles" data-sub="inmuebles">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Inmuebles</h1>
+      <p class="guia">184 unidades privadas activas · 9 zonas comunes · 12 con saldo pendiente</p>
+    </div>
+    <div class="acciones">
+      <button class="btn" type="button" data-abrir="dialogo-registrar">Registrar inmueble</button>
+    </div>
+  </div>
+
+  <div class="filtros">
+    <label class="buscador">
+      <span class="solo-lectores">Buscar inmueble</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+      <input id="buscar" type="search" placeholder="Unidad o persona que lo ocupa" autocomplete="off">
+    </label>
+    <label class="campo">
+      <span class="solo-lectores">Tipo de inmueble</span>
+      <select id="filtro-tipo">
+        <option value="">Todos los tipos</option>
+        <option>Apartamento</option>
+        <option>Parqueadero</option>
+        <option>Depósito</option>
+        <option>Zona común</option>
+      </select>
+    </label>
+    <div class="segmentos" data-grupo id="filtro-saldo" role="group" aria-label="Saldo">
+      <button type="button" data-valor="" aria-pressed="true">Todos</button>
+      <button type="button" data-valor="ok" aria-pressed="false">Al día</button>
+      <button type="button" data-valor="mora" aria-pressed="false">Con saldo</button>
+      <button type="button" data-valor="inactivo" aria-pressed="false">Desactivados</button>
+    </div>
+  </div>
+
+  <div class="superficie">
+    <div class="tabla-envoltura">
+      <table class="tabla" id="tabla-inmuebles">
+        <thead>
+          <tr>
+            <th>Unidad</th>
+            <th>Tipo</th>
+            <th>Quién lo ocupa</th>
+            <th class="num">Coeficiente</th>
+            <th class="num">Área m²</th>
+            <th class="num">Saldo vencido</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr data-tipo="Apartamento" data-saldo="ok">
+            <td><a class="fila-enlace identificador" href="inmueble.html">B-0302</a><span class="sub">Torre B</span></td>
+            <td>Apartamento</td>
+            <td>Lucía Mendoza<span class="sub">Arrendataria residente</span></td>
+            <td class="num">0,0052</td><td class="num">68,4</td><td class="num">0</td>
+            <td><span class="pildora p-ok">Al día</span></td>
+          </tr>
+          <tr data-tipo="Apartamento" data-saldo="mora">
+            <td><a class="fila-enlace identificador" href="inmueble.html">A-1104</a><span class="sub">Torre A</span></td>
+            <td>Apartamento</td>
+            <td>Sin ocupante<span class="sub">Jorge Peñaranda, propietario no residente</span></td>
+            <td class="num">0,0061</td><td class="num">82,0</td><td class="num">1&nbsp;340&nbsp;000</td>
+            <td><span class="pildora p-no">45 días en mora</span></td>
+          </tr>
+          <tr data-tipo="Apartamento" data-saldo="mora">
+            <td><a class="fila-enlace identificador" href="inmueble.html">A-0902</a><span class="sub">Torre A</span></td>
+            <td>Apartamento</td>
+            <td>Marta Oviedo<span class="sub">Propietaria residente</span></td>
+            <td class="num">0,0061</td><td class="num">82,0</td><td class="num">620&nbsp;000</td>
+            <td><span class="pildora p-al">12 días</span></td>
+          </tr>
+          <tr data-tipo="Apartamento" data-saldo="ok">
+            <td><a class="fila-enlace identificador" href="inmueble.html">A-0401</a><span class="sub">Torre A</span></td>
+            <td>Apartamento</td>
+            <td>Familia Restrepo Ariza<span class="sub">Propietario residente · 4 integrantes</span></td>
+            <td class="num">0,0058</td><td class="num">76,5</td><td class="num">0</td>
+            <td><span class="pildora p-ok">Al día</span></td>
+          </tr>
+          <tr data-tipo="Apartamento" data-saldo="ok">
+            <td><a class="fila-enlace identificador" href="inmueble.html">C-0705</a><span class="sub">Torre C</span></td>
+            <td>Apartamento</td>
+            <td>Andrés Caicedo<span class="sub">Arrendatario residente</span></td>
+            <td class="num">0,0049</td><td class="num">64,0</td><td class="num">0</td>
+            <td><span class="pildora p-ok">Al día</span></td>
+          </tr>
+          <tr data-tipo="Apartamento" data-saldo="mora">
+            <td><a class="fila-enlace identificador" href="inmueble.html">C-1201</a><span class="sub">Torre C</span></td>
+            <td>Apartamento</td>
+            <td>Diana Salcedo<span class="sub">Propietaria residente</span></td>
+            <td class="num">0,0066</td><td class="num">90,2</td><td class="num">2&nbsp;105&nbsp;000</td>
+            <td><span class="pildora p-no">92 días en mora</span></td>
+          </tr>
+          <tr data-tipo="Parqueadero" data-saldo="ok">
+            <td><a class="fila-enlace identificador" href="inmueble.html">P-022</a><span class="sub">Sótano 1</span></td>
+            <td>Parqueadero</td>
+            <td>Torre B · Apto 302<span class="sub">Cedido hasta el 30 de noviembre</span></td>
+            <td class="num">0,0004</td><td class="num">12,5</td><td class="num">0</td>
+            <td><span class="pildora p-ok">Al día</span></td>
+          </tr>
+          <tr data-tipo="Parqueadero" data-saldo="ok">
+            <td><a class="fila-enlace identificador" href="inmueble.html">V-04</a><span class="sub">Visitantes</span></td>
+            <td>Parqueadero</td>
+            <td>Uso general<span class="sub">Bien común</span></td>
+            <td class="num">—</td><td class="num">12,5</td><td class="num">—</td>
+            <td><span class="pildora p-ok">Activo</span></td>
+          </tr>
+          <tr data-tipo="Depósito" data-saldo="ok">
+            <td><a class="fila-enlace identificador" href="inmueble.html">D-014</a><span class="sub">Sótano 2</span></td>
+            <td>Depósito</td>
+            <td>Torre A · Apto 0902<span class="sub">Uso exclusivo</span></td>
+            <td class="num">0,0002</td><td class="num">4,0</td><td class="num">0</td>
+            <td><span class="pildora p-ok">Al día</span></td>
+          </tr>
+          <tr data-tipo="Zona común" data-saldo="ok">
+            <td><a class="fila-enlace" href="inmueble.html">Salón social</a><span class="sub">Primer piso, Torre A</span></td>
+            <td>Zona común</td>
+            <td>Uso general<span class="sub">Se reserva por evento</span></td>
+            <td class="num">—</td><td class="num">120,0</td><td class="num">—</td>
+            <td><span class="pildora p-ok">Activo</span></td>
+          </tr>
+          <tr data-tipo="Zona común" data-saldo="ok">
+            <td><a class="fila-enlace" href="inmueble.html">Zona BBQ</a><span class="sub">Terraza</span></td>
+            <td>Zona común</td>
+            <td>Uso general<span class="sub">Se reserva por hora</span></td>
+            <td class="num">—</td><td class="num">45,0</td><td class="num">—</td>
+            <td><span class="pildora p-ok">Activo</span></td>
+          </tr>
+          <tr data-tipo="Apartamento" data-saldo="inactivo">
+            <td><a class="fila-enlace identificador" href="inmueble.html">B-0101</a><span class="sub">Torre B</span></td>
+            <td>Apartamento</td>
+            <td>Sin ocupante<span class="sub">Unido a B-0102 por remodelación</span></td>
+            <td class="num">0,0050</td><td class="num">66,0</td><td class="num">0</td>
+            <td><span class="pildora p-ne">Desactivado</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="vacio" id="sin-resultados" hidden>
+      <h3>Ningún inmueble coincide con la búsqueda</h3>
+      <p>Revisa la identificación, por ejemplo <span class="identificador">A-1104</span>, o busca por el nombre de quien lo ocupa.</p>
+      <button class="btn segundo" type="button" id="limpiar">Quitar filtros</button>
+    </div>
+    <div class="pie">
+      <span id="conteo">12 de 196 inmuebles</span>
+      <div class="fila" style="gap:var(--e1)">
+        <button class="btn segundo chico" type="button" disabled>Anterior</button>
+        <button class="btn segundo chico" type="button">Siguiente</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Registrar inmueble: new Inmueble(identificacion, coeficiente, areaM2, inmuebleContenedor) -->
+<dialog class="dialogo" id="dialogo-registrar" aria-labelledby="titulo-registrar">
+  <form data-confirmar="Inmueble registrado. Ya puedes vincular a sus integrantes." data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-registrar">Registrar inmueble</h2>
+        <p class="guia">El historial queda anclado a este inmueble aunque cambien sus ocupantes.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario dos">
+        <label class="campo">
+          <span>Tipo de inmueble</span>
+          <select name="tipo" required data-error="Elige el tipo. Define si paga cuota, si se puede ceder y si se reserva.">
+            <option value="">Elige un tipo</option>
+            <option>Apartamento</option>
+            <option>Parqueadero</option>
+            <option>Depósito</option>
+            <option>Zona común</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span>Identificación</span>
+          <input name="identificacion" class="identificador" required placeholder="A-1203" autocomplete="off"
+                 data-error="Escribe la identificación como aparece en la escritura, por ejemplo A-1203.">
+          <span class="ayuda">Como aparece en la escritura o en el plano.</span>
+        </label>
+        <fieldset class="completo">
+          <legend class="rotulo">Naturaleza</legend>
+          <div class="elecciones">
+            <label class="eleccion"><input type="radio" name="naturaleza" value="BIEN_PRIVADO" checked><span><b>Bien privado</b><small>Unidad de un propietario</small></span></label>
+            <label class="eleccion"><input type="radio" name="naturaleza" value="USO_EXCLUSIVO"><span><b>Uso exclusivo</b><small>Común, asignado a una unidad</small></span></label>
+            <label class="eleccion"><input type="radio" name="naturaleza" value="USO_GENERAL"><span><b>Uso general</b><small>Común, para todos</small></span></label>
+          </div>
+        </fieldset>
+        <label class="campo">
+          <span>Coeficiente de copropiedad</span>
+          <input name="coeficiente" id="coeficiente" inputmode="decimal" class="num" required placeholder="0,0052"
+                 data-error="Escribe el coeficiente. Sale de la escritura y define cuánto paga de cuota.">
+          <span class="ayuda">Entre 0 y 1. Para 0,52 por ciento escribe 0,0052.</span>
+        </label>
+        <label class="campo">
+          <span>Área en m²</span>
+          <input name="area" inputmode="decimal" class="num" required placeholder="68,4"
+                 data-error="Escribe el área privada en metros cuadrados, por ejemplo 68,4.">
+        </label>
+        <label class="campo completo">
+          <span>Dentro de <span class="opcional">(opcional)</span></span>
+          <select name="contenedor">
+            <option value="">No está dentro de otro inmueble</option>
+            <option>Torre A</option>
+            <option>Torre B</option>
+            <option>Torre C</option>
+            <option>Sótano 1</option>
+            <option>Sótano 2</option>
+          </select>
+          <span class="ayuda">Un apartamento está dentro de su torre; un parqueadero, dentro de su sótano.</span>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Registrar inmueble</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var filas = Array.prototype.slice.call(document.querySelectorAll('#tabla-inmuebles tbody tr'))
+  var buscar = document.getElementById('buscar')
+  var tipo = document.getElementById('filtro-tipo')
+  var saldo = ''
+
+  function filtrar() {
+    var texto = buscar.value.trim().toLowerCase()
+    var visibles = 0
+    filas.forEach(function (f) {
+      var coincide = (!texto || f.textContent.toLowerCase().indexOf(texto) >= 0) &&
+        (!tipo.value || f.dataset.tipo === tipo.value) &&
+        (saldo ? f.dataset.saldo === saldo : f.dataset.saldo !== 'inactivo')
+      f.hidden = !coincide
+      if (coincide) visibles++
+    })
+    document.getElementById('sin-resultados').hidden = visibles > 0
+    document.querySelector('#tabla-inmuebles thead').hidden = visibles === 0
+    document.getElementById('conteo').textContent = visibles + ' de 196 inmuebles'
+  }
+
+  buscar.addEventListener('input', filtrar)
+  tipo.addEventListener('change', filtrar)
+  document.getElementById('filtro-saldo').addEventListener('cambio', function (e) { saldo = e.detail; filtrar() })
+  document.getElementById('limpiar').addEventListener('click', function () {
+    buscar.value = ''; tipo.value = ''; saldo = ''
+    document.querySelector('#filtro-saldo [data-valor=""]').click()
+    filtrar()
+  })
+
+  // El coeficiente se valida como lo haría Inmueble: entre 0 y 1.
+  document.querySelector('#dialogo-registrar form').addEventListener('confirmado', function (e) {
+    var campo = document.getElementById('coeficiente')
+    var valor = parseFloat(campo.value.replace(',', '.'))
+    var contenedor = campo.closest('.campo')
+    var previo = contenedor.querySelector('.error')
+    if (previo) previo.remove()
+    if (!(valor > 0 && valor < 1)) {
+      e.preventDefault()
+      campo.setAttribute('aria-invalid', 'true')
+      var error = document.createElement('span')
+      error.className = 'error'
+      error.setAttribute('data-generado', '')
+      error.textContent = 'El coeficiente va entre 0 y 1. Para ' + campo.value + ' por ciento escribe ' + (valor / 100).toFixed(4).replace('.', ',') + '.'
+      contenedor.appendChild(error)
+      campo.focus()
+    }
+  })
+
+  filtrar()
+})()
+</script>
+</body>
+</html>

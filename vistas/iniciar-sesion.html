@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Iniciar sesión · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="convivir.css">
+<script src="marco.js"></script>
+<style>
+  .acceso .lado-marca h1 { font-size: var(--t-2xl); max-width: 14ch; margin-top: var(--e7); }
+  .acceso .lado-marca .lema { font-size: var(--t-md); color: var(--acero); margin-top: var(--e4); max-width: 34ch; line-height: 1.45; }
+  .acceso .lado-formulario { position: relative; }
+  .acceso .luna-acceso { position: absolute; top: var(--e4); right: var(--e4); }
+  .contrasena { position: relative; display: block; }
+  .contrasena input { padding-right: 5.5rem; }
+  .contrasena .ver { position: absolute; right: 4px; top: 50%; transform: translateY(-50%); }
+  .planta { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--e2); max-width: 15rem; }
+  .planta span { aspect-ratio: 1; border-radius: var(--r-control); background: var(--convivir); }
+  .planta span.tenue { opacity: .35; }
+  @media (max-width: 52rem) { .acceso .lado-marca h1 { font-size: var(--t-lg); margin-top: var(--e3); } .acceso .lado-marca .lema { font-size: var(--t-base); } }
+</style>
+</head>
+<!-- CU-01 Iniciar sesión · Cuenta.iniciarSesionConLoginYContrasena(), validarContrasenaIngresada(),
+     bloquearCuentaPorIntentosFallidos() (RNF-01), obtenerRolDelIntegrante(), obtenerInmueblesAccesibles()
+     Extensión: Restablecer contraseña (RF-002) · Cuenta.restablecerContrasena() -->
+<body data-sin-marco>
+<div class="acceso">
+  <section class="lado-marca">
+    <div>
+      <a class="marca" href="index.html" title="Todas las vistas">
+        <svg width="34" height="34" viewBox="0 0 34 34" aria-hidden="true">
+          <rect x="1" y="1" width="32" height="32" rx="5" fill="none" stroke="var(--convivir)" stroke-width="2"/>
+          <rect x="8" y="8" width="7" height="7" fill="var(--convivir)"/>
+          <rect x="19" y="8" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+          <rect x="8" y="19" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+          <rect x="19" y="19" width="7" height="7" fill="var(--convivir)"/>
+        </svg>
+        <span class="nombre" style="font-size:var(--t-md)">CONVIVIR</span>
+      </a>
+      <h1>La vida en común, en orden.</h1>
+      <p class="lema">Visitas, pagos, reservas y novedades de tu conjunto, anclados a cada inmueble para que la historia no se pierda cuando cambian sus ocupantes.</p>
+    </div>
+    <div class="planta solo-amplio" aria-hidden="true">
+      <span></span><span class="tenue"></span><span></span><span class="tenue"></span>
+      <span class="tenue"></span><span></span><span class="tenue"></span><span></span>
+    </div>
+  </section>
+
+  <section class="lado-formulario">
+    <button class="luna luna-acceso" type="button" id="luna" aria-label="Cambiar entre tema claro y oscuro" title="Cambiar tema">◐</button>
+
+    <!-- Iniciar sesión -->
+    <div class="caja" id="panel-sesion">
+      <h2>Inicia sesión</h2>
+      <p class="guia" style="margin:var(--e2) 0 var(--e5)">Usa la cuenta que te entregó la administración de tu conjunto.</p>
+
+      <div class="aviso no" id="aviso-credenciales" role="alert" hidden style="margin-bottom:var(--e4)"></div>
+
+      <form id="form-sesion" class="formulario" novalidate>
+        <label class="campo">
+          <span>Usuario</span>
+          <input id="login" name="login" autocomplete="username" autocapitalize="none" spellcheck="false" required
+                 data-error="Escribe tu usuario. Suele ser tu nombre y apellido separados por un punto." placeholder="nombre.apellido">
+        </label>
+        <label class="campo">
+          <span>Contraseña</span>
+          <span class="contrasena">
+            <input id="contrasena" name="contrasena" type="password" autocomplete="current-password" required
+                   data-error="Escribe tu contraseña.">
+            <button class="btn texto chico ver" type="button" id="ver" aria-pressed="false">Mostrar</button>
+          </span>
+        </label>
+        <div class="fila entre">
+          <label class="opcion"><input type="checkbox" checked> Mantener la sesión en este equipo</label>
+          <button class="btn texto chico" type="button" id="ir-restablecer">Olvidé mi contraseña</button>
+        </div>
+        <button class="btn ancho" type="submit" style="min-height:46px">Iniciar sesión</button>
+      </form>
+
+      <div class="aviso" style="margin-top:var(--e6)">
+        <p><b>Cuentas de ejemplo para estas vistas.</b> Cualquier contraseña sirve.</p>
+        <p class="guia" style="margin-top:var(--e2)">
+          <button class="btn texto chico identificador" type="button" data-cuenta="paula.ortega">paula.ortega</button> administradora ·
+          <button class="btn texto chico identificador" type="button" data-cuenta="jhon.rojas">jhon.rojas</button> vigilante ·
+          <button class="btn texto chico identificador" type="button" data-cuenta="lucia.mendoza">lucia.mendoza</button> residente ·
+          <button class="btn texto chico identificador" type="button" data-cuenta="hernan.ruiz">hernan.ruiz</button> consejo ·
+          <button class="btn texto chico identificador" type="button" data-cuenta="marta.oviedo">marta.oviedo</button> cuenta bloqueada
+        </p>
+      </div>
+    </div>
+
+    <!-- Restablecer contraseña -->
+    <div class="caja" id="panel-restablecer" hidden>
+      <button class="btn texto chico" type="button" id="volver" style="margin-left:calc(-1 * var(--e2))">← Volver a iniciar sesión</button>
+      <h2 style="margin-top:var(--e4)">Restablece tu contraseña</h2>
+      <p class="guia" style="margin:var(--e2) 0 var(--e5)">Te enviamos un enlace al correo registrado en tu cuenta. Vence en 30 minutos.</p>
+      <form id="form-restablecer" class="formulario" novalidate>
+        <label class="campo">
+          <span>Usuario o correo</span>
+          <input id="login-restablecer" autocomplete="username" autocapitalize="none" spellcheck="false" required
+                 data-error="Escribe tu usuario o el correo con el que te registraron.">
+        </label>
+        <button class="btn ancho" type="submit" style="min-height:46px">Recibir el enlace por correo</button>
+      </form>
+      <div class="aviso ok" id="enviado" hidden style="margin-top:var(--e5)">
+        <p><b>Enlace enviado.</b> Si el usuario existe, llega en unos minutos a <span id="correo-oculto" class="dato"></span>. Revisa también el correo no deseado.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<script>
+(function () {
+  var CUENTAS = {
+    'paula.ortega': 'administrador/inicio.html',
+    'jhon.rojas': 'vigilante/porteria.html',
+    'lucia.mendoza': 'residente/inicio.html',
+    'hernan.ruiz': 'administrador/cartera.html?como=consejo',
+  }
+  var MAXIMO_INTENTOS = 3
+  var intentos = 0
+  var aviso = document.getElementById('aviso-credenciales')
+  var login = document.getElementById('login')
+  var contrasena = document.getElementById('contrasena')
+
+  function mostrarAviso(html) { aviso.innerHTML = html; aviso.hidden = false }
+
+  document.getElementById('form-sesion').addEventListener('submit', function (e) {
+    e.preventDefault()
+    aviso.hidden = true
+    if (!Convivir.validar(this)) return
+    var usuario = login.value.trim().toLowerCase()
+
+    if (usuario === 'marta.oviedo') {
+      mostrarAviso('<p><b>Tu cuenta está bloqueada</b> por varios intentos fallidos. Restablece tu contraseña o pide a la administración que la desbloquee.</p>')
+      return
+    }
+    if (!CUENTAS[usuario]) {
+      intentos++
+      var quedan = MAXIMO_INTENTOS - intentos
+      if (quedan <= 0) {
+        mostrarAviso('<p><b>Bloqueamos la cuenta por seguridad</b> después de ' + MAXIMO_INTENTOS + ' intentos. Restablece tu contraseña para volver a entrar.</p>')
+      } else {
+        mostrarAviso('<p><b>El usuario o la contraseña no coinciden.</b> Te ' + (quedan === 1 ? 'queda 1 intento' : 'quedan ' + quedan + ' intentos') + ' antes de que la cuenta se bloquee.</p>')
+      }
+      contrasena.value = ''
+      contrasena.focus()
+      return
+    }
+    location.href = CUENTAS[usuario]
+  })
+
+  document.querySelectorAll('[data-cuenta]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      login.value = b.dataset.cuenta
+      contrasena.value = 'ejemplo'
+      login.dispatchEvent(new Event('input', { bubbles: true }))
+      contrasena.dispatchEvent(new Event('input', { bubbles: true }))
+      contrasena.focus()
+    })
+  })
+
+  document.getElementById('ver').addEventListener('click', function () {
+    var visible = contrasena.type === 'password'
+    contrasena.type = visible ? 'text' : 'password'
+    this.textContent = visible ? 'Ocultar' : 'Mostrar'
+    this.setAttribute('aria-pressed', String(visible))
+  })
+
+  function irA(panel) {
+    document.getElementById('panel-sesion').hidden = panel !== 'sesion'
+    document.getElementById('panel-restablecer').hidden = panel !== 'restablecer'
+  }
+  document.getElementById('ir-restablecer').addEventListener('click', function () {
+    document.getElementById('login-restablecer').value = login.value
+    document.getElementById('enviado').hidden = true
+    irA('restablecer')
+    document.getElementById('login-restablecer').focus()
+  })
+  document.getElementById('volver').addEventListener('click', function () { irA('sesion'); login.focus() })
+
+  document.getElementById('form-restablecer').addEventListener('submit', function (e) {
+    e.preventDefault()
+    if (!Convivir.validar(this)) return
+    var usuario = document.getElementById('login-restablecer').value.trim()
+    var nombre = usuario.split('@')[0]
+    document.getElementById('correo-oculto').textContent = nombre.slice(0, 2) + '•••••@correo.com'
+    document.getElementById('enviado').hidden = false
+  })
+
+  document.getElementById('luna').addEventListener('click', function () {
+    var raiz = document.documentElement
+    var oscuro = raiz.getAttribute('data-theme') === 'dark' ||
+      (!raiz.hasAttribute('data-theme') && matchMedia('(prefers-color-scheme: dark)').matches)
+    var nuevo = oscuro ? 'light' : 'dark'
+    try { localStorage.setItem('convivir-tema', nuevo) } catch (err) { /* sin almacenamiento */ }
+    raiz.setAttribute('data-theme', nuevo)
+  })
+})()
+</script>
+</body>
+</html>

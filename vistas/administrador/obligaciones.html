@@ -1,0 +1,630 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Obligaciones · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-11 Generar y administrar obligaciones
+     PeriodoFacturacion.configurarValorBaseDeLaCuotaDelPeriodo(), generarObligacionesDelPeriodoParaInmueblesActivos()
+     Inmueble.calcularCuotaDelInmueble(valorBaseCuota) · FabricaObligacion.crearObligacionIndividual()
+     Obligacion.anularObligacionPorMotivo(motivo), calcularDiasDeMora() -->
+<body data-rol="administrador" data-seccion="cartera" data-sub="obligaciones">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Obligaciones</h1>
+      <p class="guia">Lo que se le cobra a cada inmueble: cuotas, multas, intereses y alquiler de zonas comunes</p>
+    </div>
+    <div class="acciones">
+      <button class="btn segundo" type="button" data-abrir="dialogo-crear">Crear obligación individual</button>
+    </div>
+  </div>
+
+  <!-- Periodo de facturación: valor base y generación de cuotas -->
+  <div class="lado">
+    <section class="superficie" aria-labelledby="titulo-periodo">
+      <div class="cabeza">
+        <h2 id="titulo-periodo">Periodo de facturación</h2>
+        <div class="segmentos" data-grupo id="periodos" role="group" aria-label="Periodo">
+          <button type="button" data-valor="2026-11" aria-pressed="true">Noviembre 2026</button>
+          <button type="button" data-valor="2026-12" aria-pressed="false">Diciembre 2026</button>
+        </div>
+      </div>
+      <div class="cuerpo pila" style="gap:var(--e5)">
+        <dl class="datos">
+          <div><dt>Estado</dt><dd id="p-estado"></dd></div>
+          <div><dt>Vencimiento de la cuota</dt><dd id="p-vence"></dd></div>
+          <div><dt>Inmuebles activos que pagan cuota</dt><dd class="num">184</dd></div>
+          <div><dt>Total a facturar</dt><dd class="num fuerte" id="p-total"></dd></div>
+        </dl>
+        <form class="formulario" id="form-base" data-confirmar="Valor base guardado" novalidate>
+          <label class="campo">
+            <span>Valor base de la cuota</span>
+            <div class="con-prefijo">
+              <span>$</span>
+              <input id="valor-base" class="num" inputmode="numeric" autocomplete="off" placeholder="100 000 000" required
+                     data-error="Escribe el valor base del periodo, por ejemplo 100 000 000. Con él se calcula la cuota de cada inmueble.">
+            </div>
+            <span class="ayuda" id="ayuda-base"></span>
+          </label>
+          <div class="fila" id="acciones-base">
+            <button class="btn segundo" type="submit">Guardar valor base</button>
+          </div>
+        </form>
+      </div>
+      <div class="pie">
+        <span id="p-generado"></span>
+        <button class="btn" type="button" id="generar">Generar obligaciones del periodo</button>
+      </div>
+    </section>
+
+    <aside class="superficie" aria-labelledby="titulo-cuota">
+      <div class="cabeza">
+        <div>
+          <h2 id="titulo-cuota">Cuota de cada inmueble</h2>
+          <p class="guia">Valor base por el coeficiente del inmueble</p>
+        </div>
+      </div>
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead><tr><th>Inmueble</th><th class="num">Coeficiente</th><th class="num">Cuota</th></tr></thead>
+          <tbody id="ejemplos-cuota"></tbody>
+        </table>
+      </div>
+      <div class="pie"><span id="pie-cuota">Los 184 coeficientes activos suman 0,9950</span></div>
+    </aside>
+  </div>
+
+  <!-- Lista de obligaciones -->
+  <section class="seccion" aria-labelledby="titulo-lista">
+    <div class="encabezado">
+      <div>
+        <h2 id="titulo-lista">Todas las obligaciones</h2>
+        <p class="guia">Ordenadas por vencimiento, de la más antigua a la más reciente</p>
+      </div>
+    </div>
+
+    <div class="filtros">
+      <label class="buscador">
+        <span class="solo-lectores">Buscar obligación</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+        <input id="buscar" type="search" placeholder="Inmueble, propietario o descripción" autocomplete="off">
+      </label>
+      <label class="campo">
+        <span class="solo-lectores">Concepto</span>
+        <select id="filtro-concepto">
+          <option value="">Todos los conceptos</option>
+          <option value="ordinaria">Cuota ordinaria</option>
+          <option value="extraordinaria">Cuota extraordinaria</option>
+          <option value="multa">Multa</option>
+          <option value="interes">Interés de mora</option>
+          <option value="alquiler">Alquiler de zona</option>
+        </select>
+      </label>
+      <label class="campo">
+        <span class="solo-lectores">Estado</span>
+        <select id="filtro-estado">
+          <option value="">Todos los estados</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="parcial">Pagada parcialmente</option>
+          <option value="pagada">Pagada</option>
+          <option value="vencida">Vencida</option>
+          <option value="anulada">Anulada</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="superficie">
+      <div class="tabla-envoltura">
+        <table class="tabla" id="tabla-obligaciones">
+          <thead>
+            <tr>
+              <th>Inmueble</th>
+              <th>Concepto</th>
+              <th>Vence</th>
+              <th class="num">Valor</th>
+              <th class="num">Saldo</th>
+              <th>Estado</th>
+              <th class="num">Días de mora</th>
+              <th><span class="solo-lectores">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="sin-resultados" hidden>
+        <h3>Ninguna obligación coincide con los filtros</h3>
+        <p>Busca por la identificación del inmueble, por ejemplo <span class="identificador">A-1104</span>, o quita el filtro de concepto o de estado.</p>
+        <button class="btn segundo" type="button" id="limpiar">Quitar filtros</button>
+      </div>
+      <div class="pie">
+        <span id="conteo"></span>
+        <div class="fila" style="gap:var(--e1)">
+          <button class="btn segundo chico" type="button" disabled>Anterior</button>
+          <button class="btn segundo chico" type="button">Siguiente</button>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Generar: PeriodoFacturacion.generarObligacionesDelPeriodoParaInmueblesActivos() -->
+<dialog class="dialogo" id="dialogo-generar" aria-labelledby="titulo-generar">
+  <form data-confirmar="Obligaciones generadas" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-generar">Generar las cuotas de <span data-periodo></span></h2>
+        <p class="guia">Se crea una cuota ordinaria pendiente para cada inmueble activo cuyo tipo paga cuota.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <dl class="datos">
+        <div><dt>Inmuebles activos</dt><dd class="num fuerte">184</dd></div>
+        <div><dt>Total a facturar</dt><dd class="num fuerte" id="g-total"></dd></div>
+        <div><dt>Valor base</dt><dd class="num" id="g-base"></dd></div>
+        <div><dt>Vencen el</dt><dd id="g-vence"></dd></div>
+      </dl>
+      <div class="aviso">
+        <p>No se incluyen <span class="identificador">B-0101</span>, que está desactivado, ni las zonas comunes y los parqueaderos de visitantes, porque su tipo no paga cuota.</p>
+        <p>Cada periodo se genera una sola vez. Si después falta un cobro, se crea como obligación individual.</p>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Generar 184 cuotas</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- El periodo ya se generó: no se cobra dos veces -->
+<dialog class="dialogo" id="dialogo-generado" aria-labelledby="titulo-generado">
+  <div class="contenido">
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-generado">Las cuotas de <span data-periodo></span> ya se generaron</h2>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <div class="aviso al">
+        <p id="generado-detalle"></p>
+        <p>Generarlas otra vez le cobraría dos veces a cada inmueble.</p>
+      </div>
+      <p class="guia">Si a un inmueble le falta un cobro, crea una obligación individual. Si una cuota quedó mal, anúlala con su motivo y crea la correcta.</p>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cerrar</button>
+      <button class="btn" type="button" id="ir-a-crear">Crear obligación individual</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Crear: FabricaObligacion.crearObligacionIndividual(concepto, valor, fechaVencimiento) -->
+<dialog class="dialogo" id="dialogo-crear" aria-labelledby="titulo-crear">
+  <form data-confirmar="Obligación creada" data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-crear">Crear obligación individual</h2>
+        <p class="guia">Un cobro para un solo inmueble. Queda en su estado de cuenta desde hoy.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario dos">
+        <label class="campo">
+          <span>Concepto</span>
+          <select name="concepto" id="c-concepto" required data-error="Elige el concepto. Define cómo aparece el cobro en el estado de cuenta.">
+            <option value="">Elige un concepto</option>
+            <option value="extraordinaria">Cuota extraordinaria</option>
+            <option value="multa">Multa</option>
+            <option value="interes">Interés de mora</option>
+            <option value="alquiler">Alquiler de zona</option>
+          </select>
+          <span class="ayuda">La cuota ordinaria no se crea aquí: sale de generar el periodo.</span>
+        </label>
+        <label class="campo">
+          <span>Inmueble</span>
+          <input name="inmueble" id="c-inmueble" class="identificador" list="lista-inmuebles" required placeholder="A-0902" autocomplete="off"
+                 data-error="Escribe el inmueble al que se le cobra, por ejemplo A-0902.">
+        </label>
+        <label class="campo">
+          <span>Valor</span>
+          <div class="con-prefijo">
+            <span>$</span>
+            <input name="valor" id="c-valor" class="num" inputmode="numeric" required placeholder="90 000" autocomplete="off"
+                   data-error="Escribe el valor a cobrar en pesos, por ejemplo 90 000.">
+          </div>
+        </label>
+        <label class="campo">
+          <span>Vence el</span>
+          <input name="vencimiento" id="c-vence" type="date" value="2026-11-30" min="2026-11-14" required
+                 data-error="Elige la fecha de vencimiento. Desde el día siguiente cuenta la mora.">
+        </label>
+        <label class="campo completo">
+          <span>Descripción</span>
+          <textarea name="descripcion" id="c-descripcion" required placeholder="Uso del salón social después de la medianoche, evento del 31 de octubre"
+                    data-error="Describe el cobro. El propietario lo lee en su estado de cuenta y debe entender de qué es."></textarea>
+          <span class="ayuda">Di de qué es y, si es una multa, qué norma del manual de convivencia se incumplió.</span>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Crear obligación</button>
+    </div>
+  </form>
+</dialog>
+
+<datalist id="lista-inmuebles">
+  <option value="A-0210"><option value="A-0305"><option value="A-0401"><option value="A-0607"><option value="A-0902"><option value="A-1104">
+  <option value="B-0302"><option value="B-0410"><option value="B-0705"><option value="B-0814"><option value="B-1002"><option value="B-1204">
+  <option value="C-0108"><option value="C-0303"><option value="C-0512"><option value="C-0705"><option value="C-0901"><option value="C-1201">
+</datalist>
+
+<!-- Anular: Obligacion.anularObligacionPorMotivo(motivo) · RN-27 -->
+<dialog class="dialogo" id="dialogo-anular" aria-labelledby="titulo-anular">
+  <form data-confirmar="Obligación anulada" data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-anular">Anular obligación</h2>
+        <p class="guia" id="anular-resumen"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <dl class="datos">
+        <div><dt>Concepto</dt><dd id="anular-concepto"></dd></div>
+        <div><dt>Saldo que se deja de cobrar</dt><dd class="num fuerte" id="anular-saldo"></dd></div>
+      </dl>
+      <div class="aviso al">La obligación no se borra: queda anulada, sin saldo, y el motivo queda en la auditoría. No se puede deshacer.</div>
+      <label class="campo">
+        <span>Motivo</span>
+        <textarea name="motivo" id="anular-motivo" required placeholder="El consejo revocó la multa en la reunión del 6 de noviembre."
+                  data-error="Escribe por qué se anula. Es obligatorio y queda en la auditoría."></textarea>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn riesgo" type="submit">Anular obligación</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var HOY = '2026-11-14'
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  var CONCEPTOS = { ordinaria: 'Cuota ordinaria', extraordinaria: 'Cuota extraordinaria', multa: 'Multa', interes: 'Interés de mora', alquiler: 'Alquiler de zona' }
+  var ESTADOS = { pendiente: ['p-al', 'Pendiente'], parcial: ['p-al', 'Pagada parcialmente'], pagada: ['p-ok', 'Pagada'], vencida: ['p-no', 'Vencida'], anulada: ['p-ne', 'Anulada'] }
+  var SUMA_COEFICIENTES = 0.995   // 184 inmuebles activos; B-0101 (0,0050) está desactivado
+  var TOTAL_REGISTRADAS = 2096
+
+  var PROPIETARIOS = {
+    'A-0210': 'Yolanda Barrios', 'A-0305': 'Fabián Orozco', 'A-0401': 'Gloria Ariza', 'A-0607': 'Mauricio Daza',
+    'A-0902': 'Marta Oviedo', 'A-1104': 'Jorge Peñaranda', 'B-0302': 'Ernesto Vargas', 'B-0410': 'Hernando Castro',
+    'B-0705': 'Natalia Bermúdez', 'B-0814': 'Camilo Ríos', 'B-1002': 'Ricardo Gómez', 'B-1204': 'Liliana Fontalvo',
+    'C-0108': 'Elkin Romero', 'C-0303': 'Óscar Pertuz', 'C-0512': 'Patricia Lozano', 'C-0705': 'Inés Carrillo',
+    'C-0901': 'Rafael Insignares', 'C-1201': 'Diana Salcedo'
+  }
+  var INACTIVOS = { 'B-0101': 'está desactivado desde marzo porque se unió a B-0102' }
+
+  // Inmueble.calcularCuotaDelInmueble(valorBaseCuota) = valor base por coeficiente
+  var EJEMPLOS = [['A-1104', 0.0061], ['B-0302', 0.0052], ['C-1201', 0.0066], ['C-0705', 0.0049]]
+
+  var PERIODOS = {
+    '2026-11': { nombre: 'noviembre de 2026', valorBase: 100000000, vence: '2026-11-30',
+                 generado: { cuando: 'el 3 de noviembre a las 8:15 a. m.', quien: 'Paula Ortega' } },
+    '2026-12': { nombre: 'diciembre de 2026', valorBase: null, vence: '2026-12-31', generado: null }
+  }
+
+  // estado: se calcula con saldo, valor y vencimiento, salvo la anulada
+  var OBLIGACIONES = [
+    { inmueble: 'A-0210', concepto: 'ordinaria', detalle: 'Julio de 2026', vence: '2026-07-31', valor: 470000, saldo: 470000 },
+    { inmueble: 'A-0401', concepto: 'extraordinaria', detalle: 'Impermeabilización de cubiertas, aprobada en la asamblea de marzo', vence: '2026-07-31', valor: 116000, saldo: 0 },
+    { inmueble: 'B-0302', concepto: 'extraordinaria', detalle: 'Impermeabilización de cubiertas, aprobada en la asamblea de marzo', vence: '2026-07-31', valor: 104000, saldo: 0 },
+    { inmueble: 'C-1201', concepto: 'alquiler', detalle: 'Zona BBQ, 14 de agosto, 5 horas', vence: '2026-08-14', valor: 125000, saldo: 125000 },
+    { inmueble: 'B-0410', concepto: 'ordinaria', detalle: 'Agosto de 2026', vence: '2026-08-31', valor: 500000, saldo: 180000 },
+    { inmueble: 'C-1201', concepto: 'ordinaria', detalle: 'Agosto de 2026', vence: '2026-08-31', valor: 660000, saldo: 660000 },
+    { inmueble: 'A-1104', concepto: 'ordinaria', detalle: 'Septiembre de 2026', vence: '2026-09-30', valor: 610000, saldo: 610000 },
+    { inmueble: 'C-0512', concepto: 'ordinaria', detalle: 'Septiembre de 2026', vence: '2026-09-30', valor: 540000, saldo: 240000 },
+    { inmueble: 'C-1201', concepto: 'ordinaria', detalle: 'Septiembre de 2026', vence: '2026-09-30', valor: 660000, saldo: 660000 },
+    { inmueble: 'A-1104', concepto: 'multa', detalle: 'Remodelación sin aviso a la administración', vence: '2026-10-15', valor: 120000, saldo: 120000 },
+    { inmueble: 'A-1104', concepto: 'ordinaria', detalle: 'Octubre de 2026', vence: '2026-10-31', valor: 610000, saldo: 610000 },
+    { inmueble: 'B-1002', concepto: 'ordinaria', detalle: 'Octubre de 2026', vence: '2026-10-31', valor: 550000, saldo: 250000 },
+    { inmueble: 'C-0705', concepto: 'multa', detalle: 'Ruido después de las 10:00 p. m., 17 de octubre', vence: '2026-10-31', valor: 150000, saldo: 0,
+      anulada: 'El consejo la revocó el 6 de noviembre: el ruido venía de otro apartamento.' },
+    { inmueble: 'C-1201', concepto: 'ordinaria', detalle: 'Octubre de 2026', vence: '2026-10-31', valor: 660000, saldo: 660000 },
+    { inmueble: 'A-0902', concepto: 'alquiler', detalle: 'Salón social, evento del 31 de octubre', vence: '2026-11-02', valor: 180000, saldo: 180000 },
+    { inmueble: 'A-0902', concepto: 'multa', detalle: 'Uso del salón social después de la medianoche, evento del 31 de octubre', vence: '2026-11-02', valor: 90000, saldo: 90000 },
+    { inmueble: 'B-1204', concepto: 'multa', detalle: 'Ruido después de las 10:00 p. m., reincidencia del 29 de octubre', vence: '2026-11-05', valor: 150000, saldo: 150000 },
+    { inmueble: 'A-0902', concepto: 'multa', detalle: 'Reposición de la puerta de vidrio del salón social', vence: '2026-11-09', valor: 350000, saldo: 350000 },
+    { inmueble: 'A-1104', concepto: 'interes', detalle: 'Octubre de 2026, sobre $ 730 000 vencidos al 31 de octubre', vence: '2026-11-30', valor: 14600, saldo: 14600 },
+    { inmueble: 'C-1201', concepto: 'interes', detalle: 'Octubre de 2026, sobre $ 1 445 000 vencidos al 31 de octubre', vence: '2026-11-30', valor: 28900, saldo: 28900 },
+    { inmueble: 'A-0305', concepto: 'ordinaria', detalle: 'Noviembre de 2026', vence: '2026-11-30', valor: 510000, saldo: 0 },
+    { inmueble: 'A-0401', concepto: 'ordinaria', detalle: 'Noviembre de 2026', vence: '2026-11-30', valor: 580000, saldo: 0 },
+    { inmueble: 'A-0902', concepto: 'ordinaria', detalle: 'Noviembre de 2026', vence: '2026-11-30', valor: 610000, saldo: 610000 },
+    { inmueble: 'A-1104', concepto: 'ordinaria', detalle: 'Noviembre de 2026', vence: '2026-11-30', valor: 610000, saldo: 610000 },
+    { inmueble: 'B-0302', concepto: 'ordinaria', detalle: 'Noviembre de 2026', vence: '2026-11-30', valor: 520000, saldo: 0 },
+    { inmueble: 'B-1002', concepto: 'ordinaria', detalle: 'Noviembre de 2026', vence: '2026-11-30', valor: 550000, saldo: 550000 },
+    { inmueble: 'C-0705', concepto: 'ordinaria', detalle: 'Noviembre de 2026', vence: '2026-11-30', valor: 490000, saldo: 490000 },
+    { inmueble: 'C-1201', concepto: 'ordinaria', detalle: 'Noviembre de 2026', vence: '2026-11-30', valor: 660000, saldo: 660000 }
+  ]
+
+  var periodoActual = '2026-11'
+  var obligacionAnulando = null
+  var cuerpoTabla = document.querySelector('#tabla-obligaciones tbody')
+
+  // ---------- Utilidades ----------
+  function fecha(iso, conAnio) {
+    var p = iso.split('-')
+    return Number(p[2]) + ' de ' + MESES[Number(p[1]) - 1] + (conAnio ? ' de ' + p[0] : '')
+  }
+  function aFecha(iso) { var p = iso.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])) }
+  function diasEntre(desde, hasta) { return Math.round((aFecha(hasta) - aFecha(desde)) / 86400000) }
+  function esc(texto) { var d = document.createElement('div'); d.textContent = texto; return d.innerHTML }
+  function miles(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
+  function leerPesos(texto) { var limpio = String(texto).replace(/\D/g, ''); return limpio ? Number(limpio) : NaN }
+  function coeficiente(c) { return c.toFixed(4).replace('.', ',') }
+  function normalizarInmueble(texto) {
+    var t = texto.trim().toUpperCase().replace(/\s+/g, '')
+    var m = t.match(/^([ABC])-?(\d{4})$/)
+    return m ? m[1] + '-' + m[2] : t
+  }
+  function marcarError(campo, mensaje) {
+    var contenedor = campo.closest('.campo')
+    var previo = contenedor.querySelector('.error')
+    if (previo) previo.remove()
+    campo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-generado', '')
+    error.textContent = mensaje
+    contenedor.appendChild(error)
+    campo.focus()
+  }
+
+  // Obligacion.calcularDiasDeMora() y el estado que resulta
+  function estadoDe(o) {
+    if (o.anulada) return 'anulada'
+    if (o.saldo === 0) return 'pagada'
+    if (o.saldo < o.valor) return 'parcial'
+    return o.vence < HOY ? 'vencida' : 'pendiente'
+  }
+  function diasDeMora(o) {
+    if (o.anulada || o.saldo === 0 || o.vence >= HOY) return 0
+    return diasEntre(o.vence, HOY)
+  }
+
+  // ---------- Periodo de facturación ----------
+  var campoBase = document.getElementById('valor-base')
+
+  function totalAFacturar(base) { return Math.round(base * SUMA_COEFICIENTES) }
+
+  function pintarEjemplos(base) {
+    document.getElementById('ejemplos-cuota').innerHTML = EJEMPLOS.map(function (e) {
+      var cuota = base ? Convivir.pesos(base * e[1]) : '—'
+      return '<tr><td class="identificador">' + e[0] + '</td><td class="num">' + coeficiente(e[1]) + '</td><td class="num">' + cuota + '</td></tr>'
+    }).join('')
+  }
+
+  function pintarPeriodo() {
+    var p = PERIODOS[periodoActual]
+    var estado = document.getElementById('p-estado')
+    if (p.generado) estado.innerHTML = '<span class="pildora p-ok">Generado</span>'
+    else if (p.valorBase) estado.innerHTML = '<span class="pildora p-al">Por generar</span>'
+    else estado.innerHTML = '<span class="pildora p-al">Sin valor base</span>'
+
+    document.getElementById('p-vence').textContent = fecha(p.vence, true)
+    document.getElementById('p-total').textContent = p.valorBase ? Convivir.pesos(totalAFacturar(p.valorBase)) : 'Falta el valor base'
+    document.getElementById('p-generado').textContent = p.generado
+      ? '184 cuotas generadas ' + p.generado.cuando + ' por ' + p.generado.quien
+      : 'Las cuotas de ' + p.nombre + ' todavía no se han generado'
+
+    campoBase.value = p.valorBase ? miles(p.valorBase) : ''
+    campoBase.disabled = !!p.generado
+    campoBase.removeAttribute('aria-invalid')
+    var error = campoBase.closest('.campo').querySelector('.error')
+    if (error) error.remove()
+    document.getElementById('acciones-base').hidden = !!p.generado
+    document.getElementById('ayuda-base').textContent = p.generado
+      ? 'Las cuotas de ' + p.nombre + ' ya se generaron con este valor. Si una quedó mal, anúlala y crea una obligación individual.'
+      : 'Es el total mensual que se reparte entre los inmuebles según su coeficiente. Noviembre usó $ 100 000 000.'
+    pintarEjemplos(p.valorBase)
+  }
+
+  document.getElementById('periodos').addEventListener('cambio', function (e) { periodoActual = e.detail; pintarPeriodo() })
+
+  // Mientras escribe, la tabla muestra cómo quedaría cada cuota
+  campoBase.addEventListener('input', function () {
+    var base = leerPesos(campoBase.value)
+    pintarEjemplos(base > 0 ? base : null)
+  })
+  campoBase.addEventListener('blur', function () {
+    var base = leerPesos(campoBase.value)
+    if (base > 0) campoBase.value = miles(base)
+  })
+
+  // PeriodoFacturacion.configurarValorBaseDeLaCuotaDelPeriodo(valorBaseCuota)
+  document.getElementById('form-base').addEventListener('confirmado', function (e) {
+    var base = leerPesos(campoBase.value)
+    if (!(base > 0)) {
+      e.preventDefault()
+      marcarError(campoBase, 'Escribe el valor solo con números, por ejemplo 100 000 000.')
+      return
+    }
+    if (base < 1000000) {
+      e.preventDefault()
+      marcarError(campoBase, 'Ese valor parece la cuota de un apartamento. El valor base es el total mensual que se reparte por coeficiente, por ejemplo 100 000 000.')
+      return
+    }
+    var p = PERIODOS[periodoActual]
+    p.valorBase = base
+    this.setAttribute('data-confirmar', 'Valor base guardado: ' + Convivir.pesos(base) + ' para ' + p.nombre + '.')
+    pintarPeriodo()
+  })
+
+  // Generar o explicar que ya se generó
+  document.getElementById('generar').addEventListener('click', function () {
+    var p = PERIODOS[periodoActual]
+    document.querySelectorAll('[data-periodo]').forEach(function (s) { s.textContent = p.nombre })
+    if (p.generado) {
+      document.getElementById('generado-detalle').textContent = p.generado.quien + ' generó ' + p.generado.cuando + ' las 184 cuotas por ' +
+        Convivir.pesos(totalAFacturar(p.valorBase)) + ', con vencimiento el ' + fecha(p.vence) + '.'
+      Convivir.abrir('dialogo-generado')
+      return
+    }
+    if (!p.valorBase) {
+      marcarError(campoBase, 'Guarda primero el valor base de ' + p.nombre + '. Sin él no se puede calcular la cuota de cada inmueble.')
+      return
+    }
+    document.getElementById('g-total').textContent = Convivir.pesos(totalAFacturar(p.valorBase))
+    document.getElementById('g-base').textContent = Convivir.pesos(p.valorBase)
+    document.getElementById('g-vence').textContent = fecha(p.vence, true)
+    Convivir.abrir('dialogo-generar')
+  })
+
+  document.querySelector('#dialogo-generar form').addEventListener('confirmado', function () {
+    var p = PERIODOS[periodoActual]
+    var ahora = new Date()
+    var h = ahora.getHours(), m = String(ahora.getMinutes()).padStart(2, '0')
+    p.generado = { cuando: 'hoy a las ' + ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.'), quien: 'Paula Ortega' }
+    TOTAL_REGISTRADAS += 184
+    this.setAttribute('data-confirmar', 'Obligaciones generadas: 184 cuotas de ' + p.nombre + ' por ' + Convivir.pesos(totalAFacturar(p.valorBase)) + '.')
+    pintarPeriodo()
+    filtrar()
+  })
+
+  document.getElementById('ir-a-crear').addEventListener('click', function () {
+    document.getElementById('dialogo-generado').close()
+    Convivir.abrir('dialogo-crear')
+  })
+
+  // ---------- Lista de obligaciones ----------
+  var buscar = document.getElementById('buscar')
+  var filtroConcepto = document.getElementById('filtro-concepto')
+  var filtroEstado = document.getElementById('filtro-estado')
+
+  function filaHTML(o, i) {
+    var estado = estadoDe(o)
+    var mora = diasDeMora(o)
+    var dueno = PROPIETARIOS[o.inmueble]
+    var saldo = o.anulada ? '0' : miles(o.saldo)
+    var sub = o.anulada ? '<span class="sub">Motivo: ' + esc(o.anulada) + '</span>' : '<span class="sub">' + esc(o.detalle) + '</span>'
+    return '<tr data-i="' + i + '">' +
+      '<td><span class="identificador fuerte">' + o.inmueble + '</span>' + (dueno ? '<span class="sub">' + esc(dueno) + '</span>' : '') + '</td>' +
+      '<td style="min-width:16rem"><span class="etiqueta">' + CONCEPTOS[o.concepto] + '</span>' + (o.anulada ? '<span class="sub">' + esc(o.detalle) + '</span>' : '') + sub + '</td>' +
+      '<td style="white-space:nowrap">' + fecha(o.vence) + '</td>' +
+      '<td class="num">' + miles(o.valor) + '</td>' +
+      '<td class="num">' + saldo + '</td>' +
+      '<td><span class="pildora ' + ESTADOS[estado][0] + '">' + ESTADOS[estado][1] + '</span></td>' +
+      '<td class="num">' + (mora ? mora : '—') + '</td>' +
+      '<td class="acciones-fila">' + (estado === 'pagada' || estado === 'anulada' ? '' : '<button class="btn riesgo chico" type="button" data-anular="' + i + '">Anular</button>') + '</td>' +
+      '</tr>'
+  }
+
+  function filtrar() {
+    var texto = buscar.value.trim().toLowerCase()
+    var visibles = 0
+    var html = ''
+    OBLIGACIONES.forEach(function (o, i) {
+      var buscable = (o.inmueble + ' ' + (PROPIETARIOS[o.inmueble] || '') + ' ' + o.detalle + ' ' + CONCEPTOS[o.concepto]).toLowerCase()
+      var coincide = (!texto || buscable.indexOf(texto) >= 0) &&
+        (!filtroConcepto.value || o.concepto === filtroConcepto.value) &&
+        (!filtroEstado.value || estadoDe(o) === filtroEstado.value)
+      if (coincide) { html += filaHTML(o, i); visibles++ }
+    })
+    cuerpoTabla.innerHTML = html
+    document.getElementById('sin-resultados').hidden = visibles > 0
+    document.querySelector('#tabla-obligaciones thead').hidden = visibles === 0
+    document.getElementById('conteo').textContent = visibles + ' de ' + miles(TOTAL_REGISTRADAS) + ' obligaciones de 2026'
+  }
+
+  buscar.addEventListener('input', filtrar)
+  filtroConcepto.addEventListener('change', filtrar)
+  filtroEstado.addEventListener('change', filtrar)
+  document.getElementById('limpiar').addEventListener('click', function () {
+    buscar.value = ''; filtroConcepto.value = ''; filtroEstado.value = ''
+    filtrar()
+  })
+
+  // ---------- Crear obligación individual ----------
+  document.querySelector('#dialogo-crear form').addEventListener('confirmado', function (e) {
+    var campoInmueble = document.getElementById('c-inmueble')
+    var campoValor = document.getElementById('c-valor')
+    var campoVence = document.getElementById('c-vence')
+    var inmueble = normalizarInmueble(campoInmueble.value)
+    var valor = leerPesos(campoValor.value)
+
+    if (INACTIVOS[inmueble]) {
+      e.preventDefault()
+      marcarError(campoInmueble, inmueble + ' ' + INACTIVOS[inmueble] + '. Solo se le cobra a inmuebles activos.')
+      return
+    }
+    if (!/^[ABC]-(0[1-9]|1[0-2])(0[1-9]|1[0-4])$/.test(inmueble)) {
+      e.preventDefault()
+      marcarError(campoInmueble, 'No hay un inmueble activo con la identificación ' + campoInmueble.value.trim() + '. Escríbela como en la escritura, por ejemplo A-0902.')
+      return
+    }
+    if (!(valor > 0)) {
+      e.preventDefault()
+      marcarError(campoValor, 'Escribe el valor solo con números y mayor que cero, por ejemplo 90 000.')
+      return
+    }
+    if (campoVence.value < HOY) {
+      e.preventDefault()
+      marcarError(campoVence, 'El vencimiento no puede ser anterior a hoy, 14 de noviembre. La mora cuenta desde el día siguiente.')
+      return
+    }
+    var concepto = document.getElementById('c-concepto').value
+    OBLIGACIONES.push({
+      inmueble: inmueble, concepto: concepto,
+      detalle: document.getElementById('c-descripcion').value.trim(),
+      vence: campoVence.value, valor: valor, saldo: valor
+    })
+    OBLIGACIONES.sort(function (a, b) { return a.vence < b.vence ? -1 : a.vence > b.vence ? 1 : 0 })
+    TOTAL_REGISTRADAS++
+    this.setAttribute('data-confirmar', 'Obligación creada: ' + CONCEPTOS[concepto].toLowerCase() + ' para ' + inmueble + ' por ' +
+      Convivir.pesos(valor) + ', vence el ' + fecha(campoVence.value) + '.')
+    filtrar()
+    // data-limpiar vacía el formulario; el vencimiento vuelve a su valor por defecto
+  })
+
+  // ---------- Anular obligación ----------
+  cuerpoTabla.addEventListener('click', function (e) {
+    var boton = e.target.closest('[data-anular]')
+    if (!boton) return
+    obligacionAnulando = OBLIGACIONES[Number(boton.getAttribute('data-anular'))]
+    var o = obligacionAnulando
+    document.getElementById('anular-resumen').textContent = o.inmueble + ' · vence el ' + fecha(o.vence) + ' · ' + o.detalle
+    document.getElementById('anular-concepto').textContent = CONCEPTOS[o.concepto]
+    document.getElementById('anular-saldo').textContent = Convivir.pesos(o.saldo)
+    Convivir.abrir('dialogo-anular')
+  })
+
+  document.querySelector('#dialogo-anular form').addEventListener('confirmado', function () {
+    var o = obligacionAnulando
+    o.anulada = document.getElementById('anular-motivo').value.trim()
+    this.setAttribute('data-confirmar', 'Obligación anulada: ' + CONCEPTOS[o.concepto].toLowerCase() + ' de ' + o.inmueble + '. El motivo queda en la auditoría.')
+    filtrar()
+  })
+
+  // ---------- Inicio ----------
+  var pedido = new URLSearchParams(location.search).get('periodo')
+  if (PERIODOS[pedido] && pedido !== periodoActual) {
+    periodoActual = pedido
+    document.querySelectorAll('#periodos button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-valor') === pedido)) })
+  }
+  pintarPeriodo()
+  filtrar()
+})()
+</script>
+</body>
+</html>

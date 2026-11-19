@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Registrar pago · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* Opción de obligación: concepto a la izquierda, saldo a la derecha */
+  .obligaciones-opciones { grid-template-columns: minmax(0, 1fr); }
+  .opcion-obligacion { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--e3); }
+  .opcion-obligacion .num { white-space: nowrap; font-weight: 600; }
+  .opcion-obligacion .pildora { margin-top: var(--e1); }
+</style>
+</head>
+<!-- CU-13 Registrar pago presencial
+     new Pago(valor, medioPago, PRESENCIAL) · Pago.procesarPagoDeLaObligacion(), generarComprobanteDePago(), anularPagoPorMotivo(motivo)
+     Obligacion.registrarAbonoALaObligacion(valorAbono) · 422 si el valor supera el saldo pendiente (RN-24, RN-27) -->
+<body data-rol="administrador" data-seccion="cartera" data-sub="pago">
+
+<main class="pagina">
+  <div class="encabezado no-imprimir">
+    <div>
+      <h1>Registrar pago presencial</h1>
+      <p class="guia">Dinero que se recibe en la oficina de administración: efectivo, transferencia o cheque</p>
+    </div>
+  </div>
+
+  <div class="lado">
+    <div>
+      <ol class="pasos no-imprimir" id="pasos">
+        <li aria-current="step">Inmueble</li>
+        <li>Obligación y pago</li>
+        <li>Recibo de caja</li>
+      </ol>
+
+      <!-- Paso 1: buscar el inmueble -->
+      <section class="superficie relleno pila" id="paso-1" style="gap:var(--e4)" aria-label="Buscar el inmueble">
+        <form class="formulario" id="form-buscar" novalidate>
+          <label class="campo" style="max-width:24rem">
+            <span>¿De qué inmueble es el pago?</span>
+            <input id="inmueble" class="identificador" list="lista-inmuebles" required placeholder="A-1104" autocomplete="off"
+                   data-error="Escribe el inmueble que paga, por ejemplo A-1104.">
+            <span class="ayuda">Torre, guion, piso y apartamento, como en la escritura.</span>
+          </label>
+          <div class="fila">
+            <button class="btn" type="submit">Buscar obligaciones</button>
+          </div>
+        </form>
+        <p class="guia">
+          Ejemplos de esta vista:
+          <button class="btn texto chico identificador" type="button" data-ejemplo="A-1104">A-1104</button>
+          <button class="btn texto chico identificador" type="button" data-ejemplo="A-0902">A-0902</button>
+          <button class="btn texto chico identificador" type="button" data-ejemplo="C-1201">C-1201</button>
+          <button class="btn texto chico identificador" type="button" data-ejemplo="B-0302">B-0302</button>
+        </p>
+        <div class="aviso ok" id="al-dia" hidden aria-live="polite"></div>
+      </section>
+
+      <!-- Paso 2: elegir la obligación y registrar el pago -->
+      <section class="pila" id="paso-2" style="gap:var(--e5)" hidden aria-label="Obligación y pago">
+        <div class="ficha" id="ficha-inmueble">
+          <div class="fila entre" style="align-items:flex-start">
+            <div>
+              <div class="titular" id="ficha-titular"></div>
+              <div class="meta" id="ficha-meta"></div>
+            </div>
+            <button class="btn texto chico" type="button" data-volver>Cambiar inmueble</button>
+          </div>
+        </div>
+
+        <form class="pila" id="form-pago" style="gap:var(--e5)" novalidate>
+          <div class="superficie">
+            <div class="cabeza">
+              <h2 id="titulo-opciones">¿Qué obligación paga?</h2>
+              <span class="guia">Cada pago abona a una sola obligación</span>
+            </div>
+            <div class="cuerpo">
+              <div class="elecciones obligaciones-opciones" id="opciones" role="radiogroup" aria-labelledby="titulo-opciones"></div>
+            </div>
+          </div>
+
+          <div class="superficie">
+            <div class="cabeza"><h2>Datos del pago</h2></div>
+            <div class="cuerpo">
+              <div class="formulario dos">
+                <label class="campo">
+                  <span>Valor recibido</span>
+                  <div class="con-prefijo">
+                    <span>$</span>
+                    <input id="valor" class="num" inputmode="numeric" required autocomplete="off"
+                           data-error="Escribe el valor que recibiste, por ejemplo 610 000.">
+                  </div>
+                  <span class="ayuda" id="ayuda-valor"></span>
+                </label>
+                <label class="campo">
+                  <span>Fecha del pago</span>
+                  <input id="fecha" type="date" value="2026-11-14" max="2026-11-14" required
+                         data-error="Elige la fecha en que se recibió el dinero.">
+                </label>
+                <div class="campo completo">
+                  <span class="rotulo" id="rotulo-medio">Medio de pago</span>
+                  <div class="elecciones" role="radiogroup" aria-labelledby="rotulo-medio">
+                    <label class="eleccion"><input type="radio" name="medio" value="EFECTIVO" checked><span><b>Efectivo</b><small>Se entrega en la oficina</small></span></label>
+                    <label class="eleccion"><input type="radio" name="medio" value="TRANSFERENCIA"><span><b>Transferencia</b><small>A la cuenta de la copropiedad</small></span></label>
+                    <label class="eleccion"><input type="radio" name="medio" value="CHEQUE"><span><b>Cheque</b><small>A nombre de la copropiedad</small></span></label>
+                  </div>
+                </div>
+                <label class="campo completo" id="campo-referencia" hidden>
+                  <span id="rotulo-referencia">Número de la transferencia</span>
+                  <input id="referencia" class="identificador" required autocomplete="off"
+                         data-error="Escribe la referencia. Sin ella no se puede cruzar el pago con el extracto del banco.">
+                  <span class="ayuda" id="ayuda-referencia"></span>
+                </label>
+                <label class="campo">
+                  <span>Quién paga</span>
+                  <input id="pagador" required autocomplete="off"
+                         data-error="Escribe el nombre de quien entrega el dinero. Queda en el recibo.">
+                  <span class="ayuda">Puede ser el propietario, el arrendatario u otra persona.</span>
+                </label>
+                <label class="campo">
+                  <span>Cédula de quien paga <span class="opcional">(opcional)</span></span>
+                  <input id="pagador-documento" class="identificador" inputmode="numeric" autocomplete="off" placeholder="72145880">
+                </label>
+              </div>
+            </div>
+            <div class="pie">
+              <span>Se registra a nombre de Paula Ortega</span>
+              <div class="fila" style="gap:var(--e2)">
+                <button class="btn segundo" type="button" data-volver>Cambiar inmueble</button>
+                <button class="btn" type="submit">Registrar pago</button>
+              </div>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- Paso 3: recibo de caja -->
+      <section class="pila" id="paso-3" style="gap:var(--e5)" hidden aria-label="Recibo de caja">
+        <div class="aviso ok no-imprimir" id="resultado" aria-live="polite"></div>
+        <article class="documento-impreso" id="recibo" aria-label="Recibo de caja">
+          <div class="encabezado-doc">
+            <div>
+              <div class="fuerte">Copropiedad Villa Campestre</div>
+              <div class="guia">Administración · recibo de caja</div>
+            </div>
+            <div style="text-align:right">
+              <div class="identificador fuerte" id="r-numero"></div>
+              <div class="guia" id="r-fecha"></div>
+            </div>
+          </div>
+          <dl class="datos">
+            <div><dt>Recibido de</dt><dd id="r-pagador"></dd></div>
+            <div><dt>Inmueble</dt><dd id="r-inmueble"></dd></div>
+            <div><dt>Propietario</dt><dd id="r-propietario"></dd></div>
+            <div><dt>Abono a</dt><dd id="r-obligacion"></dd></div>
+            <div><dt>Medio de pago</dt><dd id="r-medio"></dd></div>
+            <div><dt>Saldo de la obligación</dt><dd class="num" id="r-saldos"></dd></div>
+          </dl>
+          <div class="total">
+            <span class="fuerte">Valor recibido</span>
+            <span class="valor" id="r-valor"></span>
+          </div>
+          <p class="guia" style="margin-top:var(--e4)">Registró Paula Ortega, administradora. Este recibo es el comprobante del pago; consérvalo.</p>
+        </article>
+        <div class="fila no-imprimir">
+          <button class="btn" type="button" id="imprimir">Imprimir recibo</button>
+          <button class="btn segundo" type="button" data-volver>Registrar otro pago</button>
+        </div>
+      </section>
+    </div>
+
+    <aside class="superficie no-imprimir" aria-labelledby="titulo-recientes">
+      <div class="cabeza">
+        <h2 id="titulo-recientes">Pagos presenciales recientes</h2>
+      </div>
+      <ul class="lista" id="recientes"></ul>
+      <div class="pie"><span>31 pagos presenciales en noviembre</span></div>
+    </aside>
+  </div>
+</main>
+
+<datalist id="lista-inmuebles">
+  <option value="A-0210"><option value="A-0401"><option value="A-0607"><option value="A-0902"><option value="A-1104">
+  <option value="B-0302"><option value="B-0410"><option value="B-0705"><option value="B-1002"><option value="B-1204">
+  <option value="C-0303"><option value="C-0512"><option value="C-0705"><option value="C-0901"><option value="C-1201">
+</datalist>
+
+<!-- Anular: Pago.anularPagoPorMotivo(motivo) · decisión abierta 6 -->
+<dialog class="dialogo" id="dialogo-anular" aria-labelledby="titulo-anular">
+  <form data-confirmar="Pago anulado" data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-anular">Anular pago</h2>
+        <p class="guia" id="anular-resumen"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <dl class="datos">
+        <div><dt>Pagó</dt><dd id="anular-pagador"></dd></div>
+        <div><dt>Abono a</dt><dd id="anular-obligacion"></dd></div>
+      </dl>
+      <div class="aviso al">
+        <p><b>El saldo de la obligación no vuelve solo.</b> El pago queda anulado con su motivo, pero la obligación sigue con el abono aplicado.</p>
+        <p>Si hay que volver a cobrar ese valor, crea una obligación individual en <a href="obligaciones.html">Obligaciones</a>.</p>
+      </div>
+      <label class="campo">
+        <span>Motivo</span>
+        <textarea name="motivo" id="anular-motivo" required placeholder="El banco devolvió el cheque por fondos insuficientes."
+                  data-error="Escribe por qué se anula. Es obligatorio y queda en la auditoría junto al pago."></textarea>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn riesgo" type="submit">Anular pago</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var HOY = '2026-11-14'
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  var CONCEPTOS = { ordinaria: 'Cuota ordinaria', extraordinaria: 'Cuota extraordinaria', multa: 'Multa', interes: 'Interés de mora', alquiler: 'Alquiler de zona' }
+  var MEDIOS = { EFECTIVO: 'Efectivo', TRANSFERENCIA: 'Transferencia', CHEQUE: 'Cheque' }
+
+  function o(concepto, detalle, vence, valor, saldo) {
+    return { concepto: concepto, detalle: detalle, vence: vence, valor: valor, saldo: saldo === undefined ? valor : saldo }
+  }
+
+  // GET /api/inmuebles/id/obligaciones: lo pendiente de cada inmueble (RF-068)
+  var INMUEBLES = {
+    'A-1104': { propietario: 'Jorge Peñaranda', vinculo: 'propietario no residente', obligaciones: [
+      o('ordinaria', 'Septiembre de 2026', '2026-09-30', 610000),
+      o('multa', 'Remodelación sin aviso a la administración', '2026-10-15', 120000),
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 610000),
+      o('interes', 'Octubre de 2026', '2026-11-30', 14600),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 610000)] },
+    'A-0902': { propietario: 'Marta Oviedo', vinculo: 'propietaria residente', obligaciones: [
+      o('alquiler', 'Salón social, evento del 31 de octubre', '2026-11-02', 180000),
+      o('multa', 'Uso del salón social después de la medianoche', '2026-11-02', 90000),
+      o('multa', 'Reposición de la puerta de vidrio del salón social', '2026-11-09', 350000),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 610000)] },
+    'C-1201': { propietario: 'Diana Salcedo', vinculo: 'propietaria residente', obligaciones: [
+      o('alquiler', 'Zona BBQ, 14 de agosto, 5 horas', '2026-08-14', 125000),
+      o('ordinaria', 'Agosto de 2026', '2026-08-31', 660000),
+      o('ordinaria', 'Septiembre de 2026', '2026-09-30', 660000),
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 660000),
+      o('interes', 'Octubre de 2026', '2026-11-30', 28900),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 660000)] },
+    'B-0705': { propietario: 'Natalia Bermúdez', vinculo: 'propietaria residente', obligaciones: [
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 520000),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 520000)] },
+    'B-1002': { propietario: 'Ricardo Gómez', vinculo: 'propietario residente', obligaciones: [
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 550000, 250000),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 550000)] },
+    'C-0303': { propietario: 'Óscar Pertuz', vinculo: 'propietario residente', obligaciones: [
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 490000),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 490000)] },
+    'B-1204': { propietario: 'Liliana Fontalvo', vinculo: 'propietaria residente', obligaciones: [
+      o('multa', 'Ruido después de las 10:00 p. m., reincidencia', '2026-11-05', 150000),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 590000)] },
+    'A-0607': { propietario: 'Mauricio Daza', vinculo: 'propietario no residente', obligaciones: [
+      o('ordinaria', 'Septiembre de 2026', '2026-09-30', 580000),
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 580000),
+      o('interes', 'Octubre de 2026', '2026-11-30', 11600),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 580000)] },
+    'C-0512': { propietario: 'Patricia Lozano', vinculo: 'propietaria residente', obligaciones: [
+      o('ordinaria', 'Septiembre de 2026', '2026-09-30', 540000, 240000),
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 540000),
+      o('interes', 'Octubre de 2026', '2026-11-30', 10800),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 540000)] },
+    'B-0410': { propietario: 'Hernando Castro', vinculo: 'propietario residente', obligaciones: [
+      o('ordinaria', 'Agosto de 2026', '2026-08-31', 500000, 180000),
+      o('ordinaria', 'Septiembre de 2026', '2026-09-30', 500000),
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 500000),
+      o('interes', 'Octubre de 2026', '2026-11-30', 13600),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 500000)] },
+    'C-0901': { propietario: 'Rafael Insignares', vinculo: 'propietario no residente', obligaciones: [
+      o('ordinaria', 'Agosto de 2026', '2026-08-31', 630000),
+      o('ordinaria', 'Septiembre de 2026', '2026-09-30', 630000),
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 630000),
+      o('interes', 'Octubre de 2026', '2026-11-30', 25200),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 630000)] },
+    'A-0210': { propietario: 'Yolanda Barrios', vinculo: 'propietaria residente', obligaciones: [
+      o('ordinaria', 'Julio de 2026', '2026-07-31', 470000),
+      o('ordinaria', 'Agosto de 2026', '2026-08-31', 470000),
+      o('ordinaria', 'Septiembre de 2026', '2026-09-30', 470000),
+      o('ordinaria', 'Octubre de 2026', '2026-10-31', 470000),
+      o('interes', 'Octubre de 2026', '2026-11-30', 28200),
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 470000)] },
+    'C-0705': { propietario: 'Inés Carrillo', vinculo: 'propietaria no residente', ocupa: 'Andrés Caicedo', obligaciones: [
+      o('ordinaria', 'Noviembre de 2026', '2026-11-30', 490000)] },
+    'B-0302': { propietario: 'Ernesto Vargas', vinculo: 'propietario no residente', ocupa: 'Lucía Mendoza', obligaciones: [],
+      nota: 'Pagó la cuota de noviembre el 5 de noviembre, en línea.' },
+    'A-0401': { propietario: 'Gloria Ariza', vinculo: 'propietaria residente', obligaciones: [],
+      nota: 'Pagó la cuota de noviembre hoy a las 8:05 a. m., en línea.' }
+  }
+
+  var PAGOS = [
+    { recibo: 'RC-2026-0418', inmueble: 'B-1002', pagador: 'Ricardo Gómez', medio: 'TRANSFERENCIA', referencia: '0048213377', valor: 300000, cuando: 'hoy, 10:42 a. m.', abono: 'Cuota ordinaria de octubre' },
+    { recibo: 'RC-2026-0417', inmueble: 'C-0512', pagador: 'Patricia Lozano', medio: 'EFECTIVO', valor: 300000, cuando: 'ayer, 4:30 p. m.', abono: 'Cuota ordinaria de septiembre' },
+    { recibo: 'RC-2026-0416', inmueble: 'A-0305', pagador: 'Fabián Orozco', medio: 'CHEQUE', referencia: '7781023', valor: 510000, cuando: '12 de noviembre, 9:10 a. m.', abono: 'Cuota ordinaria de noviembre' },
+    { recibo: 'RC-2026-0415', inmueble: 'C-0108', pagador: 'Elkin Romero', medio: 'EFECTIVO', valor: 500000, cuando: '11 de noviembre, 3:22 p. m.', abono: 'Cuota ordinaria de noviembre' },
+    { recibo: 'RC-2026-0414', inmueble: 'B-0606', pagador: 'Sandra Paternina', medio: 'TRANSFERENCIA', referencia: '0047990215', valor: 540000, cuando: '10 de noviembre, 11:05 a. m.', abono: 'Cuota ordinaria de noviembre' }
+  ]
+  var siguienteRecibo = 419
+
+  var actual = null        // identificación del inmueble elegido
+  var pagoAnulando = null
+
+  // ---------- Utilidades ----------
+  function fecha(iso, conAnio) {
+    var p = iso.split('-')
+    return Number(p[2]) + ' de ' + MESES[Number(p[1]) - 1] + (conAnio ? ' de ' + p[0] : '')
+  }
+  function aFecha(iso) { var p = iso.split('-'); return new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2])) }
+  function diasDeMora(ob) { return ob.vence < HOY ? Math.round((aFecha(HOY) - aFecha(ob.vence)) / 86400000) : 0 }
+  function miles(n) { return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
+  function leerPesos(texto) { var limpio = String(texto).replace(/\D/g, ''); return limpio ? Number(limpio) : NaN }
+  function esc(texto) { var d = document.createElement('div'); d.textContent = texto; return d.innerHTML }
+  function unidad(id) { var m = id.match(/^([ABC])-(\d{2})(\d{2})$/); return m ? 'Torre ' + m[1] + ' · Apto ' + Number(m[2] + m[3]) : id }
+  function normalizar(texto) {
+    var t = texto.trim().toUpperCase().replace(/\s+/g, '')
+    var m = t.match(/^([ABC])-?(\d{4})$/)
+    return m ? m[1] + '-' + m[2] : t
+  }
+  function hora() {
+    var d = new Date()
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  function marcarError(campo, mensaje) {
+    var contenedor = campo.closest('.campo')
+    var previo = contenedor.querySelector('.error')
+    if (previo) previo.remove()
+    campo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-generado', '')
+    error.textContent = mensaje
+    contenedor.appendChild(error)
+    campo.focus()
+  }
+  function nombreObligacion(ob) {
+    return CONCEPTOS[ob.concepto] + (ob.concepto === 'ordinaria' || ob.concepto === 'interes' ? ' de ' + ob.detalle.replace(' de 2026', '').toLowerCase() : ': ' + ob.detalle.charAt(0).toLowerCase() + ob.detalle.slice(1))
+  }
+  function pendientes(inm) { return inm.obligaciones.filter(function (ob) { return ob.saldo > 0 }) }
+
+  // ---------- Pasos ----------
+  function irAPaso(n) {
+    ;[1, 2, 3].forEach(function (i) { document.getElementById('paso-' + i).hidden = i !== n })
+    document.querySelectorAll('#pasos li').forEach(function (li, i) {
+      li.classList.toggle('hecho', i + 1 < n)
+      if (i + 1 === n) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current')
+    })
+    window.scrollTo(0, 0)
+  }
+
+  // ---------- Paso 1: buscar ----------
+  var campoInmueble = document.getElementById('inmueble')
+
+  function buscar() {
+    var formulario = document.getElementById('form-buscar')
+    document.getElementById('al-dia').hidden = true
+    if (!Convivir.validar(formulario)) return
+    var id = normalizar(campoInmueble.value)
+    var inm = INMUEBLES[id]
+    if (!inm && /^[ABC]-(0[1-9]|1[0-2])(0[1-9]|1[0-4])$/.test(id)) {
+      inm = INMUEBLES[id] = { propietario: '', vinculo: '', obligaciones: [], nota: 'Pagó todo lo que se le ha cobrado hasta hoy.' }
+    }
+    if (!inm) {
+      marcarError(campoInmueble, 'No hay un inmueble activo con la identificación ' + campoInmueble.value.trim() + '. Escríbela como en la escritura, por ejemplo A-1104.')
+      return
+    }
+    campoInmueble.value = id
+    if (!pendientes(inm).length) {
+      var aviso = document.getElementById('al-dia')
+      aviso.innerHTML = '<p><b><span class="identificador">' + id + '</span> está al día.</b> No tiene obligaciones pendientes, así que no hay nada que registrar.</p><p>' + esc(inm.nota) + '</p>'
+      aviso.hidden = false
+      return
+    }
+    actual = id
+    pintarPaso2()
+    irAPaso(2)
+  }
+
+  document.getElementById('form-buscar').addEventListener('submit', function (e) { e.preventDefault(); buscar() })
+  document.querySelectorAll('[data-ejemplo]').forEach(function (b) {
+    b.addEventListener('click', function () { campoInmueble.value = b.getAttribute('data-ejemplo'); buscar() })
+  })
+
+  // ---------- Paso 2: obligación y datos del pago ----------
+  function pintarPaso2() {
+    var inm = INMUEBLES[actual]
+    var lista = pendientes(inm)
+    var vencido = 0, total = 0, masAntigua = null
+    lista.forEach(function (ob) {
+      total += ob.saldo
+      if (ob.vence < HOY) { vencido += ob.saldo; if (!masAntigua) masAntigua = ob }
+    })
+    var ficha = document.getElementById('ficha-inmueble')
+    ficha.className = 'ficha ' + (vencido ? 'no' : 'al')
+    document.getElementById('ficha-titular').innerHTML = unidad(actual) + ' · <span class="identificador">' + actual + '</span>'
+    var quien = inm.propietario ? esc(inm.propietario) + ', ' + inm.vinculo + (inm.ocupa ? '. Ocupa ' + esc(inm.ocupa) : '') : 'Propietario registrado'
+    document.getElementById('ficha-meta').innerHTML = quien + ' · ' +
+      (vencido
+        ? '<span class="dato">' + Convivir.pesos(vencido) + '</span> vencidos · ' + diasDeMora(masAntigua) + ' días en mora · ' + Convivir.pesos(total) + ' pendientes en total'
+        : 'sin saldo vencido · ' + Convivir.pesos(total) + ' por vencer')
+
+    var opciones = document.getElementById('opciones')
+    opciones.innerHTML = lista.map(function (ob, i) {
+      var mora = diasDeMora(ob)
+      var estado = ob.saldo < ob.valor
+        ? '<span class="pildora p-al">Pagada parcialmente' + (mora ? ' · ' + mora + ' días en mora' : '') + '</span>'
+        : mora ? '<span class="pildora p-no">' + mora + ' días en mora</span>' : '<span class="pildora p-al">Vence el ' + fecha(ob.vence) + '</span>'
+      var guia = (mora ? 'Venció el ' + fecha(ob.vence) : 'Vence el ' + fecha(ob.vence)) + (ob.saldo < ob.valor ? ' · valor ' + Convivir.pesos(ob.valor) : '')
+      return '<label class="eleccion"><input type="radio" name="obligacion" value="' + inm.obligaciones.indexOf(ob) + '"' + (i === 0 ? ' checked' : '') + '>' +
+        '<span><span class="opcion-obligacion"><span><b>' + esc(nombreObligacion(ob)) + '</b><small>' + guia + '</small>' + estado + '</span>' +
+        '<span class="num">' + Convivir.pesos(ob.saldo) + '</span></span></span></label>'
+    }).join('')
+
+    var formulario = document.getElementById('form-pago')
+    formulario.reset()
+    formulario.querySelectorAll('.error[data-generado]').forEach(function (x) { x.remove() })
+    formulario.querySelectorAll('[aria-invalid]').forEach(function (x) { x.removeAttribute('aria-invalid') })
+    document.getElementById('pagador').value = inm.propietario
+    elegirObligacion()
+    actualizarMedio()
+  }
+
+  function obligacionElegida() {
+    var marcada = document.querySelector('#opciones input:checked')
+    return INMUEBLES[actual].obligaciones[Number(marcada.value)]
+  }
+
+  function elegirObligacion() {
+    var ob = obligacionElegida()
+    var valor = document.getElementById('valor')
+    valor.value = miles(ob.saldo)
+    valor.removeAttribute('aria-invalid')
+    var error = valor.closest('.campo').querySelector('.error')
+    if (error) error.remove()
+    document.getElementById('ayuda-valor').textContent = 'Saldo pendiente de esta obligación: ' + Convivir.pesos(ob.saldo) + '. Puedes registrar un abono menor.'
+  }
+
+  function medioElegido() { return document.querySelector('input[name="medio"]:checked').value }
+
+  function actualizarMedio() {
+    var medio = medioElegido()
+    var campo = document.getElementById('campo-referencia')
+    campo.hidden = medio === 'EFECTIVO'
+    if (medio === 'TRANSFERENCIA') {
+      document.getElementById('rotulo-referencia').textContent = 'Número de la transferencia'
+      document.getElementById('referencia').placeholder = '0048213377'
+      document.getElementById('ayuda-referencia').textContent = 'El número de aprobación que aparece en el comprobante del banco.'
+    } else {
+      document.getElementById('rotulo-referencia').textContent = 'Número del cheque y banco'
+      document.getElementById('referencia').placeholder = '7781023 · banco que lo emite'
+      document.getElementById('ayuda-referencia').textContent = 'Revisa que el cheque esté a nombre de la copropiedad y con la fecha de hoy o anterior.'
+    }
+  }
+
+  document.getElementById('opciones').addEventListener('change', elegirObligacion)
+  document.querySelectorAll('input[name="medio"]').forEach(function (r) { r.addEventListener('change', actualizarMedio) })
+  document.getElementById('valor').addEventListener('blur', function () {
+    var v = leerPesos(this.value)
+    if (v > 0) this.value = miles(v)
+  })
+
+  // POST /api/pagos/presenciales
+  document.getElementById('form-pago').addEventListener('submit', function (e) {
+    e.preventDefault()
+    if (!Convivir.validar(this)) return
+    var ob = obligacionElegida()
+    var campoValor = document.getElementById('valor')
+    var campoFecha = document.getElementById('fecha')
+    var valor = leerPesos(campoValor.value)
+
+    if (!(valor > 0)) {
+      marcarError(campoValor, 'Escribe el valor solo con números y mayor que cero, por ejemplo 610 000.')
+      return
+    }
+    // alt: el valor supera el saldo pendiente → 422
+    if (valor > ob.saldo) {
+      marcarError(campoValor, 'El valor no puede superar el saldo pendiente de esta obligación, que es ' + Convivir.pesos(ob.saldo) +
+        '. Registra hasta ese valor y, si sobra dinero, regístralo como otro pago a la siguiente obligación.')
+      return
+    }
+    if (campoFecha.value > HOY) {
+      marcarError(campoFecha, 'La fecha del pago no puede ser posterior a hoy, 14 de noviembre.')
+      return
+    }
+
+    // new Pago(valor, medioPago, PRESENCIAL) · Obligacion.registrarAbonoALaObligacion(valorAbono) · Pago.generarComprobanteDePago()
+    var inm = INMUEBLES[actual]
+    var saldoAnterior = ob.saldo
+    ob.saldo -= valor
+    var medio = medioElegido()
+    var referencia = medio === 'EFECTIVO' ? '' : document.getElementById('referencia').value.trim()
+    var pagador = document.getElementById('pagador').value.trim()
+    var documento = document.getElementById('pagador-documento').value.replace(/\D/g, '')
+    var pago = {
+      recibo: 'RC-2026-0' + siguienteRecibo++, inmueble: actual, pagador: pagador, medio: medio, referencia: referencia,
+      valor: valor, cuando: campoFecha.value === HOY ? 'hoy, ' + hora() : fecha(campoFecha.value), abono: nombreObligacion(ob)
+    }
+    PAGOS.unshift(pago)
+    pintarRecientes()
+
+    document.getElementById('r-numero').textContent = pago.recibo
+    document.getElementById('r-fecha').textContent = fecha(campoFecha.value, true) + (campoFecha.value === HOY ? ', ' + hora() : '')
+    document.getElementById('r-pagador').innerHTML = esc(pagador) + (documento ? '<br><span class="identificador guia">CC ' + documento.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + '</span>' : '')
+    document.getElementById('r-inmueble').innerHTML = '<span class="identificador">' + actual + '</span><br><span class="guia">' + unidad(actual) + '</span>'
+    document.getElementById('r-propietario').textContent = inm.propietario || 'Propietario registrado'
+    document.getElementById('r-obligacion').innerHTML = esc(nombreObligacion(ob)) + '<br><span class="guia">Vence el ' + fecha(ob.vence, true) + '</span>'
+    document.getElementById('r-medio').innerHTML = MEDIOS[medio] + (referencia ? '<br><span class="identificador guia">' + esc(referencia) + '</span>' : '')
+    document.getElementById('r-saldos').innerHTML = 'Antes ' + Convivir.pesos(saldoAnterior) + '<br>Después ' + Convivir.pesos(ob.saldo)
+    document.getElementById('r-valor').textContent = Convivir.pesos(valor)
+
+    var restante = pendientes(inm).reduce(function (s, x) { return s + x.saldo }, 0)
+    document.getElementById('resultado').innerHTML =
+      '<p><b>Pago registrado: ' + pago.recibo + ' por ' + Convivir.pesos(valor) + '.</b> ' +
+      (ob.saldo === 0 ? 'La obligación quedó pagada.' : 'La obligación quedó pagada parcialmente, con saldo de ' + Convivir.pesos(ob.saldo) + '.') + '</p>' +
+      '<p>' + (restante ? '<span class="identificador">' + actual + '</span> todavía debe ' + Convivir.pesos(restante) + ' en total.' : '<span class="identificador">' + actual + '</span> quedó sin obligaciones pendientes.') + '</p>'
+    Convivir.confirmar('Pago registrado: ' + pago.recibo + ' por ' + Convivir.pesos(valor) + '.')
+    irAPaso(3)
+  })
+
+  // ---------- Paso 3: imprimir y volver ----------
+  document.getElementById('imprimir').addEventListener('click', function () { window.print() })
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('[data-volver]')) return
+    actual = null
+    campoInmueble.value = ''
+    document.getElementById('al-dia').hidden = true
+    irAPaso(1)
+    campoInmueble.focus()
+  })
+
+  // ---------- Pagos recientes y anulación ----------
+  function pintarRecientes() {
+    document.getElementById('recientes').innerHTML = PAGOS.slice(0, 6).map(function (p, i) {
+      var medio = MEDIOS[p.medio].toLowerCase() + (p.referencia ? ' <span class="identificador">' + esc(p.referencia) + '</span>' : '')
+      return '<li>' +
+        '<div class="principal"><b><span class="identificador">' + p.recibo + '</span> · <span class="identificador">' + p.inmueble + '</span></b>' +
+        '<span>' + esc(p.pagador) + ' · ' + medio + ' · ' + p.cuando + '</span>' +
+        '<span>' + esc(p.abono) + '</span>' +
+        (p.anulado ? '<span>Motivo: ' + esc(p.anulado) + '</span>' : '') + '</div>' +
+        '<div class="pila chica" style="justify-items:end">' +
+        '<span class="num fuerte"' + (p.anulado ? ' style="text-decoration:line-through;color:var(--acero)"' : '') + '>' + Convivir.pesos(p.valor) + '</span>' +
+        (p.anulado ? '<span class="pildora p-ne">Anulado</span>' : '<button class="btn riesgo chico" type="button" data-anular="' + i + '">Anular pago</button>') +
+        '</div></li>'
+    }).join('')
+  }
+
+  document.getElementById('recientes').addEventListener('click', function (e) {
+    var boton = e.target.closest('[data-anular]')
+    if (!boton) return
+    pagoAnulando = PAGOS[Number(boton.getAttribute('data-anular'))]
+    var p = pagoAnulando
+    document.getElementById('anular-resumen').innerHTML = '<span class="identificador">' + p.recibo + '</span> · <span class="identificador">' + p.inmueble + '</span> · ' + Convivir.pesos(p.valor) + ' · ' + p.cuando
+    document.getElementById('anular-pagador').textContent = p.pagador + ', ' + MEDIOS[p.medio].toLowerCase()
+    document.getElementById('anular-obligacion').textContent = p.abono
+    Convivir.abrir('dialogo-anular')
+  })
+
+  // PATCH /api/pagos/id/anular → estado ANULADO (RN-27). El abono no se revierte: decisión abierta 6.
+  document.querySelector('#dialogo-anular form').addEventListener('confirmado', function () {
+    pagoAnulando.anulado = document.getElementById('anular-motivo').value.trim()
+    this.setAttribute('data-confirmar', 'Pago anulado: ' + pagoAnulando.recibo + '. El motivo queda en la auditoría.')
+    pintarRecientes()
+  })
+
+  // ---------- Inicio ----------
+  pintarRecientes()
+  var pedido = new URLSearchParams(location.search).get('inmueble')
+  if (pedido) { campoInmueble.value = pedido; buscar() }
+})()
+</script>
+</body>
+</html>

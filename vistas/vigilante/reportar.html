@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reportar novedad · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* Categorías en escala de portería: tarjetas grandes que se aciertan de pie */
+  .porteria .elecciones.grandes { grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr)); }
+  .porteria .elecciones.grandes .eleccion > span { padding: var(--e4); min-height: 5.5rem; }
+  .porteria .elecciones.grandes .eleccion > span b { font-size: var(--t-md); }
+  .porteria .elecciones.grandes .eleccion > span small { font-size: var(--t-sm); }
+  .elecciones[aria-invalid="true"] .eleccion > span { border-color: var(--no); }
+
+  /* Adjuntar evidencia (RF-091): zona para tomar o elegir una foto y, ya elegida, su vista previa */
+  .adjunto {
+    display: flex; align-items: center; gap: var(--e4);
+    padding: var(--e5);
+    border: 1px dashed var(--borde);
+    border-radius: var(--r-superficie);
+    background: var(--fondo);
+    cursor: pointer;
+  }
+  .adjunto:hover { background: var(--concreto); }
+  .adjunto:focus-within { outline: 2px solid var(--convivir); outline-offset: 2px; }
+  .adjunto.arrastrando { border-color: var(--convivir); background: var(--convivir-c); }
+  .adjunto[aria-invalid="true"] { border-color: var(--no); }
+  .adjunto svg { width: 40px; height: 40px; flex: none; color: var(--acero); }
+  .adjunto b { display: block; font-weight: 600; font-size: var(--t-md); line-height: 1.3; }
+  .adjunto small { display: block; color: var(--acero); font-size: var(--t-sm); }
+  .adjunto-listo {
+    display: flex; align-items: center; gap: var(--e4); flex-wrap: wrap;
+    padding: var(--e3);
+    border: 1px solid var(--borde);
+    border-radius: var(--r-superficie);
+    background: var(--papel);
+  }
+  .adjunto-listo img {
+    width: 96px; height: 72px; object-fit: cover; flex: none;
+    border: 1px solid var(--borde); border-radius: var(--r-control); background: var(--concreto);
+  }
+  .adjunto-listo .nombre { flex: 1; min-width: 10rem; overflow-wrap: anywhere; }
+  .adjunto-listo .nombre b { display: block; font-weight: 600; font-size: var(--t-sm); }
+  .adjunto-listo .nombre span { display: block; color: var(--acero); font-size: var(--t-xs); }
+
+  /* Texto de la novedad en la lista del turno: se lee como contenido, no como metadato */
+  .lista .principal > .novedad-texto { color: var(--tinta); font-size: var(--t-sm); margin-top: 2px; }
+</style>
+</head>
+<!-- CU-15 Crear reporte, desde portería
+     Reporte.crearReporteDeNovedad() con CategoriaReporte ACTIVA, descripcion e Inmueble opcional (RF-090)
+     Incluye "Adjuntar evidencia" (RF-091): Reporte.evidencia
+     Publica EventoSistema REPORTE_CREADO · Consultar reportes propios: consultarReportesDelUsuario() (RF-092) -->
+<body class="porteria" data-rol="vigilante" data-seccion="novedad">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Reportar novedad</h1>
+      <p class="guia">Llega a la administración con tu nombre y la hora. Queda abierta hasta que alguien la atienda.</p>
+    </div>
+  </div>
+
+  <div class="lado">
+    <form class="superficie relleno" id="form-reporte" novalidate>
+      <div class="formulario" style="gap:var(--e5)">
+        <fieldset class="campo">
+          <legend class="rotulo" style="font-size:var(--t-base);font-weight:600">¿Qué pasó?</legend>
+          <div class="elecciones grandes" id="categorias">
+            <label class="eleccion"><input type="radio" name="categoria" value="Seguridad" required data-error="Elige qué pasó. Así la administración sabe quién debe atenderlo."><span><b>Seguridad</b><small>Persona sospechosa, puerta forzada, alarma</small></span></label>
+            <label class="eleccion"><input type="radio" name="categoria" value="Convivencia y ruido"><span><b>Convivencia y ruido</b><small>Música alta, discusiones, fiestas</small></span></label>
+            <label class="eleccion"><input type="radio" name="categoria" value="Daño en zona común"><span><b>Daño en zona común</b><small>Luminaria, ascensor, puerta, piscina</small></span></label>
+            <label class="eleccion"><input type="radio" name="categoria" value="Parqueaderos"><span><b>Parqueaderos</b><small>Puesto ocupado, vehículo mal parqueado</small></span></label>
+            <label class="eleccion"><input type="radio" name="categoria" value="Mascotas"><span><b>Mascotas</b><small>Animal suelto, excrementos sin recoger</small></span></label>
+            <label class="eleccion"><input type="radio" name="categoria" value="Servicios públicos"><span><b>Servicios públicos</b><small>Agua, luz, gas, citófono</small></span></label>
+          </div>
+        </fieldset>
+
+        <label class="campo">
+          <span>Descripción</span>
+          <textarea id="descripcion" required rows="4" placeholder="El ascensor de la Torre A se detuvo entre los pisos 6 y 7 a las 9:50 p. m. No había nadie adentro." data-error="Describe lo que pasó: qué viste, dónde y a qué hora."></textarea>
+          <span class="ayuda">Qué viste, dónde y a qué hora. Si hablaste con alguien, di con quién.</span>
+        </label>
+
+        <label class="campo">
+          <span>Inmueble relacionado <span class="opcional">(opcional)</span></span>
+          <input id="inmueble" list="lista-inmuebles" autocomplete="off" placeholder="C-0908 o Zona BBQ">
+          <span class="ayuda">Una unidad, un parqueadero o una zona común. Desde portería puedes relacionar cualquiera del conjunto.</span>
+          <datalist id="lista-inmuebles">
+            <option value="Salón social"></option>
+            <option value="Zona BBQ"></option>
+            <option value="Cancha múltiple"></option>
+            <option value="Piscina"></option>
+            <option value="Portería"></option>
+            <option value="Torre A"></option>
+            <option value="Torre B"></option>
+            <option value="Torre C"></option>
+            <option value="Sótano 1"></option>
+            <option value="Sótano 2"></option>
+          </datalist>
+        </label>
+
+        <div class="campo" id="campo-evidencia">
+          <span class="rotulo">Evidencia <span class="opcional">(opcional)</span></span>
+          <label class="adjunto" id="adjunto">
+            <input type="file" id="evidencia" class="solo-lectores" accept="image/*">
+            <svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 13h6l3-4h10l3 4h6v18H6z"/><circle cx="20" cy="21" r="6"/></svg>
+            <span><b>Toma una foto o elige una imagen</b><small>Una sola imagen en JPG o PNG, de hasta 10 MB. También puedes arrastrarla aquí.</small></span>
+          </label>
+          <div class="adjunto-listo" id="adjunto-listo" hidden>
+            <img id="vista-previa" alt="Vista previa de la evidencia">
+            <div class="nombre"><b id="evidencia-nombre">foto.jpg</b><span id="evidencia-peso">2,4 MB</span></div>
+            <div class="fila" style="gap:var(--e1)">
+              <button class="btn segundo chico" type="button" id="cambiar-evidencia">Cambiar foto</button>
+              <button class="btn texto chico" type="button" id="quitar-evidencia">Quitar foto</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="fila" style="margin-top:var(--e6)">
+        <button class="btn grande" type="submit">Crear reporte</button>
+      </div>
+    </form>
+
+    <aside class="superficie" aria-labelledby="titulo-turno">
+      <div class="cabeza">
+        <h2 id="titulo-turno">Novedades de mi turno</h2>
+        <span class="guia" id="cuenta-turno">4 desde las 6:00 p. m.</span>
+      </div>
+      <ul class="lista" id="novedades">
+        <li>
+          <div class="principal">
+            <b>Convivencia y ruido</b>
+            <span><span class="dato">9:41 p. m.</span> · <span class="identificador">C-0908</span></span>
+            <span class="novedad-texto">Música a alto volumen en C-0908 desde las 9:30 p. m. Llamaron de C-0808 a quejarse y se le pidió bajar el volumen por citófono.</span>
+          </div>
+          <span class="pildora p-al">Abierto, sin asignar</span>
+        </li>
+        <li>
+          <div class="principal">
+            <b>Daño en zona común</b>
+            <span><span class="dato">8:26 p. m.</span> · Zona BBQ · con foto</span>
+            <span class="novedad-texto">La luminaria del sendero junto a la Zona BBQ está apagada y el paso hacia la Torre C queda oscuro.</span>
+            <span>Paula Ortega lo asignó a mantenimiento.</span>
+          </div>
+          <span class="pildora p-ne">En proceso</span>
+        </li>
+        <li>
+          <div class="principal">
+            <b>Seguridad</b>
+            <span><span class="dato">7:10 p. m.</span> · Torre B · con foto</span>
+            <span class="novedad-texto">La puerta peatonal de la Torre B no cierra sola y queda entreabierta.</span>
+            <span>Solución: mantenimiento ajustó el brazo de cierre a las 8:50 p. m.</span>
+          </div>
+          <span class="pildora p-ok">Cerrado</span>
+        </li>
+        <li>
+          <div class="principal">
+            <b>Mascotas</b>
+            <span><span class="dato">6:35 p. m.</span> · Cancha múltiple</span>
+            <span class="novedad-texto">Perro suelto sin correa en la cancha múltiple.</span>
+            <span>Solución: lo recogió su dueña, residente de <span class="identificador">A-0710</span>.</span>
+          </div>
+          <span class="pildora p-ok">Cerrado</span>
+        </li>
+      </ul>
+      <div class="pie">Las atiende la administración. Aquí ves en qué van.</div>
+    </aside>
+  </div>
+</main>
+
+<script>
+(function () {
+  var MAXIMO = 10 * 1024 * 1024
+  var ZONAS = ['Salón social', 'Zona BBQ', 'Cancha múltiple', 'Piscina', 'Portería', 'Torre A', 'Torre B', 'Torre C', 'Sótano 1', 'Sótano 2']
+  var form = document.getElementById('form-reporte')
+  var archivo = document.getElementById('evidencia')
+  var zona = document.getElementById('adjunto')
+  var listo = document.getElementById('adjunto-listo')
+  var categorias = document.getElementById('categorias')
+  var urlPrevia = null
+  var elegido = null
+
+  function $(id) { return document.getElementById(id) }
+
+  function hora() {
+    var d = new Date()
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  function sinTildes(t) { return t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase() }
+  function peso(bytes) {
+    if (bytes < 1024 * 1024) return Math.max(1, Math.round(bytes / 1024)) + ' KB'
+    return (bytes / 1024 / 1024).toFixed(1).replace('.', ',') + ' MB'
+  }
+
+  function marcarError(contenedor, mensaje, objetivo) {
+    var previo = contenedor.querySelector('.error[data-propio]')
+    if (previo) previo.remove()
+    if (!mensaje) { objetivo.removeAttribute('aria-invalid'); return }
+    objetivo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-propio', '')
+    error.setAttribute('role', 'alert')
+    error.textContent = mensaje
+    contenedor.appendChild(error)
+  }
+
+  // Inmueble relacionado: unidad, parqueadero, depósito o zona común del conjunto
+  function inmuebleValido(texto) {
+    if (!texto) return ''
+    var codigo = texto.toUpperCase().replace(/\s+/g, '')
+    if (/^[ABC]-\d{4}$/.test(codigo) || /^P-\d{3}$/.test(codigo) || /^V-\d{2}$/.test(codigo) || /^D-\d{3}$/.test(codigo)) return codigo
+    var zonaEncontrada = ZONAS.filter(function (z) { return sinTildes(z) === sinTildes(texto.trim()) })[0]
+    return zonaEncontrada || null
+  }
+
+  // ---------- Evidencia ----------
+  function quitarEvidencia() {
+    if (urlPrevia) URL.revokeObjectURL(urlPrevia)
+    urlPrevia = null
+    elegido = null
+    archivo.value = ''
+    listo.hidden = true
+    zona.hidden = false
+  }
+
+  function recibir(file) {
+    marcarError($('campo-evidencia'), '', zona)
+    if (!file) return
+    if (!/^image\//.test(file.type)) {
+      quitarEvidencia()
+      marcarError($('campo-evidencia'), file.name + ' no es una imagen. Adjunta una foto en JPG o PNG.', zona)
+      return
+    }
+    if (file.size > MAXIMO) {
+      quitarEvidencia()
+      marcarError($('campo-evidencia'), 'La foto pesa ' + peso(file.size) + '. Adjunta una de hasta 10 MB o tómala con menos resolución.', zona)
+      return
+    }
+    if (urlPrevia) URL.revokeObjectURL(urlPrevia)
+    urlPrevia = URL.createObjectURL(file)
+    elegido = file
+    $('vista-previa').src = urlPrevia
+    $('evidencia-nombre').textContent = file.name
+    $('evidencia-peso').textContent = peso(file.size) + ' · lista para adjuntar'
+    zona.hidden = true
+    listo.hidden = false
+  }
+
+  archivo.addEventListener('change', function () { recibir(archivo.files[0]) })
+  $('quitar-evidencia').addEventListener('click', function () { quitarEvidencia(); archivo.focus() })
+  $('cambiar-evidencia').addEventListener('click', function () { archivo.click() })
+
+  ;['dragenter', 'dragover'].forEach(function (tipo) {
+    zona.addEventListener(tipo, function (e) { e.preventDefault(); zona.classList.add('arrastrando') })
+  })
+  ;['dragleave', 'drop'].forEach(function (tipo) {
+    zona.addEventListener(tipo, function () { zona.classList.remove('arrastrando') })
+  })
+  zona.addEventListener('drop', function (e) {
+    e.preventDefault()
+    var file = e.dataTransfer.files && e.dataTransfer.files[0]
+    recibir(file)
+  })
+
+  // Al elegir categoría o corregir el inmueble, el error se va
+  categorias.addEventListener('change', function () { marcarError(categorias.closest('.campo'), '', categorias) })
+  $('inmueble').addEventListener('input', function () { marcarError(this.closest('.campo'), '', this) })
+
+  // ---------- Crear reporte: Reporte.crearReporteDeNovedad() ----------
+  function anotar(categoria, inmueble, descripcion, conFoto) {
+    var li = document.createElement('li')
+    li.innerHTML = '<div class="principal"><b></b><span><span class="dato"></span><span class="donde"></span></span><span class="novedad-texto"></span></div><span class="pildora p-al">Abierto, sin asignar</span>'
+    li.querySelector('b').textContent = categoria
+    li.querySelector('.dato').textContent = hora()
+    var donde = li.querySelector('.donde')
+    if (inmueble) {
+      donde.append(' · ')
+      var id = document.createElement('span')
+      id.textContent = inmueble
+      if (/^[A-Z]-\d+$/.test(inmueble)) id.className = 'identificador'
+      donde.append(id)
+    }
+    if (conFoto) donde.append(' · con foto')
+    li.querySelector('.novedad-texto').textContent = descripcion
+    $('novedades').prepend(li)
+    var total = $('novedades').children.length
+    $('cuenta-turno').textContent = total + ' desde las 6:00 p. m.'
+  }
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault()
+    var valido = Convivir.validar(form)
+
+    var elegida = form.querySelector('input[name="categoria"]:checked')
+    var primerRadio = form.querySelector('input[name="categoria"]')
+    marcarError(categorias.closest('.campo'), elegida ? '' : primerRadio.getAttribute('data-error'), categorias)
+
+    var campoInmueble = $('inmueble')
+    var inmueble = inmuebleValido(campoInmueble.value.trim())
+    marcarError(campoInmueble.closest('.campo'), inmueble === null
+      ? 'No encontramos «' + campoInmueble.value.trim() + '» en el conjunto. Escribe una unidad como C-0908, un parqueadero como P-022 o elige una zona común de la lista.'
+      : '', campoInmueble)
+
+    if (!elegida) { primerRadio.focus(); return }
+    if (!valido) return
+    if (inmueble === null) { campoInmueble.focus(); return }
+
+    var descripcion = $('descripcion').value.trim()
+    anotar(elegida.value, inmueble, descripcion, !!elegido)
+    Convivir.confirmar('Reporte creado: ' + elegida.value + (inmueble ? ' en ' + inmueble : '') + '. Queda abierto para la administración.')
+    form.reset()
+    quitarEvidencia()
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  })
+})()
+</script>
+</body>
+</html>

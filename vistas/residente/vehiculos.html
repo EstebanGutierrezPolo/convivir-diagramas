@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vehículos · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-08 Gestionar vehículos, desde el residente
+     Registrar vehículo del propio inmueble: Vehiculo(placa, tipoVehiculo, marca, color).registrarVehiculo() (RF-046),
+       responsable entre los vinculados (RF-047), placa única (RN-14, 409), asociado al inmueble (RN-15)
+     Modificar (RF-049) y dar de baja con motivo (RF-050): el diagrama de secuencia los deja solo al administrador.
+       Están construidos con data-solo="administrador"; se ven con ?como=administrador.
+     Parqueadero en uso: CesionUso de P-022 a B-0302 (consulta) -->
+<body data-rol="residente" data-seccion="vehiculos">
+
+<main class="pagina media">
+  <div class="encabezado">
+    <div>
+      <h1>Vehículos</h1>
+      <p class="guia">Vehículos de Torre B · Apto 302. Portería los reconoce por la placa.</p>
+    </div>
+    <div class="acciones">
+      <button class="btn" type="button" data-abrir="dialogo-registrar">Registrar vehículo</button>
+    </div>
+  </div>
+
+  <!-- Parqueadero que usa B-0302 por cesión de uso -->
+  <section class="pila" aria-labelledby="titulo-parqueadero">
+    <h2 class="solo-lectores" id="titulo-parqueadero">Parqueadero que usas</h2>
+    <div class="ficha al">
+      <div class="fila entre" style="align-items:flex-start">
+        <div>
+          <div class="titular">Parqueadero <span class="identificador">P-022</span></div>
+          <div class="meta">Sótano 1 · cedido por Ernesto Vargas, propietario, hasta el 30 de noviembre</div>
+        </div>
+        <span class="pildora p-al">Vence en 16 días</span>
+      </div>
+      <dl class="datos" style="margin-top:var(--e4)">
+        <div><dt>Cedido a</dt><dd>Torre B · Apto 302</dd></div>
+        <div><dt>Vigencia</dt><dd>1 de marzo al 30 de noviembre de 2026</dd></div>
+        <div><dt>Vehículo que ampara</dt><dd class="identificador">BQA 47F</dd></div>
+      </dl>
+      <p class="guia" style="margin-top:var(--e4)">Desde el 1 de diciembre el apartamento deja de tener el uso de este parqueadero, salvo que se renueve la cesión. Si lo vas a seguir usando, pídele a Ernesto Vargas que la renueve con la administración.</p>
+    </div>
+  </section>
+
+  <section class="seccion">
+    <div class="encabezado"><h2>Vehículos del apartamento</h2></div>
+    <div class="superficie">
+      <ul class="lista" id="lista-vehiculos"></ul>
+      <div class="vacio" id="vacio-vehiculos" hidden>
+        <h3>No hay vehículos registrados en el apartamento</h3>
+        <p>Registra tu carro o tu moto para que portería lo reconozca al entrar.</p>
+        <button class="btn segundo" type="button" data-abrir="dialogo-registrar">Registrar vehículo</button>
+      </div>
+      <div class="pie" data-solo="residente">
+        <span>Para corregir los datos de un vehículo o darlo de baja, pídeselo a la administración. Solo ella puede cambiarlos.</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="pie-pagina no-imprimir">
+  Para ver el aviso de placa repetida (RN-14), registra <span class="identificador">JKT 512</span> o <span class="identificador">BQA 47F</span>.
+  Modificar y dar de baja son del administrador (RF-049, RF-050): <a href="vehiculos.html?como=administrador">ver esta pantalla como administrador</a>.
+</footer>
+
+<!-- Registrar vehículo: new Vehiculo(placa, tipoVehiculo, marca, color), registrarVehiculo() -->
+<dialog class="dialogo" id="dialogo-registrar" aria-labelledby="titulo-registrar">
+  <form id="form-registrar" data-confirmar="Vehículo registrado. Portería ya lo reconoce por la placa." data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-registrar">Registrar vehículo</h2>
+        <p class="guia">Queda asociado a Torre B · Apto 302.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario dos">
+        <label class="campo">
+          <span>Placa</span>
+          <input name="placa" id="placa" class="identificador placa" required autocomplete="off" placeholder="BQA 471" maxlength="7"
+                 data-error="Escribe la placa como aparece en el vehículo, por ejemplo BQA 471.">
+        </label>
+        <label class="campo">
+          <span>Tipo</span>
+          <select name="tipo" required data-error="Elige el tipo de vehículo.">
+            <option value="">Elige el tipo</option>
+            <option>Automóvil</option>
+            <option>Camioneta</option>
+            <option>Motocicleta</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span>Marca y línea</span>
+          <input name="marca" required autocomplete="off" placeholder="Mazda 2" data-error="Escribe la marca, por ejemplo Mazda 2.">
+        </label>
+        <label class="campo">
+          <span>Color</span>
+          <input name="color" required autocomplete="off" placeholder="Gris" data-error="Escribe el color como lo vería portería, por ejemplo gris.">
+        </label>
+        <label class="campo">
+          <span>Inmueble</span>
+          <input value="Torre B · Apto 302" disabled>
+        </label>
+        <label class="campo">
+          <span>Responsable <span class="opcional">(opcional)</span></span>
+          <select name="responsable">
+            <option value="">Sin responsable</option>
+            <option selected>Lucía Mendoza</option>
+            <option>Ernesto Vargas</option>
+          </select>
+          <span class="ayuda">Entre las personas vinculadas al apartamento.</span>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Registrar vehículo</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Modificar datos: Vehiculo.modificarDatosDelVehiculo() (RF-049, solo administrador) -->
+<dialog class="dialogo" id="dialogo-modificar" aria-labelledby="titulo-modificar" data-solo="administrador">
+  <form id="form-modificar" data-confirmar="Datos del vehículo guardados." novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-modificar">Modificar vehículo <span class="identificador" id="modificar-placa"></span></h2>
+        <p class="guia">La placa no cambia: si cambió, da de baja este vehículo y registra el otro.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario dos">
+        <label class="campo">
+          <span>Tipo</span>
+          <select name="tipo" required data-error="Elige el tipo de vehículo.">
+            <option>Automóvil</option>
+            <option>Camioneta</option>
+            <option>Motocicleta</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span>Marca y línea</span>
+          <input name="marca" required autocomplete="off" data-error="Escribe la marca, por ejemplo Mazda 2.">
+        </label>
+        <label class="campo completo">
+          <span>Color</span>
+          <input name="color" required autocomplete="off" data-error="Escribe el color como lo vería portería, por ejemplo gris.">
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Guardar cambios</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Dar de baja: Vehiculo.darDeBajaVehiculoPorMotivo(motivo) (RF-050, solo administrador) -->
+<dialog class="dialogo" id="dialogo-baja" aria-labelledby="titulo-baja" data-solo="administrador">
+  <form id="form-baja" data-confirmar="Vehículo dado de baja. Portería ya no lo reconoce." data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-baja">Dar de baja <span class="identificador" id="baja-placa"></span></h2>
+        <p class="guia">Deja de estar asociado al apartamento. El historial de ingresos se conserva.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario">
+        <label class="campo">
+          <span>Motivo</span>
+          <select name="motivo" required data-error="Elige por qué se da de baja.">
+            <option value="">Elige el motivo</option>
+            <option>Se vendió</option>
+            <option>Ya no circula en el conjunto</option>
+            <option>Se registró con datos equivocados</option>
+            <option>Otro</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span>Detalle <span class="opcional">(opcional)</span></span>
+          <textarea name="detalle" placeholder="Lo vendió en octubre; el nuevo dueño no vive en el conjunto."></textarea>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Conservar vehículo</button>
+      <button class="btn riesgo" type="submit">Dar de baja</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id) }
+
+  // Vehículos de B-0302 (Inmueble posee Vehiculo). estado: EstadoRegistro.
+  var vehiculos = [
+    { placa: 'BQA 47F', tipo: 'Automóvil', marca: 'Mazda 2', color: 'Gris', responsable: 'Lucía Mendoza', registrado: '3 de marzo de 2026', estado: 'ACTIVO', parqueadero: 'P-022' },
+    { placa: 'MKL 330', tipo: 'Automóvil', marca: 'Renault Logan', color: 'Blanco', responsable: 'Lucía Mendoza', registrado: '3 de marzo de 2026', estado: 'INACTIVO', motivoBaja: 'Se vendió', fechaBaja: '12 de abril de 2026' },
+  ]
+  // Placas de otros inmuebles: existsByPlaca() responde 409 sin decir de quién son (RN-33).
+  var OTRAS_PLACAS = ['JKT 512', 'HZM 908', 'RTY 22E']
+  var actual = null
+
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  function normalizar(placa) {
+    var limpia = placa.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    return limpia.length > 3 ? limpia.slice(0, 3) + ' ' + limpia.slice(3) : limpia
+  }
+
+  function pintar() {
+    var orden = vehiculos.slice().sort(function (a, b) { return a.estado === b.estado ? 0 : a.estado === 'ACTIVO' ? -1 : 1 })
+    $('lista-vehiculos').innerHTML = orden.map(function (v) {
+      var activo = v.estado === 'ACTIVO'
+      var linea = activo
+        ? (v.responsable ? 'Responsable: ' + esc(v.responsable) : 'Sin responsable') + ' · registrado el ' + v.registrado
+        : 'Dado de baja el ' + v.fechaBaja + ' · ' + esc(v.motivoBaja) + (v.detalle ? ': ' + esc(v.detalle) : '')
+      return '<li>' +
+        '<div class="principal">' +
+          '<b class="identificador" style="font-size:var(--t-md)">' + esc(v.placa) + '</b>' +
+          '<span style="font-size:var(--t-sm);color:var(--tinta)">' + esc(v.marca) + ' · ' + esc(v.color.toLowerCase()) + ' · ' + esc(v.tipo.toLowerCase()) + '</span>' +
+          '<span>' + linea + '</span>' +
+          (activo && v.parqueadero ? '<span>Parquea en <span class="identificador">' + v.parqueadero + '</span> por cesión, hasta el 30 de noviembre</span>' : '') +
+        '</div>' +
+        '<div class="fila" style="gap:var(--e2)">' +
+          (activo ? '<span class="pildora p-ok">Activo</span>' : '<span class="pildora p-ne">Dado de baja</span>') +
+          (activo ? '<span class="fila" style="gap:var(--e2)" data-solo="administrador">' +
+            '<button class="btn segundo chico" type="button" data-modificar="' + esc(v.placa) + '">Modificar</button>' +
+            '<button class="btn riesgo chico" type="button" data-baja="' + esc(v.placa) + '">Dar de baja</button></span>' : '') +
+        '</div>' +
+      '</li>'
+    }).join('')
+    $('vacio-vehiculos').hidden = vehiculos.length > 0
+    ocultarDeOtroRol()
+  }
+
+  // Las acciones que se pintan después de marco.js también respetan data-solo.
+  function ocultarDeOtroRol() {
+    var como = new URLSearchParams(location.search).get('como') || document.body.getAttribute('data-rol')
+    document.querySelectorAll('#lista-vehiculos [data-solo]').forEach(function (n) {
+      n.hidden = n.getAttribute('data-solo').split(/\s+/).indexOf(como) < 0
+    })
+  }
+
+  function marcarError(campo, mensaje) {
+    var contenedor = campo.closest('.campo')
+    var previo = contenedor.querySelector('.error')
+    if (previo) previo.remove()
+    campo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-generado', '')
+    error.textContent = mensaje
+    contenedor.appendChild(error)
+    campo.focus()
+  }
+
+  // ---------- Registrar (RF-046, RF-047) ----------
+  var formRegistrar = $('form-registrar')
+  $('placa').addEventListener('blur', function () { if (this.value.trim()) this.value = normalizar(this.value) })
+
+  formRegistrar.addEventListener('confirmado', function (e) {
+    var f = formRegistrar.elements
+    var placa = normalizar(f.placa.value)
+    f.placa.value = placa
+    if (!/^[A-Z]{3} \d{2}[A-Z0-9]$/.test(placa)) {
+      e.preventDefault()
+      marcarError(f.placa, 'Revisa la placa: son tres letras y tres caracteres más, como BQA 471 en carro o RTY 22E en moto.')
+      return
+    }
+    // existsByPlaca(placa) → 409 (RN-14)
+    var propia = vehiculos.filter(function (v) { return v.placa === placa })[0]
+    if (propia) {
+      e.preventDefault()
+      marcarError(f.placa, propia.estado === 'ACTIVO'
+        ? placa + ' ya está registrada en tu apartamento. La ves en la lista de vehículos.'
+        : placa + ' ya está registrada en tu apartamento, dada de baja. Pídele a la administración que la vuelva a activar.')
+      return
+    }
+    if (OTRAS_PLACAS.indexOf(placa) >= 0) {
+      e.preventDefault()
+      marcarError(f.placa, placa + ' ya está registrada en otro inmueble del conjunto. Si el vehículo es tuyo, pídele a la administración que lo pase a tu apartamento.')
+      return
+    }
+    vehiculos.unshift({
+      placa: placa, tipo: f.tipo.value, marca: f.marca.value.trim(), color: f.color.value.trim(),
+      responsable: f.responsable.value, registrado: '14 de noviembre de 2026', estado: 'ACTIVO',
+    })
+    pintar()
+  })
+
+  // ---------- Modificar y dar de baja (solo administrador) ----------
+  document.addEventListener('click', function (e) {
+    var mod = e.target.closest('[data-modificar]')
+    var baja = e.target.closest('[data-baja]')
+    if (!mod && !baja) return
+    var placa = (mod || baja).getAttribute(mod ? 'data-modificar' : 'data-baja')
+    actual = vehiculos.filter(function (v) { return v.placa === placa })[0]
+    if (mod) {
+      var f = $('form-modificar').elements
+      $('modificar-placa').textContent = actual.placa
+      f.tipo.value = actual.tipo
+      f.marca.value = actual.marca
+      f.color.value = actual.color
+      Convivir.abrir('dialogo-modificar')
+    } else {
+      $('baja-placa').textContent = actual.placa
+      Convivir.abrir('dialogo-baja')
+    }
+  })
+
+  $('form-modificar').addEventListener('confirmado', function () {
+    var f = this.elements
+    actual.tipo = f.tipo.value
+    actual.marca = f.marca.value.trim()
+    actual.color = f.color.value.trim()
+    pintar()
+  })
+
+  $('form-baja').addEventListener('confirmado', function () {
+    var f = this.elements
+    actual.estado = 'INACTIVO'
+    actual.motivoBaja = f.motivo.value
+    actual.detalle = f.detalle.value.trim()
+    actual.fechaBaja = '14 de noviembre de 2026'
+    delete actual.parqueadero
+    pintar()
+  })
+
+  pintar()
+})()
+</script>
+</body>
+</html>

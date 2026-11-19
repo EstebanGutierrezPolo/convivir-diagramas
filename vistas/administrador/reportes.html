@@ -1,0 +1,587 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reportes · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* La descripción del reporte se corta a dos líneas en la tabla; completa se lee en el detalle. */
+  .tabla td.descripcion { min-width: 16rem; max-width: 26rem; }
+  .tabla td.descripcion .resumen {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+</style>
+</head>
+<!-- CU-16 Gestionar reporte · Reporte.asignarResponsableDelReporte(responsable), Reporte.cambiarEstadoDelReporte(nuevoEstado),
+     SeguimientoReporte(observacion).registrarObservacionDeSeguimiento(), Reporte.cerrarReporteConSolucion(solucion)
+     Extensión Administrar categorías de reporte · CategoriaReporte.crearCategoriaDeReporte(),
+     modificarCategoriaDeReporte(), desactivarCategoriaDeReporte() (RF-100, RF-110, RF-111) -->
+<body data-rol="administrador" data-seccion="reportes">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Reportes</h1>
+      <p class="guia" id="resumen"></p>
+    </div>
+  </div>
+
+  <div class="pestanas" role="tablist" aria-label="Reportes y categorías">
+    <button type="button" role="tab" aria-selected="true" aria-controls="panel-reportes" id="tab-reportes">Reportes <span class="cuenta-pestana" id="cuenta-reportes">0</span></button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="panel-categorias" id="tab-categorias">Categorías <span class="cuenta-pestana" id="cuenta-categorias">0</span></button>
+  </div>
+
+  <!-- ===================== Reportes ===================== -->
+  <section id="panel-reportes" role="tabpanel" aria-labelledby="tab-reportes">
+    <div class="filtros">
+      <label class="buscador">
+        <span class="solo-lectores">Buscar reporte</span>
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+        <input id="buscar" type="search" placeholder="Descripción, inmueble o persona" autocomplete="off">
+      </label>
+      <div class="segmentos" data-grupo id="filtro-estado" role="group" aria-label="Estado">
+        <button type="button" data-valor="" aria-pressed="true">Todos</button>
+        <button type="button" data-valor="ABIERTO" aria-pressed="false">Abiertos</button>
+        <button type="button" data-valor="EN_PROCESO" aria-pressed="false">En proceso</button>
+        <button type="button" data-valor="CERRADO" aria-pressed="false">Cerrados</button>
+      </div>
+      <label class="campo">
+        <span class="solo-lectores">Categoría</span>
+        <select id="filtro-categoria"></select>
+      </label>
+      <label class="opcion"><input type="checkbox" id="solo-sin-asignar"> Solo sin asignar</label>
+    </div>
+
+    <div class="superficie">
+      <div class="tabla-envoltura">
+        <table class="tabla" id="tabla-reportes">
+          <thead>
+            <tr><th>Reporte</th><th>Categoría</th><th>Inmueble</th><th>Creado</th><th>Responsable</th><th>Estado</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="vacio" id="sin-reportes" hidden>
+        <h3>Ningún reporte coincide con los filtros</h3>
+        <p>Prueba con otro estado o categoría, o busca por la unidad, por ejemplo <span class="identificador">B-0302</span>.</p>
+        <button class="btn segundo" type="button" id="limpiar">Quitar filtros</button>
+      </div>
+      <div class="pie"><span id="conteo"></span><span>Los reportes cerrados conservan su seguimiento.</span></div>
+    </div>
+  </section>
+
+  <!-- ===================== Categorías ===================== -->
+  <section id="panel-categorias" role="tabpanel" aria-labelledby="tab-categorias" hidden>
+    <div class="fila entre" style="margin-bottom:var(--e4)">
+      <p class="guia">Los residentes y los vigilantes eligen una categoría activa al crear un reporte.</p>
+      <button class="btn" type="button" id="crear-categoria">Crear categoría</button>
+    </div>
+    <div class="superficie">
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead>
+            <tr><th>Categoría</th><th>Descripción</th><th class="num">Reportes</th><th>Estado</th><th><span class="solo-lectores">Acciones</span></th></tr>
+          </thead>
+          <tbody id="tabla-categorias"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Detalle del reporte (RF-095): descripción, evidencia y SeguimientoReporte -->
+<dialog class="dialogo ancho" id="dialogo-detalle" aria-labelledby="titulo-detalle">
+  <div class="contenido">
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-detalle">Reporte <span class="identificador" data-d="id"></span></h2>
+        <p class="guia" data-d="origen"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila" style="gap:var(--e5)">
+      <div class="fila" data-d="estados"></div>
+      <p data-d="descripcion"></p>
+      <dl class="datos">
+        <div><dt>Inmueble</dt><dd data-d="inmueble"></dd></div>
+        <div><dt>Lo creó</dt><dd data-d="creo"></dd></div>
+        <div><dt>Responsable</dt><dd data-d="responsable"></dd></div>
+        <div><dt>Evidencia</dt><dd data-d="evidencia"></dd></div>
+      </dl>
+      <div class="ficha ok" data-d="solucion-caja" hidden>
+        <div class="fuerte">Solución aplicada</div>
+        <div class="meta" data-d="solucion" style="color:var(--tinta)"></div>
+      </div>
+      <div>
+        <h3 style="font-size:var(--t-base);margin-bottom:var(--e4)">Seguimiento</h3>
+        <ol class="linea-tiempo" data-d="seguimiento"></ol>
+      </div>
+    </div>
+    <div class="pie" data-d="acciones"></div>
+  </div>
+</dialog>
+
+<!-- Asignar responsable: Reporte.asignarResponsableDelReporte(responsable) → EventoSistema REPORTE_ASIGNADO -->
+<dialog class="dialogo" id="dialogo-responsable" aria-labelledby="titulo-responsable">
+  <form data-confirmar="Responsable asignado" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-responsable">Asignar responsable</h2>
+        <p class="guia" data-campo="reporte"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <label class="campo">
+        <span>Responsable</span>
+        <select id="responsable" required data-error="Elige quién va a atender el reporte.">
+          <option value="">Elige una persona</option>
+          <option value="Paula Ortega">Paula Ortega · Administradora</option>
+          <option value="Jhon Rojas">Jhon Rojas · Vigilante, turno noche</option>
+          <option value="Édgar Molina">Édgar Molina · Vigilante, turno día</option>
+          <option value="Hernán Ruiz">Hernán Ruiz · Consejo, tesorero</option>
+        </select>
+        <span class="ayuda">Le avisamos por correo que tiene este reporte a su cargo.</span>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Volver</button>
+      <button class="btn" type="submit">Asignar responsable</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Cambiar estado y registrar observación: registrarSeguimiento(reporteId, nuevoEstado, observacion) -->
+<dialog class="dialogo" id="dialogo-seguimiento" aria-labelledby="titulo-seguimiento">
+  <form data-confirmar="Seguimiento registrado" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-seguimiento">Cambiar estado</h2>
+        <p class="guia" data-campo="reporte"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo formulario">
+      <label class="campo" id="campo-estado">
+        <span>Nuevo estado</span>
+        <select id="nuevo-estado" required data-error="Elige el estado al que pasa el reporte.">
+          <option value="ABIERTO">Abierto</option>
+          <option value="EN_PROCESO">En proceso</option>
+        </select>
+        <span class="ayuda">Para cerrarlo usa Cerrar con solución: la solución es obligatoria.</span>
+      </label>
+      <label class="campo">
+        <span>Observación</span>
+        <textarea id="observacion" required placeholder="Se pidió cotización para cambiar las dos luminarias."
+                  data-error="Escribe la observación. Queda en el seguimiento y la ve quien creó el reporte."></textarea>
+        <span class="ayuda">Queda en el seguimiento y la ve quien creó el reporte.</span>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Volver</button>
+      <button class="btn" type="submit" id="boton-seguimiento">Cambiar estado</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Cerrar: Reporte.cerrarReporteConSolucion(solucion) → EventoSistema REPORTE_CERRADO -->
+<dialog class="dialogo" id="dialogo-cerrar" aria-labelledby="titulo-cerrar">
+  <form data-confirmar="Reporte cerrado" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-cerrar">Cerrar con solución</h2>
+        <p class="guia" data-campo="reporte"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <label class="campo">
+        <span>Solución aplicada</span>
+        <textarea id="solucion" required placeholder="Se cambiaron las dos luminarias del pasillo por unas LED."
+                  data-error="Escribe la solución aplicada. Sin ella no se puede cerrar el reporte."></textarea>
+        <span class="ayuda" data-campo="aviso"></span>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Volver</button>
+      <button class="btn" type="submit">Cerrar reporte</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Crear o modificar categoría: new CategoriaReporte(nombre).crearCategoriaDeReporte(), modificarCategoriaDeReporte() -->
+<dialog class="dialogo" id="dialogo-categoria" aria-labelledby="titulo-categoria">
+  <form data-confirmar="Categoría creada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-categoria">Crear categoría</h2>
+        <p class="guia">Quien crea un reporte la ve en la lista con su descripción.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo formulario">
+      <label class="campo">
+        <span>Nombre</span>
+        <input id="categoria-nombre" required placeholder="Ascensores" autocomplete="off"
+               data-error="Escribe el nombre de la categoría, por ejemplo Ascensores.">
+      </label>
+      <label class="campo">
+        <span>Descripción</span>
+        <textarea id="categoria-descripcion" required placeholder="Fallas, ruidos o atrapamientos en los ascensores de las torres."
+                  data-error="Escribe una descripción corta. Ayuda a elegir bien la categoría al crear un reporte."></textarea>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Volver</button>
+      <button class="btn" type="submit" id="boton-categoria">Crear categoría</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Desactivar categoría: CategoriaReporte.desactivarCategoriaDeReporte() -->
+<dialog class="dialogo" id="dialogo-desactivar" aria-labelledby="titulo-desactivar">
+  <form data-confirmar="Categoría desactivada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-desactivar">Desactivar categoría</h2>
+        <p class="guia" data-campo="nombre"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <p data-campo="efecto"></p>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Volver</button>
+      <button class="btn riesgo" type="submit">Desactivar categoría</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var HOY = new Date(2026, 10, 14)
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  var ESTADOS = { ABIERTO: ['p-al', 'Abierto'], EN_PROCESO: ['p-ne', 'En proceso'], CERRADO: ['p-ok', 'Cerrado'] }
+
+  var categorias = [
+    { id: 1, nombre: 'Seguridad', descripcion: 'Puertas, accesos, rondas y personas sospechosas.', reportes: 23, estado: 'ACTIVO' },
+    { id: 2, nombre: 'Ruido y convivencia', descripcion: 'Ruido, fiestas y trato entre vecinos.', reportes: 31, estado: 'ACTIVO' },
+    { id: 3, nombre: 'Mantenimiento', descripcion: 'Luminarias, tuberías, techos, puertas y equipos dañados.', reportes: 42, estado: 'ACTIVO' },
+    { id: 4, nombre: 'Aseo', descripcion: 'Basuras, shut y limpieza de las zonas comunes.', reportes: 12, estado: 'ACTIVO' },
+    { id: 5, nombre: 'Parqueaderos', descripcion: 'Parqueaderos ocupados sin permiso y vehículos mal estacionados.', reportes: 18, estado: 'ACTIVO' },
+    { id: 6, nombre: 'Zonas comunes', descripcion: 'Salón social, piscina, zona BBQ, cancha y jardines.', reportes: 15, estado: 'ACTIVO' },
+    { id: 7, nombre: 'Mascotas', descripcion: 'Desde octubre se reporta en Ruido y convivencia.', reportes: 4, estado: 'INACTIVO' },
+  ]
+
+  var reportes = [
+    { id: 'R-0148', categoria: 1, descripcion: 'La puerta del sótano 2 no está cerrando sola y queda abierta hacia la calle.', inmueble: 'Sótano 2', creo: 'Jhon Rojas', rolCreo: 'Vigilante', creado: '2026-11-14 18:10', responsable: '', estado: 'ABIERTO', evidencia: 'puerta-sotano-2.jpg', seguimientos: [] },
+    { id: 'R-0147', categoria: 2, descripcion: 'Música a alto volumen después de las 11 de la noche en el piso 9 de la torre A, el viernes y el sábado pasados.', inmueble: 'A-0902', creo: 'Marta Oviedo', rolCreo: 'Propietaria residente', creado: '2026-11-13 23:40', responsable: '', estado: 'ABIERTO', evidencia: '', seguimientos: [] },
+    { id: 'R-0146', categoria: 3, descripcion: 'Gotera en el techo del parqueadero de visitantes V-07 cuando llueve. Ya hay un charco que moja los carros.', inmueble: 'V-07', creo: 'Jhon Rojas', rolCreo: 'Vigilante', creado: '2026-11-12 21:15', responsable: '', estado: 'ABIERTO', evidencia: 'gotera-v07.mp4', seguimientos: [] },
+    { id: 'R-0145', categoria: 3, descripcion: 'Dos luminarias apagadas en el pasillo del piso 3 de la torre B. En la noche el pasillo queda oscuro.', inmueble: 'Torre B', creo: 'Lucía Mendoza', rolCreo: 'Arrendataria · B-0302', creado: '2026-11-11 19:05', responsable: 'Paula Ortega', estado: 'EN_PROCESO', evidencia: 'pasillo-b-piso-3.jpg', seguimientos: [
+      ['2026-11-12 09:20', 'Se pidió cotización a Eléctricos del Caribe para cambiar las dos luminarias por unas LED.'],
+      ['2026-11-13 16:45', 'Los repuestos llegan el martes 17. El cambio queda para ese día en la mañana.'],
+    ] },
+    { id: 'R-0143', categoria: 5, descripcion: 'Un carro de placa HZM 908 ocupa el parqueadero P-022, que está cedido a B-0302.', inmueble: 'P-022', creo: 'Lucía Mendoza', rolCreo: 'Arrendataria · B-0302', creado: '2026-11-09 07:30', responsable: 'Jhon Rojas', estado: 'EN_PROCESO', evidencia: 'p-022-hzm-908.jpg', seguimientos: [
+      ['2026-11-09 22:10', 'El vehículo es de una visita de C-1201. Se habló con la residente y lo movieron a V-03.'],
+      ['2026-11-11 21:30', 'El vehículo volvió a parquear en P-022. Se dejó aviso escrito en el parabrisas.'],
+    ] },
+    { id: 'R-0140', categoria: 4, descripcion: 'Malos olores en el shut de basuras de la torre C desde hace una semana.', inmueble: 'Torre C', creo: 'Andrés Caicedo', rolCreo: 'Arrendatario · C-0705', creado: '2026-11-04 08:15', responsable: 'Paula Ortega', estado: 'CERRADO', evidencia: '', solucion: 'Se lavó y desinfectó el shut, y la recolección pasó a las 7:00 a. m. todos los días.', seguimientos: [
+      ['2026-11-05 10:00', 'Se programó el lavado con la empresa de aseo para el viernes 6.'],
+      ['2026-11-06 15:20', 'Lavado hecho. Se cambió el horario de recolección con la empresa.'],
+    ] },
+    { id: 'R-0138', categoria: 6, descripcion: 'La reja de la piscina tiene el candado dañado y se queda abierta en la noche.', inmueble: 'Piscina', creo: 'Gloria Ariza', rolCreo: 'Propietaria residente · A-0401', creado: '2026-11-01 17:00', responsable: 'Paula Ortega', estado: 'CERRADO', evidencia: 'candado-piscina.jpg', solucion: 'Se cambió el candado y se entregó una copia de la llave a portería.', seguimientos: [
+      ['2026-11-02 08:40', 'Se compró el candado nuevo. Mientras tanto, portería cierra la reja con cadena.'],
+    ] },
+  ]
+
+  var CARGOS = { 'Paula Ortega': 'Administradora', 'Jhon Rojas': 'Vigilante, turno noche', 'Édgar Molina': 'Vigilante, turno día', 'Hernán Ruiz': 'Consejo, tesorero' }
+  var filtro = { texto: '', estado: '', categoria: '', sinAsignar: false }
+  var actual = null
+  var categoriaActual = null
+
+  // ---------- Utilidades ----------
+  function leer(t) { var p = t.split(/[- :]/).map(Number); return new Date(p[0], p[1] - 1, p[2], p[3] || 0, p[4] || 0) }
+  function hora(d) {
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    if (h === 12 && m === '00') return '12:00 m.'
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  function dias(d) { return Math.round((HOY - new Date(d.getFullYear(), d.getMonth(), d.getDate())) / 86400000) }
+  function fecha(d) {
+    var n = dias(d)
+    return n === 0 ? 'Hoy' : n === 1 ? 'Ayer' : d.getDate() + ' de ' + MESES[d.getMonth()]
+  }
+  function hace(d) { var n = dias(d); return n === 0 ? 'hoy' : n === 1 ? 'hace 1 día' : 'hace ' + n + ' días' }
+  function ahora() { var d = new Date(); return new Date(2026, 10, 14, d.getHours(), d.getMinutes()) }
+  function texto(d) { return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate() + ' ' + d.getHours() + ':' + d.getMinutes() }
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  function categoria(id) { return categorias.filter(function (c) { return c.id === id })[0] }
+  function esCodigo(t) { return /^[A-Z]-\d+$/.test(t) }
+  function inmueble(t) { return esCodigo(t) ? '<span class="identificador">' + esc(t) + '</span>' : esc(t) }
+  function pildora(estado) { return '<span class="pildora ' + ESTADOS[estado][0] + '">' + ESTADOS[estado][1] + '</span>' }
+  function sinAsignar(r) { return !r.responsable && r.estado !== 'CERRADO' }
+
+  // ---------- Reportes ----------
+  function pintarReportes() {
+    var visibles = reportes.filter(function (r) {
+      var t = filtro.texto
+      return (!t || (r.id + ' ' + r.descripcion + ' ' + r.inmueble + ' ' + r.creo + ' ' + r.responsable).toLowerCase().indexOf(t) >= 0) &&
+        (!filtro.estado || r.estado === filtro.estado) &&
+        (!filtro.categoria || r.categoria === Number(filtro.categoria)) &&
+        (!filtro.sinAsignar || sinAsignar(r))
+    })
+    document.querySelector('#tabla-reportes tbody').innerHTML = visibles.map(function (r) {
+      var c = leer(r.creado)
+      return '<tr>' +
+        '<td class="descripcion"><a class="fila-enlace identificador" href="#' + r.id + '" data-reporte="' + r.id + '">' + r.id + '</a><span class="sub resumen">' + esc(r.descripcion) + '</span></td>' +
+        '<td><span class="etiqueta">' + esc(categoria(r.categoria).nombre) + '</span></td>' +
+        '<td>' + inmueble(r.inmueble) + '</td>' +
+        '<td>' + fecha(c) + ', ' + hora(c) + '<span class="sub">' + esc(r.creo) + '</span></td>' +
+        '<td>' + (r.responsable ? esc(r.responsable) + '<span class="sub">' + esc(CARGOS[r.responsable]) + '</span>' : (r.estado === 'CERRADO' ? '<span class="guia">Nadie</span>' : '<span class="pildora p-al">Sin asignar</span>')) + '</td>' +
+        '<td>' + pildora(r.estado) + (r.estado !== 'CERRADO' ? '<span class="sub">Abierto ' + hace(c) + '</span>' : '') + '</td>' +
+        '</tr>'
+    }).join('')
+    document.querySelector('#tabla-reportes').hidden = visibles.length === 0
+    document.getElementById('sin-reportes').hidden = visibles.length > 0
+    document.getElementById('conteo').textContent = visibles.length + ' de ' + reportes.length + ' reportes de noviembre'
+    document.getElementById('cuenta-reportes').textContent = reportes.length
+
+    var sin = reportes.filter(sinAsignar).length
+    var proceso = reportes.filter(function (r) { return r.estado === 'EN_PROCESO' }).length
+    document.getElementById('resumen').textContent = (sin ? sin + ' sin asignar' : 'Todos tienen responsable') + ' · ' + proceso + ' en proceso · ' +
+      reportes.filter(function (r) { return r.estado === 'CERRADO' }).length + ' cerrados este mes'
+  }
+
+  function pintarFiltroCategorias() {
+    var select = document.getElementById('filtro-categoria')
+    var valor = select.value
+    select.innerHTML = '<option value="">Todas las categorías</option>' + categorias.map(function (c) {
+      return '<option value="' + c.id + '">' + esc(c.nombre) + (c.estado === 'INACTIVO' ? ' (inactiva)' : '') + '</option>'
+    }).join('')
+    select.value = valor
+  }
+
+  // ---------- Detalle ----------
+  function d(campo) { return document.querySelector('#dialogo-detalle [data-d="' + campo + '"]') }
+
+  function pintarDetalle() {
+    var r = actual
+    var c = leer(r.creado)
+    d('id').textContent = r.id
+    d('origen').textContent = categoria(r.categoria).nombre + ' · creado ' + fecha(c).toLowerCase().replace(/^(\d)/, 'el $1') + ' a las ' + hora(c)
+    d('estados').innerHTML = pildora(r.estado) + (sinAsignar(r) ? ' <span class="pildora p-al">Sin asignar</span>' : '') +
+      (r.estado !== 'CERRADO' ? ' <span class="guia">Abierto ' + hace(c) + '</span>' : '')
+    d('descripcion').textContent = r.descripcion
+    d('inmueble').innerHTML = inmueble(r.inmueble)
+    d('creo').innerHTML = esc(r.creo) + '<span class="guia" style="display:block">' + esc(r.rolCreo) + '</span>'
+    d('responsable').innerHTML = r.responsable
+      ? esc(r.responsable) + '<span class="guia" style="display:block">' + esc(CARGOS[r.responsable]) + '</span>'
+      : (r.estado === 'CERRADO' ? 'Nadie' : '<span class="pildora p-al">Sin asignar</span>')
+    d('evidencia').innerHTML = r.evidencia ? '<span class="dato" style="font-size:var(--t-sm)">' + esc(r.evidencia) + '</span>' : '<span class="guia">Sin evidencia adjunta</span>'
+    d('solucion-caja').hidden = r.estado !== 'CERRADO'
+    d('solucion').textContent = r.solucion || ''
+
+    var items = ['<li class="az"><div class="cuando">' + fecha(c) + ', ' + hora(c) + '</div><div class="que">Reporte creado por ' + esc(r.creo) + '</div></li>']
+    r.seguimientos.forEach(function (s) {
+      var f = leer(s[0])
+      items.push('<li><div class="cuando">' + fecha(f) + ', ' + hora(f) + '</div><div class="detalle">' + esc(s[1]) + '</div></li>')
+    })
+    if (!r.seguimientos.length && r.estado !== 'CERRADO') items.push('<li><div class="detalle guia">Todavía no hay observaciones. Registra la primera cuando empiece la atención.</div></li>')
+    d('seguimiento').innerHTML = items.join('')
+
+    var acciones = d('acciones')
+    if (r.estado === 'CERRADO') {
+      acciones.innerHTML = '<button class="btn segundo" type="button" data-cerrar>Volver a la lista</button>'
+    } else {
+      acciones.innerHTML =
+        '<button class="btn segundo" type="button" data-hacer="responsable">' + (r.responsable ? 'Cambiar responsable' : 'Asignar responsable') + '</button>' +
+        '<button class="btn segundo" type="button" data-hacer="estado">Cambiar estado</button>' +
+        '<button class="btn segundo" type="button" data-hacer="observacion">Registrar observación</button>' +
+        '<button class="btn" type="button" data-hacer="cerrar">Cerrar con solución</button>'
+    }
+  }
+
+  function preparar(id) {
+    var dialogo = document.getElementById(id)
+    var formulario = dialogo.querySelector('form')
+    formulario.reset()
+    formulario.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    formulario.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+    var guia = dialogo.querySelector('[data-campo="reporte"]')
+    if (guia && actual) guia.innerHTML = '<span class="identificador">' + actual.id + '</span> · ' + esc(actual.descripcion)
+    return dialogo
+  }
+
+  function abrirSeguimiento(modo) {
+    var dialogo = preparar('dialogo-seguimiento')
+    var cambiar = modo === 'estado'
+    dialogo.querySelector('#titulo-seguimiento').textContent = cambiar ? 'Cambiar estado' : 'Registrar observación'
+    dialogo.querySelector('#boton-seguimiento').textContent = cambiar ? 'Cambiar estado' : 'Registrar observación'
+    dialogo.querySelector('#campo-estado').hidden = !cambiar
+    dialogo.querySelector('#nuevo-estado').value = actual.estado === 'ABIERTO' ? 'EN_PROCESO' : 'ABIERTO'
+    dialogo.setAttribute('data-modo', modo)
+    Convivir.abrir('dialogo-seguimiento')
+  }
+
+  document.addEventListener('click', function (e) {
+    var enlace = e.target.closest('[data-reporte]')
+    if (enlace) {
+      e.preventDefault()
+      actual = reportes.filter(function (r) { return r.id === enlace.getAttribute('data-reporte') })[0]
+      pintarDetalle()
+      Convivir.abrir('dialogo-detalle')
+    }
+    var hacer = e.target.closest('[data-hacer]')
+    if (hacer) {
+      var accion = hacer.getAttribute('data-hacer')
+      if (accion === 'responsable') {
+        preparar('dialogo-responsable')
+        document.getElementById('responsable').value = actual.responsable
+        Convivir.abrir('dialogo-responsable')
+      }
+      if (accion === 'estado' || accion === 'observacion') abrirSeguimiento(accion)
+      if (accion === 'cerrar') {
+        var dialogo = preparar('dialogo-cerrar')
+        dialogo.querySelector('[data-campo="aviso"]').textContent = 'La ve ' + actual.creo + ', que creó el reporte. Le avisamos por correo al cerrarlo.'
+        Convivir.abrir('dialogo-cerrar')
+      }
+    }
+  })
+
+  function despues() { pintarReportes(); pintarDetalle() }
+
+  document.querySelector('#dialogo-responsable form').addEventListener('confirmado', function () {
+    actual.responsable = document.getElementById('responsable').value
+    this.setAttribute('data-confirmar', 'Responsable asignado: ' + actual.responsable + '. Le avisamos por correo.')
+    despues()
+  })
+
+  document.querySelector('#dialogo-seguimiento form').addEventListener('confirmado', function (e) {
+    var dialogo = document.getElementById('dialogo-seguimiento')
+    var cambiar = dialogo.getAttribute('data-modo') === 'estado'
+    var select = document.getElementById('nuevo-estado')
+    if (cambiar && select.value === actual.estado) {
+      e.preventDefault()
+      select.setAttribute('aria-invalid', 'true')
+      var error = document.createElement('span')
+      error.className = 'error'
+      error.setAttribute('data-generado', '')
+      error.textContent = 'El reporte ya está ' + ESTADOS[actual.estado][1].toLowerCase() + '. Elige otro estado, o usa Registrar observación para anotar sin cambiarlo.'
+      select.closest('.campo').appendChild(error)
+      select.focus()
+      return
+    }
+    if (cambiar) actual.estado = select.value
+    actual.seguimientos.push([texto(ahora()), document.getElementById('observacion').value.trim()])
+    this.setAttribute('data-confirmar', cambiar ? 'Estado cambiado a ' + ESTADOS[actual.estado][1].toLowerCase() + '. La observación quedó en el seguimiento.' : 'Observación registrada en el seguimiento.')
+    despues()
+  })
+
+  document.querySelector('#dialogo-cerrar form').addEventListener('confirmado', function () {
+    actual.estado = 'CERRADO'
+    actual.solucion = document.getElementById('solucion').value.trim()
+    this.setAttribute('data-confirmar', 'Reporte cerrado. Le avisamos a ' + actual.creo + ' con la solución.')
+    despues()
+  })
+
+  // ---------- Categorías ----------
+  function pintarCategorias() {
+    document.getElementById('tabla-categorias').innerHTML = categorias.map(function (c) {
+      var activa = c.estado === 'ACTIVO'
+      return '<tr>' +
+        '<td class="fuerte">' + esc(c.nombre) + '</td>' +
+        '<td style="min-width:16rem">' + esc(c.descripcion) + '</td>' +
+        '<td class="num">' + c.reportes + '</td>' +
+        '<td>' + (activa ? '<span class="pildora p-ok">Activa</span>' : '<span class="pildora p-ne">Inactiva</span>') + '</td>' +
+        '<td class="acciones-fila">' + (activa
+          ? '<button class="btn segundo chico" type="button" data-categoria="modificar" data-id="' + c.id + '">Modificar</button> ' +
+            '<button class="btn texto chico" type="button" data-categoria="desactivar" data-id="' + c.id + '">Desactivar</button>'
+          : '<span class="guia">Ya no se puede elegir</span>') + '</td>' +
+        '</tr>'
+    }).join('')
+    document.getElementById('cuenta-categorias').textContent = categorias.length
+    pintarFiltroCategorias()
+  }
+
+  function abrirCategoria(c) {
+    categoriaActual = c || null
+    var dialogo = document.getElementById('dialogo-categoria')
+    var formulario = dialogo.querySelector('form')
+    formulario.reset()
+    formulario.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    formulario.querySelectorAll('[aria-invalid]').forEach(function (x) { x.removeAttribute('aria-invalid') })
+    dialogo.querySelector('#titulo-categoria').textContent = c ? 'Modificar categoría' : 'Crear categoría'
+    dialogo.querySelector('#boton-categoria').textContent = c ? 'Guardar cambios' : 'Crear categoría'
+    if (c) {
+      document.getElementById('categoria-nombre').value = c.nombre
+      document.getElementById('categoria-descripcion').value = c.descripcion
+    }
+    Convivir.abrir('dialogo-categoria')
+  }
+
+  document.getElementById('crear-categoria').addEventListener('click', function () { abrirCategoria() })
+
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-categoria]')
+    if (!b) return
+    var c = categoria(Number(b.getAttribute('data-id')))
+    if (b.getAttribute('data-categoria') === 'modificar') abrirCategoria(c)
+    else {
+      categoriaActual = c
+      var dialogo = document.getElementById('dialogo-desactivar')
+      dialogo.querySelector('[data-campo="nombre"]').textContent = c.nombre
+      var abiertos = reportes.filter(function (r) { return r.categoria === c.id && r.estado !== 'CERRADO' }).length
+      dialogo.querySelector('[data-campo="efecto"]').textContent =
+        'Los ' + c.reportes + ' reportes que ya la tienen la conservan' + (abiertos ? ', incluidos ' + abiertos + ' que siguen abiertos' : '') +
+        '. Desde ahora nadie podrá elegirla al crear un reporte.'
+      Convivir.abrir('dialogo-desactivar')
+    }
+  })
+
+  document.querySelector('#dialogo-categoria form').addEventListener('confirmado', function () {
+    var nombre = document.getElementById('categoria-nombre').value.trim()
+    var descripcion = document.getElementById('categoria-descripcion').value.trim()
+    if (categoriaActual) {
+      categoriaActual.nombre = nombre
+      categoriaActual.descripcion = descripcion
+      this.setAttribute('data-confirmar', 'Categoría modificada: ' + nombre + '.')
+    } else {
+      categorias.push({ id: categorias.length + 1, nombre: nombre, descripcion: descripcion, reportes: 0, estado: 'ACTIVO' })
+      this.setAttribute('data-confirmar', 'Categoría creada: ' + nombre + '. Ya aparece al crear un reporte.')
+    }
+    pintarCategorias()
+    pintarReportes()
+  })
+
+  document.querySelector('#dialogo-desactivar form').addEventListener('confirmado', function () {
+    categoriaActual.estado = 'INACTIVO'
+    this.setAttribute('data-confirmar', 'Categoría desactivada: ' + categoriaActual.nombre + '.')
+    pintarCategorias()
+  })
+
+  // ---------- Filtros ----------
+  document.getElementById('buscar').addEventListener('input', function () { filtro.texto = this.value.trim().toLowerCase(); pintarReportes() })
+  document.getElementById('filtro-estado').addEventListener('cambio', function (e) { filtro.estado = e.detail; pintarReportes() })
+  document.getElementById('filtro-categoria').addEventListener('change', function () { filtro.categoria = this.value; pintarReportes() })
+  document.getElementById('solo-sin-asignar').addEventListener('change', function () { filtro.sinAsignar = this.checked; pintarReportes() })
+  document.getElementById('limpiar').addEventListener('click', function () {
+    document.getElementById('buscar').value = ''
+    document.getElementById('filtro-categoria').value = ''
+    document.getElementById('solo-sin-asignar').checked = false
+    document.querySelector('#filtro-estado [data-valor=""]').click()
+    filtro = { texto: '', estado: '', categoria: '', sinAsignar: false }
+    pintarReportes()
+  })
+
+  pintarCategorias()
+  pintarReportes()
+})()
+</script>
+</body>
+</html>

@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reportes · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* Campo para adjuntar una imagen: muestra el archivo elegido. Solo tokens. */
+  .adjunto {
+    display: flex; align-items: center; gap: var(--e3); flex-wrap: wrap;
+    padding: var(--e3);
+    border: 1px dashed var(--borde);
+    border-radius: var(--r-control);
+    background: var(--fondo);
+    cursor: pointer;
+    min-width: 0;
+  }
+  .adjunto:hover { background: var(--concreto); }
+  .adjunto:focus-within { outline: 2px solid var(--convivir); outline-offset: 2px; }
+  .adjunto.con-archivo { border-style: solid; background: var(--papel); }
+  .adjunto[aria-invalid="true"] { border-color: var(--no); }
+  .adjunto img { width: 48px; height: 48px; object-fit: cover; border-radius: var(--r-control); border: 1px solid var(--borde); flex: none; }
+  .adjunto .nombre-archivo { min-width: 0; flex: 1; font-size: var(--t-sm); overflow-wrap: anywhere; }
+  .adjunto .nombre-archivo small { display: block; color: var(--acero); font-size: var(--t-xs); }
+  /* El seguimiento ocupa todo el ancho del renglón. */
+  .lista > li > .seguimiento { flex-basis: 100%; padding-top: var(--e3); }
+</style>
+</head>
+<!-- CU-15 Crear reporte · Reporte(descripcion).crearReporteDeNovedad() (RF-090), evidencia (RF-091)
+     CategoriaReporte ACTIVA; inmueble opcional con vinculación vigente (RN-33, 403)
+     Consultar reportes propios y del inmueble con su SeguimientoReporte (RF-092, RF-093), solo lectura -->
+<body data-rol="residente" data-seccion="reportes">
+
+<main class="pagina media">
+  <div class="encabezado">
+    <div>
+      <h1>Reportes</h1>
+      <p class="guia">Daños, problemas de seguridad o de convivencia. La administración los asigna y te cuenta cómo van.</p>
+    </div>
+    <div class="acciones">
+      <button class="btn" type="button" data-abrir="dialogo-reporte">Crear reporte</button>
+    </div>
+  </div>
+
+  <div class="filtros">
+    <div class="segmentos" data-grupo id="filtro-estado" role="group" aria-label="Estado">
+      <button type="button" data-valor="curso" aria-pressed="true">En curso</button>
+      <button type="button" data-valor="CERRADO" aria-pressed="false">Cerrados</button>
+      <button type="button" data-valor="" aria-pressed="false">Todos</button>
+    </div>
+  </div>
+
+  <div class="superficie">
+    <ul class="lista" id="lista-reportes"></ul>
+    <div class="vacio" id="vacio-reportes" hidden>
+      <svg class="simbolo" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M10 5h14l7 7v23H10z"/><path d="M24 5v7h7M15 20h11M15 26h8"/></svg>
+      <h3 id="vacio-titulo">No tienes reportes en curso</h3>
+      <p>Si ves un daño o algo que afecte la convivencia, repórtalo aquí y no por el grupo de WhatsApp: queda registrado y sabes en qué va.</p>
+      <button class="btn segundo" type="button" data-abrir="dialogo-reporte">Crear reporte</button>
+    </div>
+  </div>
+</main>
+
+<footer class="pie-pagina no-imprimir">
+  Para ver el aviso de inmueble sin vínculo vigente (RN-33), crea un reporte, elige Otro inmueble y escribe <span class="identificador">B-0402</span>.
+</footer>
+
+<!-- Crear reporte: new Reporte(descripcion), crearReporteDeNovedad() -->
+<dialog class="dialogo" id="dialogo-reporte" aria-labelledby="titulo-reporte">
+  <form id="form-reporte" data-confirmar="Reporte creado. Te avisamos cuando la administración lo asigne." data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-reporte">Crear reporte</h2>
+        <p class="guia">Lo recibe la administración de Villa Campestre.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="aviso no" id="error-vinculo" role="alert" hidden style="margin-bottom:var(--e4)"></div>
+      <div class="formulario">
+        <label class="campo">
+          <span>Categoría</span>
+          <select name="categoria" required data-error="Elige la categoría. Así llega a la persona que lo puede resolver.">
+            <option value="">Elige una categoría</option>
+            <option>Daños e infraestructura</option>
+            <option>Seguridad</option>
+            <option>Ruido y convivencia</option>
+            <option>Aseo y basuras</option>
+            <option>Ascensores</option>
+            <option>Parqueaderos</option>
+            <option>Otro</option>
+          </select>
+        </label>
+        <label class="campo">
+          <span>Qué pasa</span>
+          <textarea name="descripcion" required maxlength="1000" placeholder="La luminaria del sótano 1, frente al parqueadero P-022, está apagada desde el martes."
+                    data-error="Describe la novedad: qué pasa, dónde y desde cuándo."></textarea>
+          <span class="ayuda">Di qué pasa, dónde y desde cuándo.</span>
+        </label>
+        <div class="campo" id="campo-evidencia">
+          <span class="rotulo" id="rotulo-evidencia">Evidencia <span class="opcional">(opcional)</span></span>
+          <label class="adjunto" id="adjunto">
+            <input type="file" id="evidencia" name="evidencia" accept="image/jpeg,image/png,image/webp" class="solo-lectores" aria-labelledby="rotulo-evidencia" aria-describedby="ayuda-evidencia">
+            <img id="miniatura" alt="" hidden>
+            <span class="btn segundo chico" aria-hidden="true" id="texto-boton-archivo">Elegir foto</span>
+            <span class="nombre-archivo" id="nombre-archivo">Ninguna foto elegida</span>
+          </label>
+          <span class="ayuda" id="ayuda-evidencia">Una foto en JPG, PNG o WEBP de hasta 5 MB.</span>
+          <button class="btn texto chico" type="button" id="quitar-evidencia" hidden>Quitar foto</button>
+        </div>
+        <label class="campo">
+          <span>Inmueble relacionado <span class="opcional">(opcional)</span></span>
+          <select name="inmueble" id="inmueble">
+            <option value="">Ninguno: es de una zona común o del conjunto</option>
+            <option value="B-0302">Torre B · Apto 302, donde vives</option>
+            <option value="otro">Otro inmueble</option>
+          </select>
+        </label>
+        <label class="campo" id="campo-otro" hidden>
+          <span>Identificación del inmueble</span>
+          <input name="otroInmueble" id="otro-inmueble" class="identificador" required autocomplete="off" placeholder="B-0402"
+                 data-error="Escribe la identificación del inmueble, por ejemplo B-0402.">
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Crear reporte</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id) }
+  var MAXIMO = 5 * 1024 * 1024
+
+  // Reporte con su SeguimientoReporte. Lucía solo los consulta: no cambia el estado.
+  var reportes = [
+    { id: 'R-0437', categoria: 'Daños e infraestructura', descripcion: 'La luminaria del sótano 1, frente al parqueadero P-022, está apagada desde el martes. En la noche queda muy oscuro para salir del carro.',
+      inmueble: '', evidencia: 'luminaria-sotano1.jpg', creado: '12 de noviembre', estado: 'ABIERTO', responsable: '',
+      seguimiento: [{ cuando: '12 de noviembre, 8:14 p. m.', que: 'Reporte creado', detalle: 'Llegó a la administración. Todavía no tiene responsable.' }] },
+    { id: 'R-0412', categoria: 'Daños e infraestructura', descripcion: 'Sale agua del techo del baño principal cuando usan la ducha del apartamento de arriba. Ya hay una mancha de unos 40 cm.',
+      inmueble: 'B-0302', evidencia: 'techo-bano.jpg', creado: '2 de noviembre', estado: 'EN_PROCESO', responsable: 'Carlos Gómez, mantenimiento',
+      seguimiento: [
+        { cuando: '2 de noviembre, 9:30 a. m.', que: 'Reporte creado', detalle: 'Con una foto adjunta.' },
+        { cuando: '3 de noviembre, 8:10 a. m.', que: 'Asignado a Carlos Gómez, mantenimiento', detalle: 'Paula Ortega, administradora, cambió el estado a en proceso.' },
+        { cuando: '5 de noviembre, 4:45 p. m.', que: 'Observación', detalle: 'Se revisó desde el apartamento de arriba: la filtración viene del sifón de la ducha.' },
+        { cuando: '10 de noviembre, 11:20 a. m.', que: 'Observación', detalle: 'El plomero viene el martes 17 de noviembre a las 9:00 a. m. Por favor deja acceso al baño.' },
+      ] },
+    { id: 'R-0365', categoria: 'Aseo y basuras', descripcion: 'La puerta del shut de basuras del piso 3 de la Torre B no cierra y sale mal olor al pasillo.',
+      inmueble: '', evidencia: '', creado: '14 de octubre', estado: 'CERRADO', responsable: 'Carlos Gómez, mantenimiento',
+      seguimiento: [
+        { cuando: '14 de octubre, 7:02 p. m.', que: 'Reporte creado', detalle: '' },
+        { cuando: '15 de octubre, 9:00 a. m.', que: 'Asignado a Carlos Gómez, mantenimiento', detalle: '' },
+        { cuando: '20 de octubre, 3:30 p. m.', que: 'Cerrado con solución', detalle: 'Se cambiaron las bisagras y el brazo hidráulico de la puerta.', cerrado: true },
+      ] },
+    { id: 'R-0298', categoria: 'Seguridad', descripcion: 'La puerta peatonal de la portería se queda abierta después de que alguien pasa.',
+      inmueble: '', evidencia: 'puerta-peatonal.jpg', creado: '28 de agosto', estado: 'CERRADO', responsable: 'Jhon Rojas, vigilancia',
+      seguimiento: [
+        { cuando: '28 de agosto, 10:15 p. m.', que: 'Reporte creado', detalle: 'Con una foto adjunta.' },
+        { cuando: '29 de agosto, 7:40 a. m.', que: 'Asignado a Jhon Rojas, vigilancia', detalle: '' },
+        { cuando: '2 de septiembre, 6:00 p. m.', que: 'Cerrado con solución', detalle: 'Se ajustó el cierre automático. Portería revisa la puerta en cada ronda.', cerrado: true },
+      ] },
+  ]
+  var siguiente = 438
+  var filtro = 'curso'
+  var abiertos = {}
+
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  function horaActual() {
+    var d = new Date()
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  var ESTADOS = {
+    ABIERTO: '<span class="pildora p-al">Abierto</span>',
+    EN_PROCESO: '<span class="pildora p-ne">En proceso</span>',
+    CERRADO: '<span class="pildora p-ok">Cerrado</span>',
+  }
+
+  // ---------- Mis reportes (RF-092, RF-093) ----------
+  function pintar() {
+    var visibles = reportes.filter(function (r) {
+      if (filtro === 'curso') return r.estado !== 'CERRADO'
+      return !filtro || r.estado === filtro
+    })
+    $('lista-reportes').innerHTML = visibles.map(function (r) {
+      var abierto = !!abiertos[r.id]
+      var datos = ['Creado el ' + r.creado]
+      if (r.inmueble) datos.push('<span class="identificador">' + esc(r.inmueble) + '</span>')
+      if (r.evidencia) datos.push('con foto')
+      var ultimo = r.seguimiento.length - 1
+      return '<li>' +
+        '<div class="principal">' +
+          '<b>' + esc(r.categoria) + ' <span class="identificador guia">' + r.id + '</span></b>' +
+          '<p style="font-size:var(--t-sm);margin:2px 0">' + esc(r.descripcion) + '</p>' +
+          '<span>' + datos.join(' · ') + '</span>' +
+          '<span>' + (r.responsable ? 'Lo atiende ' + esc(r.responsable) : 'Sin responsable todavía') + '</span>' +
+        '</div>' +
+        '<div class="fila" style="gap:var(--e2)">' + ESTADOS[r.estado] +
+          '<button class="btn texto chico" type="button" data-ver="' + r.id + '" aria-expanded="' + abierto + '" aria-controls="seg-' + r.id + '">' +
+            (abierto ? 'Ocultar seguimiento' : 'Ver seguimiento') + '</button>' +
+        '</div>' +
+        '<div class="seguimiento" id="seg-' + r.id + '"' + (abierto ? '' : ' hidden') + '>' +
+          '<ol class="linea-tiempo">' + r.seguimiento.slice().reverse().map(function (s, i) {
+            var clase = s.cerrado ? 'ok' : (i === 0 ? 'az' : '')
+            return '<li' + (clase ? ' class="' + clase + '"' : '') + '>' +
+              '<div class="cuando">' + s.cuando + '</div>' +
+              '<div class="que">' + esc(s.que) + '</div>' +
+              (s.detalle ? '<div class="detalle">' + esc(s.detalle) + '</div>' : '') +
+            '</li>'
+          }).join('') + '</ol>' +
+        '</div>' +
+      '</li>'
+    }).join('')
+    $('vacio-reportes').hidden = visibles.length > 0
+    $('vacio-titulo').textContent = filtro === 'CERRADO' ? 'No tienes reportes cerrados' : filtro === 'curso' ? 'No tienes reportes en curso' : 'Todavía no has creado reportes'
+  }
+
+  $('filtro-estado').addEventListener('cambio', function (e) { filtro = e.detail; pintar() })
+  $('lista-reportes').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-ver]')
+    if (!b) return
+    abiertos[b.dataset.ver] = !abiertos[b.dataset.ver]
+    pintar()
+  })
+
+  // ---------- Evidencia (RF-091) ----------
+  var archivo = $('evidencia')
+  var adjunto = $('adjunto')
+
+  function limpiarEvidencia() {
+    archivo.value = ''
+    adjunto.classList.remove('con-archivo')
+    adjunto.removeAttribute('aria-invalid')
+    $('miniatura').hidden = true
+    $('miniatura').removeAttribute('src')
+    $('nombre-archivo').textContent = 'Ninguna foto elegida'
+    $('texto-boton-archivo').textContent = 'Elegir foto'
+    $('quitar-evidencia').hidden = true
+    var error = $('campo-evidencia').querySelector('.error')
+    if (error) error.remove()
+  }
+
+  function errorEvidencia(mensaje) {
+    limpiarEvidencia()
+    adjunto.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.textContent = mensaje
+    $('ayuda-evidencia').insertAdjacentElement('afterend', error)
+  }
+
+  archivo.addEventListener('change', function () {
+    var f = archivo.files[0]
+    if (!f) { limpiarEvidencia(); return }
+    if (!/^image\/(jpeg|png|webp)$/.test(f.type)) {
+      errorEvidencia(f.name + ' no es una foto. Elige una imagen en JPG, PNG o WEBP.')
+      return
+    }
+    if (f.size > MAXIMO) {
+      errorEvidencia('La foto pesa ' + (f.size / 1048576).toFixed(1).replace('.', ',') + ' MB. Elige una de hasta 5 MB o tómala con menos resolución.')
+      return
+    }
+    var previo = $('campo-evidencia').querySelector('.error')
+    if (previo) previo.remove()
+    adjunto.removeAttribute('aria-invalid')
+    adjunto.classList.add('con-archivo')
+    $('miniatura').src = URL.createObjectURL(f)
+    $('miniatura').hidden = false
+    $('nombre-archivo').innerHTML = '<span></span><small></small>'
+    $('nombre-archivo').firstChild.textContent = f.name
+    $('nombre-archivo').lastChild.textContent = (f.size < 1048576 ? Math.max(1, Math.round(f.size / 1024)) + ' KB' : (f.size / 1048576).toFixed(1).replace('.', ',') + ' MB')
+    $('texto-boton-archivo').textContent = 'Cambiar foto'
+    $('quitar-evidencia').hidden = false
+  })
+  $('quitar-evidencia').addEventListener('click', limpiarEvidencia)
+
+  // ---------- Inmueble relacionado ----------
+  var selectInmueble = $('inmueble')
+  selectInmueble.addEventListener('change', function () {
+    $('campo-otro').hidden = selectInmueble.value !== 'otro'
+    $('error-vinculo').hidden = true
+  })
+  $('otro-inmueble').addEventListener('input', function () { $('error-vinculo').hidden = true })
+
+  // ---------- Crear reporte: POST /api/reportes ----------
+  var formulario = $('form-reporte')
+  formulario.addEventListener('confirmado', function (e) {
+    var f = formulario.elements
+    var inmueble = selectInmueble.value === 'otro' ? f.otroInmueble.value.trim().toUpperCase() : selectInmueble.value
+    // Un residente solo asocia inmuebles con los que tiene vinculación vigente (RN-33, 403).
+    if (inmueble && inmueble !== 'B-0302') {
+      e.preventDefault()
+      var aviso = $('error-vinculo')
+      aviso.innerHTML = '<p><b>No puedes relacionar el reporte con <span class="identificador"></span>.</b></p>' +
+        '<p>Solo puedes relacionar inmuebles con los que tienes una vinculación vigente. Si el problema viene de otro apartamento, crea el reporte sin inmueble y cuéntalo en la descripción: la administración lo relaciona.</p>'
+      aviso.querySelector('.identificador').textContent = inmueble
+      aviso.hidden = false
+      aviso.scrollIntoView({ block: 'nearest' })
+      return
+    }
+    var foto = archivo.files[0]
+    reportes.unshift({
+      id: 'R-0' + siguiente++, categoria: f.categoria.value, descripcion: f.descripcion.value.trim(),
+      inmueble: inmueble, evidencia: foto ? foto.name : '', creado: '14 de noviembre', estado: 'ABIERTO', responsable: '',
+      seguimiento: [{ cuando: '14 de noviembre, ' + horaActual(), que: 'Reporte creado', detalle: foto ? 'Con una foto adjunta.' : 'Llegó a la administración. Todavía no tiene responsable.' }],
+    })
+    if (filtro === 'CERRADO') document.querySelector('#filtro-estado [data-valor="curso"]').click()
+    else pintar()
+  })
+  formulario.addEventListener('reset', function () {
+    limpiarEvidencia()
+    $('campo-otro').hidden = true
+    $('error-vinculo').hidden = true
+  })
+
+  pintar()
+
+  // Desde Inicio, "Reportar novedad" llega con #crear.
+  if (location.hash === '#crear') Convivir.abrir('dialogo-reporte')
+})()
+</script>
+</body>
+</html>

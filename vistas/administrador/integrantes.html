@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Personas · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-03 Gestionar integrantes · FabricaIntegrante.crearIntegrante(rol, documento, nombres, apellidos),
+     Empleado.registrarIntegranteEnLaCopropiedad(integrante), Integrante.modificarDatosDeContacto(),
+     Empleado.desactivarIntegrantePorMotivo(integrante, motivo), Integrante.obtenerRolDelIntegrante() -->
+<body data-rol="administrador" data-seccion="residentes">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Personas</h1>
+      <p class="guia" id="resumen">Propietarios, arrendatarios, residentes, consejo y empleados de Villa Campestre.</p>
+    </div>
+    <div class="acciones">
+      <button class="btn" type="button" id="abrir-registrar">Registrar persona</button>
+    </div>
+  </div>
+
+  <div class="filtros">
+    <label class="buscador">
+      <span class="solo-lectores">Buscar persona</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+      <input id="buscar" type="search" placeholder="Nombre, documento o unidad" autocomplete="off">
+    </label>
+    <label class="campo">
+      <span class="solo-lectores">Rol</span>
+      <select id="filtro-rol">
+        <option value="">Todos los roles</option>
+        <option value="PROPIETARIO">Propietario</option>
+        <option value="ARRENDATARIO">Arrendatario</option>
+        <option value="RESIDENTE">Residente autorizado</option>
+        <option value="CONSEJO">Miembro del consejo</option>
+        <option value="EMPLEADO">Empleado</option>
+      </select>
+    </label>
+    <div class="segmentos" data-grupo id="filtro-estado" role="group" aria-label="Estado">
+      <button type="button" data-valor="ACTIVO" aria-pressed="true">Activas</button>
+      <button type="button" data-valor="INACTIVO" aria-pressed="false">Desactivadas</button>
+      <button type="button" data-valor="" aria-pressed="false">Todas</button>
+    </div>
+  </div>
+
+  <div class="superficie">
+    <div class="tabla-envoltura">
+      <table class="tabla" id="tabla-personas">
+        <thead>
+          <tr>
+            <th>Persona</th>
+            <th>Documento</th>
+            <th>Rol</th>
+            <th>Inmuebles</th>
+            <th>Contacto</th>
+            <th>Cuenta</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="vacio" id="sin-resultados" hidden>
+      <h3>Ninguna persona coincide con la búsqueda</h3>
+      <p>Busca por nombre, por documento sin puntos, por ejemplo <span class="identificador">1032418765</span>, o por unidad, por ejemplo <span class="identificador">B-0302</span>.</p>
+      <button class="btn segundo" type="button" id="limpiar">Quitar filtros</button>
+    </div>
+    <div class="pie">
+      <span id="conteo"></span>
+      <div class="fila" style="gap:var(--e1)">
+        <button class="btn segundo chico" type="button" disabled>Anterior</button>
+        <button class="btn segundo chico" type="button">Siguiente</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Registrar persona: IntegranteServicio.registrarIntegrante(datos). 409 si el documento ya existe. -->
+<dialog class="dialogo ancho" id="dialogo-registrar" aria-labelledby="titulo-registrar">
+  <form id="form-registrar" data-confirmar="Persona registrada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-registrar">Registrar persona</h2>
+        <p class="guia">Primero elige su rol: de él dependen los datos que se piden.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="aviso no" id="aviso-repetido" hidden role="alert" style="margin-bottom:var(--e5)">
+        <p id="texto-repetido"></p>
+        <p id="rol-repetido"></p>
+        <div class="fila" style="margin-top:var(--e3)">
+          <button class="btn segundo chico" type="button" id="ver-repetido">Ver su ficha</button>
+        </div>
+      </div>
+
+      <div class="pila" style="gap:var(--e6)">
+        <fieldset class="campo" id="campo-rol">
+          <legend class="rotulo">Rol</legend>
+          <div class="elecciones">
+            <label class="eleccion"><input type="radio" name="rol" value="PROPIETARIO"><span><b>Propietario</b><small>Dueño de un inmueble</small></span></label>
+            <label class="eleccion"><input type="radio" name="rol" value="ARRENDATARIO"><span><b>Arrendatario</b><small>Vive en arriendo</small></span></label>
+            <label class="eleccion"><input type="radio" name="rol" value="RESIDENTE"><span><b>Residente autorizado</b><small>Familiar o acompañante</small></span></label>
+            <label class="eleccion"><input type="radio" name="rol" value="CONSEJO"><span><b>Miembro del consejo</b><small>Elegido por la asamblea</small></span></label>
+            <label class="eleccion"><input type="radio" name="rol" value="EMPLEADO"><span><b>Empleado</b><small>Administración o vigilancia</small></span></label>
+          </div>
+        </fieldset>
+
+        <div class="vacio" id="sin-rol" style="padding:var(--e5) 0">
+          <p>Elige el rol para ver los datos que necesitas.</p>
+        </div>
+
+        <div class="pila" style="gap:var(--e6)" id="resto" hidden>
+          <!-- Campos propios de cada subclase de Integrante -->
+          <fieldset data-propios="PROPIETARIO" hidden>
+            <legend>Como propietario</legend>
+            <div class="formulario">
+              <label class="campo">
+                <span>Dirección de correspondencia</span>
+                <input id="p-correspondencia" required placeholder="Calle 84 # 45-30, apto 801, Barranquilla"
+                       data-error="Escribe a dónde le llegan las cartas de la administración. Si vive aquí, escribe su unidad.">
+                <span class="ayuda">Si vive en el conjunto, escribe su torre y apartamento.</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset data-propios="ARRENDATARIO" hidden>
+            <legend>Como arrendatario</legend>
+            <div class="formulario dos">
+              <label class="campo">
+                <span>Número de contrato de arriendo</span>
+                <input id="p-contrato" class="identificador" required placeholder="ARR-2026-0201" autocomplete="off"
+                       data-error="Escribe el número del contrato de arriendo, por ejemplo ARR-2026-0201.">
+                <span class="ayuda">Como aparece en el contrato que entregó la inmobiliaria o el propietario.</span>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset data-propios="RESIDENTE" hidden>
+            <legend>Como residente autorizado</legend>
+            <div class="formulario dos">
+              <label class="campo">
+                <span>Parentesco con quien lo autoriza</span>
+                <select id="p-parentesco" required data-error="Elige el parentesco con el propietario o arrendatario del inmueble.">
+                  <option value="">Elige el parentesco</option>
+                  <option>Hijo o hija</option>
+                  <option>Cónyuge o compañero</option>
+                  <option>Padre o madre</option>
+                  <option>Hermano o hermana</option>
+                  <option>Otro familiar</option>
+                  <option>Sin parentesco</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset data-propios="CONSEJO" hidden>
+            <legend>Como miembro del consejo</legend>
+            <div class="formulario dos">
+              <label class="campo completo">
+                <span>Cargo en el consejo</span>
+                <select id="p-cargo-consejo" required data-error="Elige el cargo que le dio la asamblea.">
+                  <option value="">Elige el cargo</option>
+                  <option>Presidente</option>
+                  <option>Vicepresidente</option>
+                  <option>Tesorero</option>
+                  <option>Secretario</option>
+                  <option>Vocal</option>
+                </select>
+              </label>
+              <label class="campo">
+                <span>Inicio del periodo</span>
+                <input id="p-periodo-inicio" type="date" required data-error="Elige la fecha de la asamblea que lo eligió.">
+              </label>
+              <label class="campo">
+                <span>Fin del periodo</span>
+                <input id="p-periodo-fin" type="date" required data-error="Elige hasta cuándo va su periodo. Suele ser un año.">
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset data-propios="EMPLEADO" hidden>
+            <legend>Como empleado</legend>
+            <div class="formulario dos">
+              <fieldset class="completo">
+                <legend class="rotulo">Cargo</legend>
+                <div class="elecciones">
+                  <label class="eleccion"><input type="radio" name="cargo" value="ADMINISTRADOR" checked><span><b>Administrador</b><small>Gestiona la copropiedad en Convivir</small></span></label>
+                  <label class="eleccion"><input type="radio" name="cargo" value="VIGILANTE"><span><b>Vigilante</b><small>Usa la pantalla de portería</small></span></label>
+                </div>
+              </fieldset>
+              <label class="campo">
+                <span>Fecha de ingreso</span>
+                <input id="p-ingreso" type="date" required data-error="Elige el día en que empezó a trabajar en el conjunto.">
+              </label>
+              <label class="campo" data-vigilante hidden>
+                <span>Empresa de seguridad</span>
+                <input id="p-empresa" required placeholder="Vigilancia Costa Segura Ltda." data-error="Escribe la empresa de seguridad que lo contrató.">
+              </label>
+              <label class="campo" data-vigilante hidden>
+                <span>Turno</span>
+                <select id="p-turno" required data-error="Elige su turno para saber quién está en portería.">
+                  <option value="">Elige el turno</option>
+                  <option>Día, de 6:00 a. m. a 6:00 p. m.</option>
+                  <option>Noche, de 6:00 p. m. a 6:00 a. m.</option>
+                  <option>Relevo</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <!-- Campos comunes de Integrante -->
+          <fieldset>
+            <legend>Identificación</legend>
+            <div class="formulario dos">
+              <label class="campo">
+                <span>Tipo de documento</span>
+                <select id="c-tipo-doc" required data-error="Elige el tipo de documento.">
+                  <option value="CC">Cédula de ciudadanía</option>
+                  <option value="CE">Cédula de extranjería</option>
+                  <option value="PA">Pasaporte</option>
+                  <option value="TI">Tarjeta de identidad</option>
+                  <option value="NIT">NIT, si es una empresa</option>
+                </select>
+              </label>
+              <label class="campo">
+                <span>Número de documento</span>
+                <input id="c-documento" class="identificador" inputmode="numeric" required autocomplete="off" placeholder="1032418765"
+                       data-error="Escribe el número de documento sin puntos ni espacios.">
+                <span class="ayuda" id="ayuda-documento">Sin puntos ni espacios.</span>
+              </label>
+              <label class="campo completo" id="campo-razon" hidden>
+                <span>Razón social</span>
+                <input id="c-razon" required placeholder="Inversiones Lomas del Norte S.A.S."
+                       data-error="Escribe la razón social como aparece en el RUT.">
+              </label>
+              <div class="formulario dos completo" id="datos-persona">
+                <label class="campo">
+                  <span>Nombres</span>
+                  <input id="c-nombres" required autocomplete="off" placeholder="Lucía" data-error="Escribe los nombres como aparecen en el documento.">
+                </label>
+                <label class="campo">
+                  <span>Apellidos</span>
+                  <input id="c-apellidos" required autocomplete="off" placeholder="Mendoza Ríos" data-error="Escribe los apellidos como aparecen en el documento.">
+                </label>
+                <label class="campo">
+                  <span>Género</span>
+                  <select id="c-genero" required data-error="Elige el género. Lo usamos para nombrar su rol, por ejemplo propietaria o propietario.">
+                    <option value="">Elige el género</option>
+                    <option value="F">Femenino</option>
+                    <option value="M">Masculino</option>
+                    <option value="NB">No binario</option>
+                  </select>
+                </label>
+                <label class="campo">
+                  <span>Fecha de nacimiento <span class="opcional">(opcional)</span></span>
+                  <input id="c-nacimiento" type="date" max="2026-11-14">
+                </label>
+              </div>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Residencia y contacto</legend>
+            <div class="formulario dos">
+              <label class="campo">
+                <span>País de residencia</span>
+                <select id="c-pais" required data-error="Elige el país donde vive.">
+                  <option>Colombia</option>
+                  <option>Venezuela</option>
+                  <option>Estados Unidos</option>
+                  <option>España</option>
+                  <option>Otro país</option>
+                </select>
+              </label>
+              <label class="campo">
+                <span>Ciudad de residencia</span>
+                <input id="c-ciudad" required value="Barranquilla" data-error="Escribe la ciudad donde vive.">
+              </label>
+              <label class="campo completo">
+                <span>Dirección de residencia</span>
+                <input id="c-direccion" required placeholder="Villa Campestre, Torre B, apto 302" data-error="Escribe la dirección donde vive. Si vive en el conjunto, escribe su torre y apartamento.">
+              </label>
+              <label class="campo">
+                <span>Teléfono</span>
+                <input id="c-telefono" type="tel" inputmode="tel" required placeholder="304 215 9087" data-error="Escribe un celular para que portería pueda llamarle.">
+              </label>
+              <label class="campo">
+                <span id="rotulo-correo">Correo</span>
+                <input id="c-correo" type="email" required placeholder="lucia.mendoza@correo.co" autocomplete="off"
+                       data-error="Escribe su correo. Ahí le llega el enlace para crear su contraseña.">
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>Cuenta de acceso</legend>
+            <label class="opcion">
+              <input type="checkbox" id="c-cuenta" checked>
+              <span>Crear su cuenta de acceso a Convivir<small>Le llega un correo para crear su contraseña. Entra con su correo.</small></span>
+            </label>
+          </fieldset>
+        </div>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Registrar persona</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Ficha de la persona -->
+<dialog class="dialogo ancho" id="dialogo-ficha" aria-labelledby="ficha-nombre">
+  <div class="contenido">
+    <div class="cabeza">
+      <div>
+        <div class="fila" style="gap:var(--e3)">
+          <h2 id="ficha-nombre"></h2>
+          <span id="ficha-estado"></span>
+        </div>
+        <p class="guia" id="ficha-sub"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo" id="ficha-cuerpo"></div>
+    <div class="pie">
+      <button class="btn riesgo" type="button" id="ficha-desactivar">Desactivar persona</button>
+      <button class="btn segundo empuje" type="button" id="ficha-contacto">Modificar contacto</button>
+      <button class="btn" type="button" data-cerrar>Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- Modificar contacto: Integrante.modificarDatosDeContacto() -->
+<dialog class="dialogo" id="dialogo-contacto" aria-labelledby="titulo-contacto">
+  <form id="form-contacto" data-confirmar="Datos de contacto modificados" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-contacto">Modificar contacto</h2>
+        <p class="guia">Portería y la administración usan estos datos para avisarle.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario">
+        <label class="campo">
+          <span>Teléfono</span>
+          <input id="m-telefono" type="tel" inputmode="tel" required data-error="Escribe un celular para que portería pueda llamarle.">
+        </label>
+        <label class="campo">
+          <span>Correo</span>
+          <input id="m-correo" type="email" required data-error="Escribe su correo. Si tiene cuenta, con él entra a Convivir.">
+          <span class="ayuda" id="ayuda-m-correo"></span>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Guardar contacto</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Desactivar: Empleado.desactivarIntegrantePorMotivo(integrante, motivo). La información del inmueble no se pierde (RN-05). -->
+<dialog class="dialogo" id="dialogo-desactivar" aria-labelledby="titulo-desactivar">
+  <form id="form-desactivar" data-confirmar="Persona desactivada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-desactivar">Desactivar persona</h2>
+        <p class="guia">No se borra nada: sigue en el historial de sus inmuebles.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario">
+        <div class="aviso al" id="aviso-vigentes" hidden></div>
+        <label class="campo">
+          <span>Motivo</span>
+          <textarea id="d-motivo" required placeholder="Terminó su contrato de arriendo y entregó el apartamento."
+                    data-error="Escribe el motivo. Queda en el historial y explica por qué ya no aparece."></textarea>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn riesgo" type="submit">Desactivar persona</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var HOY = '2026-11-14'
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  var GENEROS = { F: 'Femenino', M: 'Masculino', NB: 'No binario' }
+  var OTRAS_ACTIVAS = 438
+  var OTRAS_DESACTIVADAS = 33
+
+  // Integrante (campos comunes) y lo propio de su subclase en "propios".
+  // Las vinculaciones no tienen tipo: el vínculo se lee del rol y de esResidente.
+  var personas = [
+    { id: 1, tipoDoc: 'CC', doc: '1020456789', nombres: 'Paula', apellidos: 'Ortega Lince', rol: 'EMPLEADO', genero: 'F', nacimiento: '1986-05-21', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Calle 76 # 54-21, apto 302', telefono: '300 412 5578', correo: 'paula.ortega@villacampestre.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { cargo: 'ADMINISTRADOR', ingreso: '2024-01-15' }, vinculos: [] },
+    { id: 2, tipoDoc: 'CC', doc: '80245117', nombres: 'Jhon', apellidos: 'Rojas Mercado', rol: 'EMPLEADO', genero: 'M', nacimiento: '1990-09-03', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Carrera 21 # 45-08, barrio Rebolo', telefono: '301 778 2290', correo: 'jhon.rojas@correo.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { cargo: 'VIGILANTE', ingreso: '2025-06-01', empresa: 'Vigilancia Costa Segura Ltda.', turno: 'Noche, de 6:00 p. m. a 6:00 a. m.' }, vinculos: [] },
+    { id: 3, tipoDoc: 'CC', doc: '19456230', nombres: 'Hernán', apellidos: 'Ruiz Cabrales', rol: 'CONSEJO', genero: 'M', nacimiento: '1958-02-11', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Villa Campestre, Torre C, apto 310', telefono: '315 600 1144', correo: 'hernan.ruiz@correo.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { cargo: 'Tesorero', inicio: '2026-03-28', fin: '2027-03-27' }, vinculos: [{ inmueble: 'C-0310', residente: true, desde: '2014-06-01' }] },
+    { id: 4, tipoDoc: 'CC', doc: '1032418765', nombres: 'Lucía', apellidos: 'Mendoza Ríos', rol: 'ARRENDATARIO', genero: 'F', nacimiento: '1992-11-30', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Villa Campestre, Torre B, apto 302', telefono: '304 215 9087', correo: 'lucia.mendoza@correo.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { contrato: 'ARR-2026-0187' }, vinculos: [{ inmueble: 'B-0302', residente: true, desde: '2026-03-01', autoriza: true }] },
+    { id: 5, tipoDoc: 'CC', doc: '79312554', nombres: 'Ernesto', apellidos: 'Vargas Pinedo', rol: 'PROPIETARIO', genero: 'M', nacimiento: '1961-07-14', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Calle 84 # 45-30, apto 801', telefono: '310 455 2011', correo: 'ernesto.vargas@correo.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { correspondencia: 'Calle 84 # 45-30, apto 801, Barranquilla' }, vinculos: [{ inmueble: 'B-0302', residente: false, desde: '2019-03-12', porcentaje: 100 }, { inmueble: 'P-022', residente: false, desde: '2019-03-12', porcentaje: 100 }] },
+    { id: 6, tipoDoc: 'CC', doc: '17189003', nombres: 'Jorge', apellidos: 'Peñaranda Gil', rol: 'PROPIETARIO', genero: 'M', nacimiento: '1955-01-20', pais: 'Colombia', ciudad: 'Bogotá', direccion: 'Carrera 11 # 93-40, apto 502', telefono: '312 980 4471', correo: 'jorge.penaranda@correo.co', cuenta: '', estado: 'ACTIVO',
+      propios: { correspondencia: 'Carrera 11 # 93-40, apto 502, Bogotá' }, vinculos: [{ inmueble: 'A-1104', residente: false, desde: '2017-08-01', porcentaje: 100 }, { inmueble: 'P-088', residente: false, desde: '2017-08-01', porcentaje: 100 }] },
+    { id: 7, tipoDoc: 'CC', doc: '41765882', nombres: 'Marta', apellidos: 'Oviedo Lara', rol: 'PROPIETARIO', genero: 'F', nacimiento: '1968-04-02', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Villa Campestre, Torre A, apto 902', telefono: '300 118 6623', correo: 'marta.oviedo@correo.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { correspondencia: 'Villa Campestre, Torre A, apto 902' }, vinculos: [{ inmueble: 'A-0902', residente: true, desde: '2012-05-10', porcentaje: 100 }, { inmueble: 'P-045', residente: false, desde: '2012-05-10', porcentaje: 100 }] },
+    { id: 8, tipoDoc: 'CC', doc: '51902334', nombres: 'Gloria', apellidos: 'Ariza Daza', rol: 'PROPIETARIO', genero: 'F', nacimiento: '1972-10-08', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Villa Campestre, Torre A, apto 401', telefono: '317 334 0981', correo: 'gloria.ariza@correo.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { correspondencia: 'Villa Campestre, Torre A, apto 401' }, vinculos: [{ inmueble: 'A-0401', residente: true, desde: '2015-02-20', porcentaje: 100 }, { inmueble: 'P-061', residente: false, desde: '2015-02-20', porcentaje: 100 }, { inmueble: 'P-151', residente: false, desde: '2015-02-20', porcentaje: 100 }] },
+    { id: 9, tipoDoc: 'CC', doc: '1001238417', nombres: 'Sofía', apellidos: 'Restrepo Ariza', rol: 'RESIDENTE', genero: 'F', nacimiento: '2003-06-19', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Villa Campestre, Torre A, apto 401', telefono: '318 562 7740', correo: 'sofia.restrepo@correo.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { parentesco: 'Hijo o hija' }, vinculos: [{ inmueble: 'A-0401', residente: true, desde: '2021-06-19' }] },
+    { id: 10, tipoDoc: 'CC', doc: '1018447920', nombres: 'Andrés', apellidos: 'Caicedo Polo', rol: 'ARRENDATARIO', genero: 'M', nacimiento: '1989-12-05', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Villa Campestre, Torre C, apto 705', telefono: '305 871 3302', correo: 'andres.caicedo@correo.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { contrato: 'ARR-2025-0342' }, vinculos: [{ inmueble: 'C-0705', residente: true, desde: '2025-09-01', autoriza: true }] },
+    { id: 11, tipoDoc: 'CC', doc: '52640118', nombres: 'Diana', apellidos: 'Salcedo Vega', rol: 'PROPIETARIO', genero: 'F', nacimiento: '1979-03-27', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Villa Campestre, Torre C, apto 1201', telefono: '316 204 5518', correo: 'diana.salcedo@correo.co', cuenta: 'BLOQUEADA', estado: 'ACTIVO',
+      propios: { correspondencia: 'Villa Campestre, Torre C, apto 1201' }, vinculos: [{ inmueble: 'C-1201', residente: true, desde: '2016-11-01', porcentaje: 100 }, { inmueble: 'P-102', residente: false, desde: '2016-11-01', porcentaje: 100 }] },
+    { id: 12, tipoDoc: 'NIT', doc: '9004123375', razon: 'Inversiones Lomas del Norte S.A.S.', rol: 'PROPIETARIO', genero: '', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Carrera 53 # 98-120, oficina 704', telefono: '605 385 7720', correo: 'contabilidad@lomasdelnorte.co', cuenta: '', estado: 'ACTIVO',
+      propios: { correspondencia: 'Carrera 53 # 98-120, oficina 704, Barranquilla' }, vinculos: [{ inmueble: 'A-0703', residente: false, desde: '2020-01-15', porcentaje: 100 }, { inmueble: 'P-130', residente: false, desde: '2020-01-15', porcentaje: 100 }] },
+    { id: 13, tipoDoc: 'CC', doc: '79640215', nombres: 'Ricardo', apellidos: 'Lozano Pérez', rol: 'PROPIETARIO', genero: 'M', nacimiento: '1975-08-22', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Villa Campestre, Torre C, apto 402', telefono: '311 640 2215', correo: 'ricardo.lozano@correo.co', cuenta: 'ACTIVA', estado: 'ACTIVO',
+      propios: { correspondencia: 'Villa Campestre, Torre C, apto 402' }, vinculos: [{ inmueble: 'C-0402', residente: true, desde: '2022-04-01', porcentaje: 100 }, { inmueble: 'P-140', residente: false, desde: '2022-04-01', porcentaje: 100 }] },
+    { id: 14, tipoDoc: 'CC', doc: '1032556908', nombres: 'Natalia', apellidos: 'Mendoza Ríos', rol: 'RESIDENTE', genero: 'F', nacimiento: '1996-02-14', pais: 'Colombia', ciudad: 'Barranquilla', direccion: 'Villa Campestre, Torre B, apto 302', telefono: '304 902 1176', correo: 'natalia.mendoza@correo.co', cuenta: '', estado: 'ACTIVO',
+      propios: { parentesco: 'Hermano o hermana' }, vinculos: [] },
+    { id: 15, tipoDoc: 'CC', doc: '80112976', nombres: 'Carlos', apellidos: 'Ibáñez Rueda', rol: 'ARRENDATARIO', genero: 'M', nacimiento: '1984-03-09', pais: 'Colombia', ciudad: 'Santa Marta', direccion: 'Calle 22 # 3-41, El Rodadero', telefono: '300 655 4410', correo: 'carlos.ibanez@correo.co', cuenta: 'INACTIVA', estado: 'INACTIVO',
+      desactivada: '2026-03-02', motivo: 'Terminó su contrato de arriendo de B-0302 el 28 de febrero de 2026 y se fue del conjunto.',
+      propios: { contrato: 'ARR-2023-0044' }, vinculos: [{ inmueble: 'B-0302', residente: true, desde: '2023-02-01', hasta: '2026-02-28' }] },
+  ]
+
+  var cuerpo = document.querySelector('#tabla-personas tbody')
+  var buscar = document.getElementById('buscar')
+  var filtroRol = document.getElementById('filtro-rol')
+  var estado = 'ACTIVO'
+  var actual = null
+
+  // ---------- Utilidades ----------
+  function esc(texto) {
+    return String(texto == null ? '' : texto).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] })
+  }
+  function fecha(iso) {
+    var p = iso.split('-')
+    return Number(p[2]) + ' de ' + MESES[Number(p[1]) - 1] + ' de ' + p[0]
+  }
+  function agrupar(n) { return n.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
+  function documento(p) {
+    if (p.tipoDoc === 'NIT') return 'NIT ' + agrupar(p.doc.slice(0, -1)) + '-' + p.doc.slice(-1)
+    return p.tipoDoc + ' ' + (/^\d+$/.test(p.doc) ? agrupar(p.doc) : p.doc)
+  }
+  function nombre(p) { return p.razon || p.nombres + ' ' + p.apellidos }
+  function femenino(p) { return p.genero === 'F' }
+
+  // Integrante.obtenerRolDelIntegrante(): sale de la subclase.
+  function rolTexto(p) {
+    var f = femenino(p)
+    switch (p.rol) {
+      case 'PROPIETARIO': return f ? 'Propietaria' : 'Propietario'
+      case 'ARRENDATARIO': return f ? 'Arrendataria' : 'Arrendatario'
+      case 'RESIDENTE': return f ? 'Residente autorizada' : 'Residente autorizado'
+      case 'CONSEJO': return 'Miembro del consejo'
+      default: return f ? 'Empleada' : 'Empleado'
+    }
+  }
+  function cargoTexto(p) {
+    if (p.propios.cargo === 'ADMINISTRADOR') return femenino(p) ? 'Administradora' : 'Administrador'
+    return 'Vigilante'
+  }
+  function detalleRol(p) {
+    var x = p.propios
+    switch (p.rol) {
+      case 'ARRENDATARIO': return 'Contrato <span class="identificador">' + esc(x.contrato) + '</span>'
+      case 'RESIDENTE': return esc(x.parentesco)
+      case 'CONSEJO': return esc(x.cargo)
+      case 'EMPLEADO': return cargoTexto(p) + (x.turno ? ' · turno ' + esc(x.turno.split(',')[0].toLowerCase()) : '')
+      default: return ''
+    }
+  }
+  // El vínculo con cada inmueble se deduce del rol y de esResidente.
+  function vinculoTexto(p, v) {
+    if (p.rol === 'PROPIETARIO' && v.inmueble.charAt(0) !== 'A' && v.inmueble.charAt(0) !== 'B' && v.inmueble.charAt(0) !== 'C') return rolTexto(p)
+    return rolTexto(p) + (v.residente ? ' residente' : ' no residente')
+  }
+  function cuentaPildora(c) {
+    if (c === 'ACTIVA') return '<span class="pildora p-ok">Activa</span>'
+    if (c === 'BLOQUEADA') return '<span class="pildora p-no">Bloqueada</span>'
+    if (c === 'INACTIVA') return '<span class="pildora p-ne">Inactiva</span>'
+    return '<span class="guia">Sin cuenta</span>'
+  }
+  function buscarPorId(id) { return personas.filter(function (p) { return p.id === id })[0] }
+
+  // ---------- Lista ----------
+  function fila(p) {
+    var vigentes = p.vinculos.filter(function (v) { return !v.hasta })
+    var inmuebles = vigentes.length
+      ? vigentes.map(function (v) { return '<span class="identificador">' + v.inmueble + '</span>' }).join(', ')
+      : p.vinculos.length
+        ? '<span class="guia">Ninguno vigente</span><span class="sub">Estuvo en <span class="identificador">' + p.vinculos[0].inmueble + '</span></span>'
+        : '<span class="guia">Sin inmuebles</span>'
+    var detalle = detalleRol(p)
+    var pildora = p.estado === 'ACTIVO' ? '<span class="pildora p-ok">Activa</span>' : '<span class="pildora p-ne">Desactivada</span>'
+    var buscable = (nombre(p) + ' ' + p.doc + ' ' + vigentes.map(function (v) { return v.inmueble }).join(' ') + ' ' + p.vinculos.map(function (v) { return v.inmueble }).join(' ') + ' ' + p.correo).toLowerCase()
+    return '<tr data-buscable="' + esc(buscable) + '">' +
+      '<td><a class="fila-enlace" href="#" data-ficha="' + p.id + '">' + esc(nombre(p)) + '</a>' + (p.razon ? '<span class="sub">Empresa</span>' : '') + '</td>' +
+      '<td class="mono">' + documento(p) + '</td>' +
+      '<td><span class="etiqueta">' + rolTexto(p) + '</span>' + (detalle ? '<span class="sub">' + detalle + '</span>' : '') + '</td>' +
+      '<td>' + inmuebles + '</td>' +
+      '<td>' + esc(p.telefono) + '<span class="sub">' + esc(p.correo) + '</span></td>' +
+      '<td>' + cuentaPildora(p.cuenta) + '</td>' +
+      '<td>' + pildora + '</td></tr>'
+  }
+
+  function pintar() {
+    var texto = buscar.value.trim().toLowerCase().replace(/[.\s](?=\d)/g, '')
+    var visibles = personas.filter(function (p) {
+      return (!estado || p.estado === estado) && (!filtroRol.value || p.rol === filtroRol.value)
+    })
+    cuerpo.innerHTML = visibles.map(fila).join('')
+    var n = 0
+    cuerpo.querySelectorAll('tr').forEach(function (tr) {
+      var coincide = !texto || tr.getAttribute('data-buscable').indexOf(texto) >= 0
+      tr.hidden = !coincide
+      if (coincide) n++
+    })
+    document.getElementById('sin-resultados').hidden = n > 0
+    document.querySelector('#tabla-personas thead').hidden = n === 0
+    // La página muestra una muestra; el resto de las personas de la copropiedad está en las páginas siguientes.
+    var activas = personas.filter(function (p) { return p.estado === 'ACTIVO' }).length + OTRAS_ACTIVAS
+    var desactivadas = personas.filter(function (p) { return p.estado === 'INACTIVO' }).length + OTRAS_DESACTIVADAS
+    var universo = estado === 'ACTIVO' ? activas + ' personas activas' : estado === 'INACTIVO' ? desactivadas + ' personas desactivadas' : (activas + desactivadas) + ' personas'
+    document.getElementById('conteo').textContent = n + ' de ' + universo
+    document.getElementById('resumen').textContent = activas + ' personas activas: propietarios, arrendatarios, residentes, consejo y empleados de Villa Campestre.'
+  }
+
+  // ---------- Ficha ----------
+  function datos(pares) {
+    return '<dl class="datos">' + pares.filter(function (p) { return p }).map(function (p) {
+      return '<div><dt>' + p[0] + '</dt><dd>' + p[1] + '</dd></div>'
+    }).join('') + '</dl>'
+  }
+  function bloque(titulo, contenido) {
+    return '<section><h4 style="margin-bottom:var(--e3)">' + titulo + '</h4>' + contenido + '</section>'
+  }
+
+  function abrirFicha(p) {
+    actual = p
+    document.getElementById('ficha-nombre').textContent = nombre(p)
+    document.getElementById('ficha-estado').innerHTML = p.estado === 'ACTIVO' ? '<span class="pildora p-ok">Activa</span>' : '<span class="pildora p-ne">Desactivada</span>'
+    document.getElementById('ficha-sub').innerHTML = rolTexto(p) + ' · <span class="identificador">' + documento(p) + '</span>'
+
+    var html = ''
+    if (p.estado === 'INACTIVO') {
+      html += '<div class="aviso"><p><b>Desactivada el ' + fecha(p.desactivada) + '.</b> ' + esc(p.motivo) + '</p><p>Su historial en los inmuebles se conserva.</p></div>'
+    }
+
+    var x = p.propios
+    var personales = p.razon
+      ? [['Razón social', esc(p.razon)], ['NIT', '<span class="identificador">' + documento(p).slice(4) + '</span>']]
+      : [['Documento', '<span class="identificador">' + documento(p) + '</span>'], ['Género', GENEROS[p.genero] || '—'], ['Fecha de nacimiento', p.nacimiento ? fecha(p.nacimiento) : 'Sin registrar']]
+    personales = personales.concat([
+      ['Residencia', esc(p.ciudad) + ', ' + esc(p.pais)],
+      ['Dirección', esc(p.direccion)],
+      ['Teléfono', '<span class="num">' + esc(p.telefono) + '</span>'],
+      ['Correo', esc(p.correo)],
+    ])
+    html += bloque(p.razon ? 'Datos de la empresa' : 'Datos personales', datos(personales))
+
+    var propios
+    switch (p.rol) {
+      case 'PROPIETARIO': propios = [['Dirección de correspondencia', esc(x.correspondencia)]]; break
+      case 'ARRENDATARIO': propios = [['Número de contrato', '<span class="identificador">' + esc(x.contrato) + '</span>']]; break
+      case 'RESIDENTE': propios = [['Parentesco', esc(x.parentesco)]]; break
+      case 'CONSEJO': propios = [['Cargo en el consejo', esc(x.cargo)], ['Periodo', fecha(x.inicio) + ' a ' + fecha(x.fin)]]; break
+      default: propios = [['Cargo', cargoTexto(p)], ['Fecha de ingreso', fecha(x.ingreso)], x.empresa ? ['Empresa de seguridad', esc(x.empresa)] : null, x.turno ? ['Turno', esc(x.turno)] : null]
+    }
+    html += bloque('Como ' + rolTexto(p).toLowerCase(), datos(propios))
+
+    var lista
+    if (!p.vinculos.length) {
+      lista = '<div class="superficie"><div class="vacio" style="padding:var(--e5)"><h3>Todavía no está vinculada a ningún inmueble</h3>' +
+        '<p>Vincúlala desde la ficha del inmueble, en la pestaña Vinculaciones.</p><a class="btn segundo chico" href="inmuebles.html">Ir a Inmuebles</a></div></div>'
+    } else {
+      lista = '<div class="superficie"><ul class="lista">' + p.vinculos.map(function (v) {
+        var cuando = v.hasta ? 'del ' + fecha(v.desde) + ' al ' + fecha(v.hasta) : 'desde el ' + fecha(v.desde)
+        var extra = (v.porcentaje ? ' · ' + v.porcentaje + ' % de propiedad' : '') + (v.autoriza ? ' · autoriza accesos' : '')
+        return '<li><div class="principal"><b><a class="identificador" href="inmueble.html">' + v.inmueble + '</a></b><span>' + vinculoTexto(p, v) + ', ' + cuando + extra + '</span></div>' +
+          (v.hasta ? '<span class="pildora p-ne">Finalizada</span>' : '<span class="pildora p-ok">Vigente</span>') + '</li>'
+      }).join('') + '</ul></div>'
+    }
+    html += bloque('Inmuebles', lista)
+
+    var cuenta = { ACTIVA: 'Entra a Convivir con ' + esc(p.correo) + '.', BLOQUEADA: 'Se bloqueó por intentos fallidos. Puede restablecer su contraseña desde la pantalla de acceso.', INACTIVA: 'Se desactivó con la persona.' }[p.cuenta] || 'No tiene cuenta. Puede pedirla a la administración.'
+    html += bloque('Cuenta de acceso', '<div class="fila">' + cuentaPildora(p.cuenta) + '<span class="guia">' + cuenta + '</span></div>')
+
+    var contenedor = document.getElementById('ficha-cuerpo')
+    contenedor.innerHTML = '<div class="pila" style="gap:var(--e5)">' + html + '</div>'
+    document.getElementById('ficha-desactivar').hidden = p.estado !== 'ACTIVO'
+    document.getElementById('ficha-contacto').hidden = p.estado !== 'ACTIVO'
+    var dialogo = document.getElementById('dialogo-ficha')
+    if (!dialogo.open) Convivir.abrir('dialogo-ficha')
+    contenedor.scrollTop = 0
+  }
+
+  // ---------- Modificar contacto ----------
+  var formContacto = document.getElementById('form-contacto')
+  document.getElementById('ficha-contacto').addEventListener('click', function () {
+    formContacto.reset()
+    formContacto.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    document.getElementById('titulo-contacto').textContent = 'Modificar contacto de ' + nombre(actual)
+    document.getElementById('m-telefono').value = actual.telefono
+    document.getElementById('m-correo').value = actual.correo
+    document.getElementById('ayuda-m-correo').textContent = actual.cuenta === 'ACTIVA' || actual.cuenta === 'BLOQUEADA' ? 'Con este correo entra a Convivir. Si lo cambias, entra con el nuevo.' : ''
+    Convivir.abrir('dialogo-contacto')
+  })
+  formContacto.addEventListener('confirmado', function (e) {
+    var correo = document.getElementById('m-correo')
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo.value.trim())) {
+      e.preventDefault()
+      marcarError(correo, 'Ese correo está incompleto. Escríbelo como nombre@dominio.co.')
+      return
+    }
+    actual.telefono = document.getElementById('m-telefono').value.trim()
+    actual.correo = correo.value.trim()
+    formContacto.setAttribute('data-confirmar', 'Contacto de ' + nombre(actual) + ' modificado')
+    abrirFicha(actual)
+    pintar()
+  })
+
+  // ---------- Desactivar ----------
+  var formDesactivar = document.getElementById('form-desactivar')
+  document.getElementById('ficha-desactivar').addEventListener('click', function () {
+    formDesactivar.reset()
+    formDesactivar.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    document.getElementById('titulo-desactivar').textContent = 'Desactivar a ' + nombre(actual)
+    var vigentes = actual.vinculos.filter(function (v) { return !v.hasta })
+    var aviso = document.getElementById('aviso-vigentes')
+    aviso.hidden = !vigentes.length
+    aviso.innerHTML = vigentes.length
+      ? 'Tiene ' + (vigentes.length === 1 ? '1 vinculación vigente' : vigentes.length + ' vinculaciones vigentes') + ': ' +
+        vigentes.map(function (v) { return '<span class="identificador">' + v.inmueble + '</span>' }).join(', ') +
+        '. Si ya no está en el inmueble, finaliza también la vinculación desde la ficha del inmueble.'
+      : ''
+    Convivir.abrir('dialogo-desactivar')
+    document.getElementById('d-motivo').focus()
+  })
+  formDesactivar.addEventListener('confirmado', function () {
+    actual.estado = 'INACTIVO'
+    actual.motivo = document.getElementById('d-motivo').value.trim()
+    actual.desactivada = HOY
+    formDesactivar.setAttribute('data-confirmar', nombre(actual) + ' quedó desactivada. La información de sus inmuebles se conserva.')
+    abrirFicha(actual)
+    pintar()
+  })
+
+  // ---------- Registrar ----------
+  var form = document.getElementById('form-registrar')
+  var tipoDoc = document.getElementById('c-tipo-doc')
+  var cuentaCasilla = document.getElementById('c-cuenta')
+  var correo = document.getElementById('c-correo')
+
+  function rolElegido() { var r = form.querySelector('[name="rol"]:checked'); return r ? r.value : '' }
+
+  function marcarError(campo, mensaje) {
+    var contenedor = campo.closest('.campo')
+    var previo = contenedor.querySelector('.error[data-generado]')
+    if (previo) previo.remove()
+    campo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-generado', '')
+    error.textContent = mensaje
+    contenedor.appendChild(error)
+    if (campo.focus) campo.focus()
+  }
+
+  function actualizarFormulario() {
+    var rol = rolElegido()
+    document.getElementById('sin-rol').hidden = !!rol
+    document.getElementById('resto').hidden = !rol
+    form.querySelectorAll('[data-propios]').forEach(function (f) { f.hidden = f.getAttribute('data-propios') !== rol })
+    var errorRol = document.querySelector('#campo-rol .error')
+    if (rol && errorRol) errorRol.remove()
+
+    // Solo propietarios y arrendatarios pueden ser una empresa.
+    var nit = tipoDoc.querySelector('[value="NIT"]')
+    nit.disabled = rol !== 'PROPIETARIO' && rol !== 'ARRENDATARIO'
+    if (nit.disabled && tipoDoc.value === 'NIT') tipoDoc.value = 'CC'
+    var esEmpresa = tipoDoc.value === 'NIT'
+    document.getElementById('campo-razon').hidden = !esEmpresa
+    document.getElementById('datos-persona').hidden = esEmpresa
+    document.getElementById('ayuda-documento').textContent = esEmpresa ? 'Con el dígito de verificación, sin guion: 9004123375.' : 'Sin puntos ni espacios.'
+
+    var vigilante = (form.querySelector('[name="cargo"]:checked') || {}).value === 'VIGILANTE'
+    form.querySelectorAll('[data-vigilante]').forEach(function (c) { c.hidden = !vigilante })
+
+    // El correo es obligatorio si se crea la cuenta: es su usuario.
+    correo.required = cuentaCasilla.checked
+    document.getElementById('rotulo-correo').innerHTML = cuentaCasilla.checked ? 'Correo' : 'Correo <span class="opcional">(opcional)</span>'
+  }
+
+  form.addEventListener('change', function (e) {
+    if (e.target.name === 'rol' || e.target.name === 'cargo' || e.target === tipoDoc || e.target === cuentaCasilla) actualizarFormulario()
+  })
+
+  document.getElementById('abrir-registrar').addEventListener('click', function () {
+    form.reset()
+    form.querySelectorAll('.error[data-generado], #campo-rol .error').forEach(function (e) { e.remove() })
+    form.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+    document.getElementById('aviso-repetido').hidden = true
+    actualizarFormulario()
+    Convivir.abrir('dialogo-registrar')
+  })
+
+  form.addEventListener('confirmado', function (e) {
+    var aviso = document.getElementById('aviso-repetido')
+    aviso.hidden = true
+    var rol = rolElegido()
+    if (!rol) {
+      e.preventDefault()
+      var campoRol = document.getElementById('campo-rol')
+      if (!campoRol.querySelector('.error')) {
+        var error = document.createElement('span')
+        error.className = 'error'
+        error.textContent = 'Elige el rol de la persona. De él dependen los datos que se piden.'
+        campoRol.appendChild(error)
+      }
+      campoRol.querySelector('input').focus()
+      return
+    }
+
+    var campoDoc = document.getElementById('c-documento')
+    var numero = campoDoc.value.replace(/[\s.\-]/g, '').toUpperCase()
+    if (tipoDoc.value !== 'PA' && !/^\d{5,12}$/.test(numero)) {
+      e.preventDefault()
+      marcarError(campoDoc, 'El número de documento lleva solo números, entre 5 y 12. Escríbelo sin puntos ni espacios.')
+      return
+    }
+
+    // 409: ya existe un integrante con ese documento (IntegranteRepositorio.existsByDocumento)
+    var repetido = personas.filter(function (p) { return p.doc === numero })[0]
+    if (repetido) {
+      e.preventDefault()
+      document.getElementById('texto-repetido').innerHTML = '<b>Ya hay una persona registrada con ' + documento(repetido) + ':</b> ' + esc(nombre(repetido)) + ', ' + rolTexto(repetido).toLowerCase() +
+        (repetido.estado === 'INACTIVO' ? ', desactivada.' : '.')
+      document.getElementById('rol-repetido').textContent = repetido.rol !== rol
+        ? 'Cada persona tiene un solo rol en Convivir. Si debe quedar con otro, revisa su ficha antes de registrarla de nuevo.'
+        : 'Búscala en la lista para vincularla a otro inmueble o corregir sus datos.'
+      document.getElementById('ver-repetido').dataset.id = repetido.id
+      aviso.hidden = false
+      marcarError(campoDoc, 'Ese documento ya está registrado. Revisa el número o abre su ficha.')
+      document.querySelector('#dialogo-registrar .cuerpo').scrollTop = 0
+      return
+    }
+
+    if (correo.value.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(correo.value.trim())) {
+      e.preventDefault()
+      marcarError(correo, 'Ese correo está incompleto. Escríbelo como nombre@dominio.co.')
+      return
+    }
+
+    var propios = {}
+    if (rol === 'CONSEJO') {
+      var ini = document.getElementById('p-periodo-inicio'), fin = document.getElementById('p-periodo-fin')
+      if (fin.value <= ini.value) { e.preventDefault(); marcarError(fin, 'El periodo termina antes de empezar. Elige una fecha posterior al ' + fecha(ini.value) + '.'); return }
+      propios = { cargo: document.getElementById('p-cargo-consejo').value, inicio: ini.value, fin: fin.value }
+    }
+    if (rol === 'PROPIETARIO') propios = { correspondencia: document.getElementById('p-correspondencia').value.trim() }
+    if (rol === 'ARRENDATARIO') propios = { contrato: document.getElementById('p-contrato').value.trim().toUpperCase() }
+    if (rol === 'RESIDENTE') propios = { parentesco: document.getElementById('p-parentesco').value }
+    if (rol === 'EMPLEADO') {
+      var cargo = form.querySelector('[name="cargo"]:checked').value
+      propios = { cargo: cargo, ingreso: document.getElementById('p-ingreso').value }
+      if (cargo === 'VIGILANTE') { propios.empresa = document.getElementById('p-empresa').value.trim(); propios.turno = document.getElementById('p-turno').value }
+    }
+
+    var esEmpresa = tipoDoc.value === 'NIT'
+    var nueva = {
+      id: personas.length + 1, tipoDoc: tipoDoc.value, doc: numero, rol: rol,
+      nombres: esEmpresa ? '' : document.getElementById('c-nombres').value.trim(),
+      apellidos: esEmpresa ? '' : document.getElementById('c-apellidos').value.trim(),
+      razon: esEmpresa ? document.getElementById('c-razon').value.trim() : '',
+      genero: esEmpresa ? '' : document.getElementById('c-genero').value,
+      nacimiento: esEmpresa ? '' : document.getElementById('c-nacimiento').value,
+      pais: document.getElementById('c-pais').value, ciudad: document.getElementById('c-ciudad').value.trim(),
+      direccion: document.getElementById('c-direccion').value.trim(), telefono: document.getElementById('c-telefono').value.trim(),
+      correo: correo.value.trim() || 'Sin correo', cuenta: cuentaCasilla.checked ? 'ACTIVA' : '', estado: 'ACTIVO',
+      propios: propios, vinculos: [],
+    }
+    personas.unshift(nueva)
+    form.setAttribute('data-confirmar', nombre(nueva) + ' quedó registrada como ' + rolTexto(nueva).toLowerCase() + '.' +
+      (nueva.cuenta ? ' Le enviamos el correo para crear su contraseña.' : ''))
+    buscar.value = ''
+    filtroRol.value = ''
+    document.querySelector('#filtro-estado [data-valor="ACTIVO"]').click()
+  })
+
+  document.getElementById('ver-repetido').addEventListener('click', function () {
+    var p = buscarPorId(Number(this.dataset.id))
+    document.getElementById('dialogo-registrar').close()
+    abrirFicha(p)
+  })
+
+  // ---------- Eventos ----------
+  cuerpo.addEventListener('click', function (e) {
+    var enlace = e.target.closest('[data-ficha]')
+    if (!enlace) return
+    e.preventDefault()
+    abrirFicha(buscarPorId(Number(enlace.dataset.ficha)))
+  })
+  buscar.addEventListener('input', pintar)
+  filtroRol.addEventListener('change', pintar)
+  document.getElementById('filtro-estado').addEventListener('cambio', function (e) { estado = e.detail; pintar() })
+  document.getElementById('limpiar').addEventListener('click', function () {
+    buscar.value = ''; filtroRol.value = ''
+    document.querySelector('#filtro-estado [data-valor=""]').click()
+  })
+
+  pintar()
+})()
+</script>
+</body>
+</html>

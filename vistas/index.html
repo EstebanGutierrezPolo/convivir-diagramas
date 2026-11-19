@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vistas · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="convivir.css">
+<script src="marco.js"></script>
+<style>
+  .portada { display: flex; justify-content: space-between; align-items: center; gap: var(--e4); padding: var(--e4) 0; }
+  .vista { display: flex; flex-direction: column; gap: var(--e2); padding: var(--e4) var(--e5); text-decoration: none; color: inherit; height: 100%; }
+  .vista:hover { background: var(--concreto); color: inherit; }
+  .vista b { font-weight: 600; color: var(--tinta); }
+  .vista p { font-size: var(--t-sm); color: var(--acero); flex: 1; }
+  .vista .codigos { display: flex; flex-wrap: wrap; gap: var(--e1); }
+  .actor { margin-top: var(--e7); }
+  .actor > .encabezado { margin-bottom: var(--e4); }
+  .actor h2 { font-size: var(--t-md); font-weight: 600; letter-spacing: -.01em; }
+  .actor .rejilla { grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr)); }
+</style>
+</head>
+<body data-sin-marco>
+<main class="pagina">
+  <div class="portada">
+    <span class="marca">
+      <svg width="28" height="28" viewBox="0 0 34 34" aria-hidden="true">
+        <rect x="1" y="1" width="32" height="32" rx="5" fill="none" stroke="var(--convivir)" stroke-width="2.2"/>
+        <rect x="8" y="8" width="7" height="7" fill="var(--convivir)"/>
+        <rect x="19" y="8" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="8" y="19" width="7" height="7" fill="var(--convivir)" opacity=".35"/>
+        <rect x="19" y="19" width="7" height="7" fill="var(--convivir)"/>
+      </svg>
+      <span class="nombre" style="font-size:var(--t-base)">CONVIVIR</span>
+    </span>
+    <div class="segmentos" role="group" aria-label="Tema de la página">
+      <button type="button" data-tema="light">Claro</button>
+      <button type="button" data-tema="dark">Oscuro</button>
+      <button type="button" data-tema="auto">Sistema</button>
+    </div>
+  </div>
+
+  <header style="margin-top:var(--e6)">
+    <h1>Vistas de la aplicación</h1>
+    <p style="margin-top:var(--e3)">Las pantallas definitivas de Convivir, una por caso de uso, agrupadas por quien las usa. Siguen el <a href="../sistema">sistema de diseño</a> y su flujo es el de cada diagrama de secuencia.</p>
+    <p class="guia" style="margin-top:var(--e2)">Dentro de cualquier vista, el menú de la cuenta permite cambiar de rol y de tema. El logotipo vuelve a esta página.</p>
+  </header>
+
+  <div id="actores"></div>
+
+  <section class="actor">
+    <div class="encabezado">
+      <div>
+        <h2>Cobertura de casos de uso</h2>
+        <p class="guia">Cada caso de uso del documento v1.2 y la pantalla donde se realiza.</p>
+      </div>
+    </div>
+    <div class="superficie">
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead><tr><th>Caso de uso</th><th>Nombre</th><th>Actor principal</th><th>Vista</th></tr></thead>
+          <tbody id="cobertura"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var ACTORES = [
+    { nombre: 'Cualquier usuario registrado', vistas: [
+      { titulo: 'Iniciar sesión', ruta: 'iniciar-sesion.html', cu: ['CU-01'], texto: 'Entrada con usuario y contraseña, intentos fallidos, cuenta bloqueada y restablecer contraseña.' },
+    ] },
+    { nombre: 'Administrador', vistas: [
+      { titulo: 'Inicio', ruta: 'administrador/inicio.html', cu: [], texto: 'Recaudo del mes, cartera vencida y lo pendiente de hoy.' },
+      { titulo: 'Inmuebles', ruta: 'administrador/inmuebles.html', cu: ['CU-02'], texto: 'Lista de unidades, parqueaderos, depósitos y zonas comunes. Registrar inmueble.' },
+      { titulo: 'Detalle del inmueble', ruta: 'administrador/inmueble.html', cu: ['CU-02', 'CU-04'], texto: 'Datos, historial completo y quién está vinculado al inmueble.' },
+      { titulo: 'Tipos de inmueble', ruta: 'administrador/tipos-inmueble.html', cu: ['CU-19'], texto: 'Qué paga cuota, qué se cede, qué se reserva y a qué tarifa.' },
+      { titulo: 'Parqueaderos y cesiones', ruta: 'administrador/parqueaderos.html', cu: ['CU-09'], texto: 'Uso vigente de cada parqueadero y cesiones entre inmuebles.' },
+      { titulo: 'Vehículos', ruta: 'administrador/vehiculos.html', cu: ['CU-08'], texto: 'Vehículos registrados por inmueble y su responsable.' },
+      { titulo: 'Personas', ruta: 'administrador/integrantes.html', cu: ['CU-03'], texto: 'Propietarios, arrendatarios, residentes autorizados, consejo y empleados.' },
+      { titulo: 'Obligaciones', ruta: 'administrador/obligaciones.html', cu: ['CU-11'], texto: 'Cuota del periodo, generar obligaciones y obligaciones individuales.' },
+      { titulo: 'Registrar pago', ruta: 'administrador/pago-presencial.html', cu: ['CU-13'], texto: 'Pago en la oficina, recibo de caja y anulación.' },
+      { titulo: 'Estado de cartera', ruta: 'administrador/cartera.html', cu: ['CU-14'], texto: 'Cartera por días de mora, gastos del periodo y paz y salvo.' },
+      { titulo: 'Reservas', ruta: 'administrador/reservas.html', cu: ['CU-21'], texto: 'Confirmar, cancelar, finalizar y multar reservas de zonas comunes.' },
+      { titulo: 'Reportes', ruta: 'administrador/reportes.html', cu: ['CU-16'], texto: 'Asignar, dar seguimiento y cerrar novedades. Categorías.' },
+      { titulo: 'Usuarios y roles', ruta: 'administrador/usuarios.html', cu: ['CU-18'], texto: 'Cuentas de acceso, bloqueos y restablecimiento.' },
+      { titulo: 'Auditoría', ruta: 'administrador/auditoria.html', cu: ['CU-18'], texto: 'Quién hizo qué y cuándo. Exportar el registro.' },
+      { titulo: 'Notificaciones', ruta: 'administrador/notificaciones.html', cu: ['CU-17'], texto: 'Qué eventos avisan, a quién, y cómo salieron los envíos.' },
+      { titulo: 'Copropiedad', ruta: 'administrador/copropiedad.html', cu: [], texto: 'Datos generales de la propiedad horizontal.' },
+    ] },
+    { nombre: 'Vigilante', vistas: [
+      { titulo: 'Portería: personas', ruta: 'vigilante/porteria.html', cu: ['CU-07'], texto: 'Buscar por documento, veredicto, ingreso, salida e ingreso como excepción.' },
+      { titulo: 'Portería: vehículos', ruta: 'vigilante/vehiculos.html', cu: ['CU-10'], texto: 'Buscar por placa y registrar el movimiento con su parqueadero.' },
+      { titulo: 'Dentro del conjunto', ruta: 'vigilante/presentes.html', cu: ['CU-07'], texto: 'Quién está dentro ahora y registrar su salida.' },
+      { titulo: 'Reportar novedad', ruta: 'vigilante/reportar.html', cu: ['CU-15'], texto: 'Novedad del turno con evidencia.' },
+    ] },
+    { nombre: 'Residente', guia: 'Propietario residente, arrendatario o residente autorizado. Se ve como Lucía Mendoza, arrendataria de B-0302.', vistas: [
+      { titulo: 'Inicio', ruta: 'residente/inicio.html', cu: [], texto: 'Lo que debe, sus visitas, reservas y reportes.' },
+      { titulo: 'Visitas', ruta: 'residente/visitas.html', cu: ['CU-05', 'CU-06'], texto: 'Visitas ocasionales y autorizaciones recurrentes.' },
+      { titulo: 'Pagos', ruta: 'residente/pagos.html', cu: ['CU-12'], texto: 'Obligaciones, abono parcial, pasarela y comprobante.' },
+      { titulo: 'Reservas', ruta: 'residente/reservas.html', cu: ['CU-20'], texto: 'Disponibilidad, solicitar y cancelar reservas.' },
+      { titulo: 'Reportes', ruta: 'residente/reportes.html', cu: ['CU-15'], texto: 'Reportar una novedad y seguirla.' },
+      { titulo: 'Vehículos', ruta: 'residente/vehiculos.html', cu: ['CU-08'], texto: 'Sus vehículos y el parqueadero que usa.' },
+    ] },
+    { nombre: 'Miembro del consejo', vistas: [
+      { titulo: 'Cartera', ruta: 'administrador/cartera.html?como=consejo', cu: ['CU-14'], texto: 'Consulta de cartera y gastos, sin acciones de administración.' },
+      { titulo: 'Auditoría', ruta: 'administrador/auditoria.html?como=consejo', cu: ['CU-18'], texto: 'Consulta y exportación del registro de auditoría.' },
+    ] },
+  ]
+
+  var CASOS = [
+    ['CU-01', 'Iniciar sesión', 'Usuario registrado'],
+    ['CU-02', 'Gestionar inmuebles', 'Administrador'],
+    ['CU-03', 'Gestionar integrantes', 'Administrador'],
+    ['CU-04', 'Gestionar vinculación integrante–inmueble', 'Administrador'],
+    ['CU-05', 'Registrar visita ocasional', 'Residente'],
+    ['CU-06', 'Registrar autorización recurrente', 'Residente'],
+    ['CU-07', 'Registrar ingreso y salida de visitantes y autorizados', 'Vigilante'],
+    ['CU-08', 'Gestionar vehículos', 'Administrador y residente'],
+    ['CU-09', 'Gestionar parqueaderos y cesiones de uso', 'Administrador'],
+    ['CU-10', 'Registrar movimiento vehicular', 'Vigilante'],
+    ['CU-11', 'Generar y administrar obligaciones', 'Administrador'],
+    ['CU-12', 'Consultar obligación y pagar', 'Propietario y arrendatario'],
+    ['CU-13', 'Registrar pago presencial', 'Administrador'],
+    ['CU-14', 'Consultar cartera e información financiera', 'Administrador y consejo'],
+    ['CU-15', 'Crear reporte', 'Residente y vigilante'],
+    ['CU-16', 'Gestionar reporte', 'Administrador'],
+    ['CU-17', 'Configurar notificaciones', 'Administrador'],
+    ['CU-18', 'Gestionar usuarios, roles y auditoría', 'Administrador y consejo'],
+    ['CU-19', 'Gestionar tipos de inmueble', 'Administrador'],
+    ['CU-20', 'Reservar zona común', 'Residente'],
+    ['CU-21', 'Gestionar reservas', 'Administrador'],
+  ]
+
+  function el(etiqueta, clase, texto) {
+    var n = document.createElement(etiqueta)
+    if (clase) n.className = clase
+    if (texto) n.textContent = texto
+    return n
+  }
+
+  var contenedor = document.getElementById('actores')
+  ACTORES.forEach(function (actor) {
+    var seccion = el('section', 'actor')
+    var cabeza = el('div', 'encabezado')
+    var titulo = el('div')
+    titulo.appendChild(el('h2', '', actor.nombre))
+    titulo.appendChild(el('p', 'guia', actor.guia || (actor.vistas.length + (actor.vistas.length === 1 ? ' vista' : ' vistas'))))
+    cabeza.appendChild(titulo)
+    seccion.appendChild(cabeza)
+
+    var rejilla = el('div', 'rejilla r3')
+    actor.vistas.forEach(function (v) {
+      var tarjeta = el('a', 'superficie vista')
+      tarjeta.href = v.ruta
+      tarjeta.appendChild(el('b', '', v.titulo))
+      tarjeta.appendChild(el('p', '', v.texto))
+      var codigos = el('div', 'codigos')
+      v.cu.forEach(function (c) { codigos.appendChild(el('span', 'etiqueta dato', c)) })
+      tarjeta.appendChild(codigos)
+      rejilla.appendChild(tarjeta)
+    })
+    seccion.appendChild(rejilla)
+    contenedor.appendChild(seccion)
+  })
+
+  var cuerpo = document.getElementById('cobertura')
+  CASOS.forEach(function (caso) {
+    var fila = el('tr')
+    fila.appendChild(el('td', 'mono', caso[0]))
+    fila.appendChild(el('td', '', caso[1]))
+    fila.appendChild(el('td', '', caso[2]))
+    var celda = el('td')
+    ACTORES.forEach(function (actor) {
+      actor.vistas.forEach(function (v) {
+        if (v.cu.indexOf(caso[0]) < 0) return
+        if (celda.childNodes.length) celda.appendChild(document.createTextNode(' · '))
+        var a = el('a', '', v.titulo)
+        a.href = v.ruta
+        celda.appendChild(a)
+      })
+    })
+    fila.appendChild(celda)
+    cuerpo.appendChild(fila)
+  })
+})()
+</script>
+</body>
+</html>

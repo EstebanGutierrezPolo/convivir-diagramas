@@ -15,6 +15,7 @@ El código está en [convivir-frontend](https://github.com/EstebanGutierrezPolo/
 | `fuentes/secuencia/` | Un diagrama de secuencia por caso de uso |
 | `fuentes/notas/` | Estado del proyecto, decisiones abiertas y cómo se llevan las relaciones al código |
 | `convivir_sistema.html` | Sistema de diseño: marca, paleta, tipografía y componentes |
+| `vistas/` | Interfaces definitivas de la aplicación, una por caso de uso, y la hoja de estilos que se lleva al frontend |
 | `servidor.mjs` y `web/` | Visor y editor de los diagramas |
 
 Los diagramas son archivos de texto en formato [Mermaid](https://mermaid.js.org). La regla del proyecto es que el diagrama es el código: si el código necesita algo distinto, primero se cambia el diagrama.
@@ -35,3 +36,7 @@ Abre http://localhost:4000
 - **Guardar diagrama** (Ctrl + S) escribe el archivo en `fuentes/`. Después se hace commit como con cualquier otro cambio.
 - **Descargar SVG** baja la imagen en tema claro para insertarla en Word.
 - En Clases, el diagrama completo se arma solo uniendo los módulos.
+
+## Ver las interfaces
+
+Con el visor corriendo, abre http://localhost:4000/vistas/ o el enlace **Vistas** de la barra. Cada vista se puede ver como administrador, vigilante, residente o miembro del consejo desde el menú de la cuenta, en tema claro u oscuro. Las reglas para construir una vista nueva están en `vistas/GUIA-VISTAS.md`.

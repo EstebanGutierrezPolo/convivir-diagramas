@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Auditoría · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-18 inclusión Consultar y exportar auditoría (RF-108, RF-109, RN-32)
+     GET /api/auditoria?usuario&desde&hasta&accion · Auditoria.exportarRegistroDeAuditoria(fechaDesde, fechaHasta), solo administrador
+     Con ?como=consejo la ve el miembro del consejo: consulta, sin exportar -->
+<body data-rol="administrador" data-seccion="administracion" data-sub="auditoria">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Auditoría</h1>
+      <p class="guia">Toda operación sobre inmuebles, personas, cartera, cuentas y reportes queda aquí con quién la hizo y cuándo.</p>
+    </div>
+    <div class="acciones" data-solo="administrador">
+      <button class="btn segundo" type="button" id="exportar">Exportar registro</button>
+    </div>
+  </div>
+
+  <div class="aviso" data-solo-como="consejo" style="margin-bottom:var(--e5)">
+    <p>Como miembro del consejo consultas el registro completo. Si necesitas el archivo de un periodo, pídeselo a la administración.</p>
+  </div>
+
+  <form class="superficie relleno" id="filtros" role="search" novalidate style="margin-bottom:var(--e4)">
+    <div class="formulario" style="grid-template-columns:repeat(auto-fit, minmax(min(100%, 11rem), 1fr))">
+      <label class="campo">
+        <span>Desde</span>
+        <input type="date" id="desde" value="2026-11-01" max="2026-11-14">
+      </label>
+      <label class="campo">
+        <span>Hasta</span>
+        <input type="date" id="hasta" value="2026-11-14" max="2026-11-14">
+      </label>
+      <label class="campo">
+        <span>Acción</span>
+        <select id="accion"></select>
+      </label>
+      <label class="campo">
+        <span>Documento de quien actuó</span>
+        <input id="documento" class="identificador" inputmode="numeric" autocomplete="off" placeholder="32765418">
+      </label>
+    </div>
+    <div class="aviso no" id="rango-invertido" role="alert" hidden style="margin-top:var(--e4)">
+      <p data-campo="mensaje"></p>
+    </div>
+  </form>
+
+  <div class="superficie">
+    <div class="tabla-envoltura">
+      <table class="tabla" id="tabla-auditoria">
+        <thead>
+          <tr><th>Fecha y hora</th><th>Quién</th><th>Acción</th><th>Elemento afectado</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="vacio" id="sin-resultados" hidden>
+      <h3>No hay operaciones con esos filtros</h3>
+      <p>Amplía el rango de fechas o revisa el documento: va sin puntos ni espacios, por ejemplo <span class="identificador">32765418</span>.</p>
+      <button class="btn segundo" type="button" id="limpiar">Quitar filtros</button>
+    </div>
+    <div class="pie">
+      <span id="conteo"></span>
+      <span>El registro no se puede editar ni borrar.</span>
+    </div>
+  </div>
+</main>
+
+<!-- Exportar: Auditoria.exportarRegistroDeAuditoria(fechaDesde, fechaHasta) : File -->
+<dialog class="dialogo" id="dialogo-exportar" aria-labelledby="titulo-exportar">
+  <form data-confirmar="Registro exportado" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-exportar">Exportar registro de auditoría</h2>
+        <p class="guia">Descarga todas las operaciones del periodo en un archivo CSV que abre en Excel.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario dos">
+        <label class="campo">
+          <span>Desde</span>
+          <input type="date" id="exportar-desde" required max="2026-11-14" data-error="Elige la fecha inicial del periodo.">
+        </label>
+        <label class="campo">
+          <span>Hasta</span>
+          <input type="date" id="exportar-hasta" required max="2026-11-14" data-error="Elige la fecha final del periodo.">
+        </label>
+      </div>
+      <p class="guia" style="margin-top:var(--e4)">El archivo trae todas las acciones del periodo, sin los filtros de la tabla.</p>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Exportar registro</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+
+  // Auditoria.accion: el tipoEvento del EventoSistema que la originó.
+  var ACCIONES = {
+    INICIO_SESION: 'Inicio de sesión',
+    CUENTA_CREADA: 'Cuenta creada',
+    CUENTA_MODIFICADA: 'Cuenta modificada',
+    INMUEBLE_REGISTRADO: 'Inmueble registrado',
+    INMUEBLE_DESACTIVADO: 'Inmueble desactivado',
+    VINCULACION_CREADA: 'Vinculación creada',
+    VINCULACION_FINALIZADA: 'Vinculación finalizada',
+    OBLIGACION_GENERADA: 'Obligaciones generadas',
+    OBLIGACION_ANULADA: 'Obligación anulada',
+    PAGO_REGISTRADO: 'Pago registrado',
+    PAGO_CONFIRMADO: 'Pago confirmado',
+    PAGO_ANULADO: 'Pago anulado',
+    REPORTE_CREADO: 'Reporte creado',
+    REPORTE_ASIGNADO: 'Reporte asignado',
+    REPORTE_CAMBIO_DE_ESTADO: 'Seguimiento de reporte',
+    REPORTE_CERRADO: 'Reporte cerrado',
+  }
+
+  // Integrante que realiza la operación (Integrante "1" --> "*" Auditoria : realiza).
+  var PERSONAS = {
+    '32765418': 'Paula Ortega',
+    '1047392815': 'Jhon Rojas',
+    '8745210': 'Hernán Ruiz',
+    '1143228790': 'Lucía Mendoza',
+    '1129504377': 'Andrés Caicedo',
+  }
+
+  var registros = [
+    ['2026-11-14 19:52', '1047392815', 'INICIO_SESION', 'Cuenta jhon.rojas'],
+    ['2026-11-14 18:10', '1047392815', 'REPORTE_CREADO', 'Reporte R-0148 · Sótano 2'],
+    ['2026-11-14 11:32', '32765418', 'PAGO_REGISTRADO', 'Pago RC-2026-1187 · A-0902 · $ 300 000 en efectivo'],
+    ['2026-11-14 09:05', '32765418', 'CUENTA_MODIFICADA', 'Cuenta sofia.restrepo · contraseña restablecida'],
+    ['2026-11-14 08:47', '32765418', 'INICIO_SESION', 'Cuenta paula.ortega'],
+    ['2026-11-13 16:45', '32765418', 'REPORTE_CAMBIO_DE_ESTADO', 'Reporte R-0145 · observación registrada'],
+    ['2026-11-13 10:12', '32765418', 'OBLIGACION_ANULADA', 'Obligación OB-2026-11-0391 · C-0705 · interés cobrado dos veces'],
+    ['2026-11-12 21:15', '1047392815', 'REPORTE_CREADO', 'Reporte R-0146 · V-07'],
+    ['2026-11-12 15:30', '8745210', 'INICIO_SESION', 'Cuenta hernan.ruiz'],
+    ['2026-11-12 09:20', '32765418', 'REPORTE_CAMBIO_DE_ESTADO', 'Reporte R-0145 · pasó a en proceso'],
+    ['2026-11-11 14:02', '32765418', 'PAGO_ANULADO', 'Pago RC-2026-1162 · C-1201 · cheque devuelto por el banco'],
+    ['2026-11-10 10:15', '32765418', 'INMUEBLE_DESACTIVADO', 'Inmueble B-0101 · unido a B-0102 por remodelación'],
+    ['2026-11-09 22:10', '1047392815', 'REPORTE_CAMBIO_DE_ESTADO', 'Reporte R-0143 · observación registrada'],
+    ['2026-11-09 08:00', '32765418', 'REPORTE_ASIGNADO', 'Reporte R-0143 · a Jhon Rojas'],
+    ['2026-11-04 08:15', '1129504377', 'REPORTE_CREADO', 'Reporte R-0140 · Torre C'],
+    ['2026-11-03 07:00', '32765418', 'OBLIGACION_GENERADA', 'Periodo noviembre de 2026 · 184 cuotas ordinarias'],
+    ['2026-11-02 16:20', '32765418', 'CUENTA_CREADA', 'Cuenta sofia.restrepo'],
+    ['2026-11-02 11:40', '1143228790', 'PAGO_CONFIRMADO', 'Pago en línea PSE-88412097 · B-0302 · $ 410 000'],
+    ['2026-11-01 09:30', '32765418', 'VINCULACION_CREADA', 'Vinculación de Sofía Restrepo con A-0401 · residente autorizada'],
+    ['2026-10-30 17:05', '32765418', 'VINCULACION_FINALIZADA', 'Vinculación de Camilo Durán con C-0705 · terminó el contrato'],
+    ['2026-10-28 10:40', '32765418', 'INMUEBLE_REGISTRADO', 'Inmueble V-12 · parqueadero de visitantes'],
+  ]
+
+  var campos = {
+    desde: document.getElementById('desde'),
+    hasta: document.getElementById('hasta'),
+    accion: document.getElementById('accion'),
+    documento: document.getElementById('documento'),
+  }
+
+  campos.accion.innerHTML = '<option value="">Todas las acciones</option>' + Object.keys(ACCIONES).map(function (k) {
+    return '<option value="' + k + '">' + ACCIONES[k] + '</option>'
+  }).join('')
+
+  function leer(t) { var p = t.split(/[- :]/).map(Number); return new Date(p[0], p[1] - 1, p[2], p[3] || 0, p[4] || 0) }
+  function hora(d) {
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    if (h === 12 && m === '00') return '12:00 m.'
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  function fechaLarga(t) { var d = leer(t); return d.getDate() + ' de ' + MESES[d.getMonth()] + (d.getFullYear() !== 2026 ? ' de ' + d.getFullYear() : '') }
+  function agrupar(n) { return n.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  // Unidades, comprobantes, reportes y logins van en monoespaciada.
+  function codigos(t) {
+    return esc(t).replace(/\b([A-Z]{1,3}-[0-9][0-9-]*|[a-z]+\.[a-z]+)\b/g, '<span class="identificador">$1</span>')
+  }
+  function dia(t) { return t.slice(0, 10) }
+
+  function rangoInvertido(desde, hasta) { return desde && hasta && desde > hasta }
+
+  function pintar() {
+    var desde = campos.desde.value, hasta = campos.hasta.value
+    var documento = campos.documento.value.replace(/\D/g, '')
+    var aviso = document.getElementById('rango-invertido')
+    var tabla = document.getElementById('tabla-auditoria')
+    if (rangoInvertido(desde, hasta)) {
+      aviso.querySelector('[data-campo="mensaje"]').textContent = 'La fecha inicial (' + fechaLarga(desde) + ') es posterior a la final (' + fechaLarga(hasta) + '). Cambia una de las dos para ver el registro.'
+      aviso.hidden = false
+      campos.desde.setAttribute('aria-invalid', 'true')
+      tabla.hidden = true
+      document.getElementById('sin-resultados').hidden = true
+      document.getElementById('conteo').textContent = 'Sin resultados'
+      return
+    }
+    aviso.hidden = true
+    campos.desde.removeAttribute('aria-invalid')
+    var visibles = registros.filter(function (r) {
+      return (!desde || dia(r[0]) >= desde) && (!hasta || dia(r[0]) <= hasta) &&
+        (!campos.accion.value || r[2] === campos.accion.value) &&
+        (!documento || r[1].indexOf(documento) === 0)
+    })
+    document.querySelector('#tabla-auditoria tbody').innerHTML = visibles.map(function (r) {
+      var d = leer(r[0])
+      return '<tr>' +
+        '<td style="white-space:nowrap">' + fechaLarga(r[0]) + '<span class="sub num">' + hora(d) + '</span></td>' +
+        '<td>' + esc(PERSONAS[r[1]]) + '<span class="sub">CC <span class="identificador">' + agrupar(r[1]) + '</span></span></td>' +
+        '<td><span class="etiqueta">' + ACCIONES[r[2]] + '</span></td>' +
+        '<td style="min-width:16rem">' + codigos(r[3]) + '</td>' +
+        '</tr>'
+    }).join('')
+    tabla.hidden = visibles.length === 0
+    document.getElementById('sin-resultados').hidden = visibles.length > 0
+    document.getElementById('conteo').textContent = visibles.length + (visibles.length === 1 ? ' operación' : ' operaciones') +
+      (desde && hasta ? ' del ' + fechaLarga(desde) + ' al ' + fechaLarga(hasta) : '')
+  }
+
+  ;['desde', 'hasta', 'accion'].forEach(function (k) { campos[k].addEventListener('change', pintar) })
+  campos.documento.addEventListener('input', pintar)
+  document.getElementById('filtros').addEventListener('submit', function (e) { e.preventDefault(); pintar() })
+  document.getElementById('limpiar').addEventListener('click', function () {
+    campos.desde.value = '2026-11-01'
+    campos.hasta.value = '2026-11-14'
+    campos.accion.value = ''
+    campos.documento.value = ''
+    pintar()
+  })
+
+  // ---------- Exportar (solo administrador) ----------
+  var exportarDesde = document.getElementById('exportar-desde')
+  var exportarHasta = document.getElementById('exportar-hasta')
+
+  document.getElementById('exportar').addEventListener('click', function () {
+    var formulario = document.querySelector('#dialogo-exportar form')
+    formulario.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    formulario.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+    exportarDesde.value = rangoInvertido(campos.desde.value, campos.hasta.value) ? '' : campos.desde.value
+    exportarHasta.value = rangoInvertido(campos.desde.value, campos.hasta.value) ? '' : campos.hasta.value
+    Convivir.abrir('dialogo-exportar')
+  })
+
+  function errorEn(campo, mensaje) {
+    campo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-generado', '')
+    error.textContent = mensaje
+    campo.closest('.campo').appendChild(error)
+    campo.focus()
+  }
+
+  document.querySelector('#dialogo-exportar form').addEventListener('confirmado', function (e) {
+    var desde = exportarDesde.value, hasta = exportarHasta.value
+    if (rangoInvertido(desde, hasta)) {
+      e.preventDefault()
+      errorEn(exportarHasta, 'La fecha final es anterior a la inicial. Pon una igual o posterior al ' + fechaLarga(desde) + '.')
+      return
+    }
+    var periodo = registros.filter(function (r) { return dia(r[0]) >= desde && dia(r[0]) <= hasta })
+    if (!periodo.length) {
+      e.preventDefault()
+      errorEn(exportarDesde, 'No hay operaciones del ' + fechaLarga(desde) + ' al ' + fechaLarga(hasta) + '. Amplía el periodo.')
+      return
+    }
+    var lineas = [['Fecha', 'Hora', 'Documento', 'Quién', 'Acción', 'Elemento afectado']].concat(periodo.map(function (r) {
+      return [dia(r[0]), r[0].slice(11), r[1], PERSONAS[r[1]], ACCIONES[r[2]], r[3]]
+    })).map(function (fila) {
+      return fila.map(function (c) { return '"' + String(c).replace(/"/g, '""') + '"' }).join(';')
+    })
+    var archivo = new Blob(['﻿' + lineas.join('\r\n')], { type: 'text/csv;charset=utf-8' })
+    var enlace = document.createElement('a')
+    enlace.href = URL.createObjectURL(archivo)
+    enlace.download = 'auditoria-villa-campestre-' + desde + '-a-' + hasta + '.csv'
+    document.body.appendChild(enlace)
+    enlace.click()
+    setTimeout(function () { URL.revokeObjectURL(enlace.href); enlace.remove() }, 1000)
+    this.setAttribute('data-confirmar', 'Registro exportado: ' + periodo.length + ' operaciones del ' + fechaLarga(desde) + ' al ' + fechaLarga(hasta) + '.')
+  })
+
+  pintar()
+})()
+</script>
+</body>
+</html>

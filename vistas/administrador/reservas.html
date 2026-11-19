@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reservas · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* La tarifa va en monoespaciada, pero su explicación ("por evento") es texto corriente. */
+  .tabla td.num .sub { font-family: var(--texto); }
+  .tabla td.finalidad { min-width: 13rem; max-width: 20rem; }
+  .tabla td.cierre { min-width: 14rem; }
+</style>
+</head>
+<!-- CU-21 Gestionar reservas · Reserva.confirmarReserva(), Reserva.cancelarReservaPorMotivo(motivo),
+     Reserva.finalizarReserva(), Reserva.aplicarMultaPorIncumplimiento(motivo), Reserva.calcularTarifaDeLaReserva()
+     Patrón State: ComportamientoReserva (ReservaSolicitada, ReservaConfirmada, ReservaCerrada)
+     Patrón Strategy: EstrategiaTarifa (TarifaPorHora, TarifaPorDia, TarifaPorEvento)
+     FabricaObligacion.crearObligacionPorReserva(reserva), crearObligacionIndividual(MULTA, valorMulta, fechaVencimiento)
+     RN-38 sin superposición de confirmadas, RN-39 ALQUILER_ZONA al inmueble que paga, RN-40 multa al propietario -->
+<body data-rol="administrador" data-seccion="reservas">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Reservas de zonas comunes</h1>
+      <p class="guia" id="resumen">Salón social, Zona BBQ, Cancha múltiple y Habitación de huéspedes</p>
+    </div>
+    <div class="acciones">
+      <a class="btn segundo" href="tipos-inmueble.html">Tarifas y multas por zona</a>
+    </div>
+  </div>
+
+  <div class="pestanas" role="tablist" aria-label="Reservas por estado">
+    <button type="button" role="tab" aria-selected="true" aria-controls="panel-solicitadas" id="tab-solicitadas">Por confirmar <span class="cuenta-pestana" data-cuenta="SOLICITADA">0</span></button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="panel-confirmadas" id="tab-confirmadas">Confirmadas <span class="cuenta-pestana" data-cuenta="CONFIRMADA">0</span></button>
+    <button type="button" role="tab" aria-selected="false" aria-controls="panel-cerradas" id="tab-cerradas">Cerradas <span class="cuenta-pestana" data-cuenta="CERRADA">0</span></button>
+  </div>
+
+  <div class="filtros">
+    <label class="campo">
+      <span class="solo-lectores">Zona común</span>
+      <select id="filtro-zona">
+        <option value="">Todas las zonas</option>
+        <option value="salon">Salón social</option>
+        <option value="bbq">Zona BBQ</option>
+        <option value="cancha">Cancha múltiple</option>
+        <option value="huespedes">Habitación de huéspedes</option>
+      </select>
+    </label>
+  </div>
+
+  <!-- ReservaSolicitada: confirmar o cancelar -->
+  <section id="panel-solicitadas" role="tabpanel" aria-labelledby="tab-solicitadas">
+    <div class="superficie">
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead>
+            <tr><th>Zona</th><th>Fecha y franja</th><th>Quién la pidió</th><th>Finalidad</th><th class="num">Tarifa</th><th>Estado</th><th><span class="solo-lectores">Acciones</span></th></tr>
+          </thead>
+          <tbody data-estado="SOLICITADA"></tbody>
+        </table>
+      </div>
+      <div class="vacio" data-vacio="SOLICITADA" hidden>
+        <h3>No hay reservas por confirmar</h3>
+        <p>Cuando un residente pida una zona común, la solicitud aparece aquí para que la confirmes o la canceles.</p>
+      </div>
+      <div class="pie"><span>Confirma solo si la zona está libre: dos reservas confirmadas no pueden cruzarse en la misma zona.</span></div>
+    </div>
+  </section>
+
+  <!-- ReservaConfirmada: finalizar, aplicar multa o cancelar -->
+  <section id="panel-confirmadas" role="tabpanel" aria-labelledby="tab-confirmadas" hidden>
+    <div class="superficie">
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead>
+            <tr><th>Zona</th><th>Fecha y franja</th><th>Quién la pidió</th><th>Finalidad</th><th class="num">Tarifa</th><th>Estado</th><th><span class="solo-lectores">Acciones</span></th></tr>
+          </thead>
+          <tbody data-estado="CONFIRMADA"></tbody>
+        </table>
+      </div>
+      <div class="vacio" data-vacio="CONFIRMADA" hidden>
+        <h3>No hay reservas confirmadas</h3>
+        <p>Las reservas que confirmes quedan aquí hasta que las finalices, las canceles o apliques una multa.</p>
+      </div>
+      <div class="pie"><span>Cuando la reserva termine, finalízala. Si no se respetó el horario o hubo daños, aplica la multa en su lugar.</span></div>
+    </div>
+  </section>
+
+  <!-- ReservaCerrada: canceladas, finalizadas e incumplidas, sin acciones -->
+  <section id="panel-cerradas" role="tabpanel" aria-labelledby="tab-cerradas" hidden>
+    <div class="superficie">
+      <div class="tabla-envoltura">
+        <table class="tabla">
+          <thead>
+            <tr><th>Zona</th><th>Fecha y franja</th><th>Quién la pidió</th><th>Finalidad</th><th class="num">Tarifa</th><th>Cómo terminó</th></tr>
+          </thead>
+          <tbody data-estado="CERRADA"></tbody>
+        </table>
+      </div>
+      <div class="vacio" data-vacio="CERRADA" hidden>
+        <h3>Todavía no hay reservas cerradas</h3>
+        <p>Aquí quedan las reservas canceladas, finalizadas o incumplidas, con su motivo y su multa.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Confirmar: Reserva.confirmarReserva() → validarDisponibilidadDeLaZona(), calcularTarifaDeLaReserva(),
+     FabricaObligacion.crearObligacionPorReserva(reserva) -->
+<dialog class="dialogo" id="dialogo-confirmar" aria-labelledby="titulo-confirmar">
+  <form data-confirmar="Reserva confirmada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-confirmar">Confirmar reserva</h2>
+        <p class="guia" data-campo="cuando"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <div class="aviso no" id="confirmar-error" role="alert" hidden>
+        <p><b>La zona ya está reservada en ese periodo.</b> <span data-campo="choque"></span></p>
+        <p><button class="btn texto chico" type="button" id="cancelar-por-choque">Cancelar esta solicitud</button></p>
+      </div>
+      <dl class="datos fila-unica">
+        <div><dt>Quién la pidió</dt><dd data-campo="pidio"></dd></div>
+        <div><dt>Inmueble que paga</dt><dd data-campo="paga"></dd></div>
+        <div><dt>Finalidad</dt><dd data-campo="finalidad"></dd></div>
+        <div><dt>Tarifa</dt><dd data-campo="tarifa"></dd></div>
+      </dl>
+      <div class="ficha az" id="obligacion-alquiler">
+        <div class="titular" data-campo="obligacion-valor"></div>
+        <div class="meta" data-campo="obligacion-meta"></div>
+      </div>
+      <div class="ficha" id="sin-obligacion" hidden>
+        <div class="titular">Sin costo</div>
+        <div class="meta" data-campo="sin-costo"></div>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Volver</button>
+      <button class="btn" type="submit">Confirmar reserva</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Cancelar: Reserva.cancelarReservaPorMotivo(motivo) → ComportamientoReserva.cancelar(reserva, motivo) -->
+<dialog class="dialogo" id="dialogo-cancelar" aria-labelledby="titulo-cancelar">
+  <form data-confirmar="Reserva cancelada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-cancelar">Cancelar reserva</h2>
+        <p class="guia" data-campo="cuando"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <p class="guia" data-campo="quien"></p>
+      <div class="aviso al" id="cancelar-obligacion" hidden>
+        <p data-campo="obligacion"></p>
+      </div>
+      <label class="campo">
+        <span>Motivo de la cancelación</span>
+        <textarea name="motivo" id="motivo-cancelacion" required placeholder="La residente la canceló por pronóstico de lluvia."
+                  data-error="Escribe el motivo. Quien pidió la reserva lo ve en su historial."></textarea>
+        <span class="ayuda">Quien pidió la reserva lo ve en su historial.</span>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Volver</button>
+      <button class="btn riesgo" type="submit">Cancelar reserva</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Finalizar: Reserva.finalizarReserva() → ComportamientoReserva.finalizar(reserva) -->
+<dialog class="dialogo" id="dialogo-finalizar" aria-labelledby="titulo-finalizar">
+  <form data-confirmar="Reserva finalizada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-finalizar">Finalizar reserva</h2>
+        <p class="guia" data-campo="cuando"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <dl class="datos fila-unica">
+        <div><dt>Quién la pidió</dt><dd data-campo="pidio"></dd></div>
+        <div><dt>Inmueble que paga</dt><dd data-campo="paga"></dd></div>
+        <div><dt>Tarifa cobrada</dt><dd data-campo="tarifa"></dd></div>
+      </dl>
+      <p class="guia">La reserva pasa a cerradas y la zona queda libre. Si no se respetó el horario o la zona quedó con daños, vuelve y aplica la multa en lugar de finalizarla.</p>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Volver</button>
+      <button class="btn" type="submit">Finalizar reserva</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Multa: Reserva.aplicarMultaPorIncumplimiento(motivo) → ComportamientoReserva.marcarIncumplida(reserva, motivo),
+     FabricaObligacion.crearObligacionIndividual(MULTA, valorMulta, fechaVencimiento) -->
+<dialog class="dialogo" id="dialogo-multa" aria-labelledby="titulo-multa">
+  <form data-confirmar="Multa aplicada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-multa">Aplicar multa por incumplimiento</h2>
+        <p class="guia" data-campo="cuando"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <div class="ficha no" id="multa-con-valor">
+        <div class="titular" data-campo="multa-valor"></div>
+        <div class="meta" data-campo="multa-meta"></div>
+      </div>
+      <div class="ficha" id="multa-sin-valor" hidden>
+        <div class="titular">Esta zona no tiene multa</div>
+        <div class="meta" data-campo="multa-cero"></div>
+      </div>
+      <dl class="datos fila-unica">
+        <div><dt>A cargo de</dt><dd data-campo="propietario"></dd></div>
+        <div><dt>Quién la pidió</dt><dd data-campo="pidio"></dd></div>
+      </dl>
+      <p class="guia">La multa la paga siempre el propietario del inmueble que paga la reserva, aunque la haya pedido un arrendatario o un residente autorizado.</p>
+      <label class="campo">
+        <span>Motivo de la multa</span>
+        <textarea name="motivo" id="motivo-multa" required placeholder="Entregó el salón a la 1:30 a. m., fuera del horario, con dos sillas rotas."
+                  data-error="Escribe el motivo de la multa. Queda en la obligación y lo ve el propietario."></textarea>
+        <span class="ayuda">Di qué pasó y a qué hora. Queda en la obligación y lo ve el propietario.</span>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Volver</button>
+      <button class="btn riesgo" type="submit" id="boton-multa">Aplicar multa</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var HOY = new Date(2026, 10, 14)
+  var DIAS = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  var VENCE_MULTA = new Date(2026, 10, 30)
+
+  // TipoInmueble de cada zona común: valorTarifa, unidadTarifa y valorMulta.
+  var TIPOS = {
+    salon: { zona: 'Salón social', unidad: 'POR_EVENTO', tarifa: 180000, multa: 90000 },
+    bbq: { zona: 'Zona BBQ', unidad: 'POR_HORA', tarifa: 25000, multa: 50000 },
+    cancha: { zona: 'Cancha múltiple', unidad: 'POR_HORA', tarifa: 0, multa: 0 },
+    huespedes: { zona: 'Habitación de huéspedes', unidad: 'POR_DIA', tarifa: 70000, multa: 35000 },
+  }
+  var UNIDADES = { POR_HORA: 'Por hora', POR_DIA: 'Por día', POR_EVENTO: 'Por evento' }
+
+  // Propietario de cada inmueble que paga (RN-40).
+  var PROPIETARIOS = {
+    'B-0302': 'Ernesto Vargas, propietario no residente',
+    'C-0705': 'Beatriz Londoño, propietaria no residente',
+    'A-0401': 'Gloria Ariza, propietaria residente',
+    'A-0902': 'Marta Oviedo, propietaria residente',
+    'C-1201': 'Diana Salcedo, propietaria residente',
+  }
+
+  var reservas = [
+    { id: 231, tipo: 'salon', inicio: '2026-11-21 16:00', fin: '2026-11-21 23:00', pidio: 'Lucía Mendoza', vinculo: 'arrendataria', paga: 'B-0302', finalidad: 'Cumpleaños de su esposo, unas 40 personas', estado: 'SOLICITADA' },
+    { id: 233, tipo: 'bbq', inicio: '2026-11-15 12:00', fin: '2026-11-15 16:00', pidio: 'Andrés Caicedo', vinculo: 'arrendatario', paga: 'C-0705', finalidad: 'Asado con compañeros de trabajo', estado: 'SOLICITADA' },
+    { id: 234, tipo: 'huespedes', inicio: '2026-11-27', fin: '2026-11-28', pidio: 'Gloria Ariza', vinculo: 'propietaria residente', paga: 'A-0401', finalidad: 'Hospedaje de su hermana, que viene de Bucaramanga', estado: 'SOLICITADA' },
+    { id: 235, tipo: 'cancha', inicio: '2026-11-28 08:00', fin: '2026-11-28 10:00', pidio: 'Sofía Restrepo', vinculo: 'residente autorizada', paga: 'A-0401', finalidad: 'Partido de microfútbol con vecinos del conjunto', estado: 'SOLICITADA' },
+    { id: 226, tipo: 'bbq', inicio: '2026-11-15 13:00', fin: '2026-11-15 17:00', pidio: 'Marta Oviedo', vinculo: 'propietaria residente', paga: 'A-0902', finalidad: 'Almuerzo familiar de domingo', estado: 'CONFIRMADA' },
+    { id: 224, tipo: 'salon', inicio: '2026-11-13 19:00', fin: '2026-11-13 23:00', pidio: 'Diana Salcedo', vinculo: 'propietaria residente', paga: 'C-1201', finalidad: 'Reunión de exalumnos del colegio', estado: 'CONFIRMADA' },
+    { id: 228, tipo: 'cancha', inicio: '2026-11-14 09:00', fin: '2026-11-14 11:00', pidio: 'Andrés Caicedo', vinculo: 'arrendatario', paga: 'C-0705', finalidad: 'Entrenamiento de baloncesto', estado: 'CONFIRMADA' },
+    { id: 230, tipo: 'bbq', inicio: '2026-12-05 15:00', fin: '2026-12-05 18:00', pidio: 'Lucía Mendoza', vinculo: 'arrendataria', paga: 'B-0302', finalidad: 'Despedida de fin de año con vecinos de la torre B', estado: 'CONFIRMADA' },
+    { id: 219, tipo: 'salon', inicio: '2026-11-07 18:00', fin: '2026-11-07 23:00', pidio: 'Marta Oviedo', vinculo: 'propietaria residente', paga: 'A-0902', finalidad: 'Primera comunión de su nieta', estado: 'FINALIZADA' },
+    { id: 221, tipo: 'bbq', inicio: '2026-11-08 12:00', fin: '2026-11-08 15:00', pidio: 'Lucía Mendoza', vinculo: 'arrendataria', paga: 'B-0302', finalidad: 'Almuerzo con amigos', estado: 'CANCELADA', motivoCancelacion: 'Pronóstico de lluvia. La residente lo pidió por citófono.' },
+    { id: 214, tipo: 'salon', inicio: '2026-10-31 19:00', fin: '2026-10-31 23:00', pidio: 'Andrés Caicedo', vinculo: 'arrendatario', paga: 'C-0705', finalidad: 'Fiesta de disfraces', estado: 'INCUMPLIDA', motivoMulta: 'Entregó el salón a la 1:30 a. m., fuera del horario, con dos sillas rotas.' },
+    { id: 211, tipo: 'huespedes', inicio: '2026-10-24', fin: '2026-10-25', pidio: 'Gloria Ariza', vinculo: 'propietaria residente', paga: 'A-0401', finalidad: 'Visita de sus padres', estado: 'FINALIZADA' },
+  ]
+
+  var CERRADOS = ['CANCELADA', 'FINALIZADA', 'INCUMPLIDA']
+  var zonaFiltro = ''
+  var actual = null
+
+  // ---------- Utilidades de fecha y texto ----------
+  function leer(texto) {
+    var p = texto.split(/[- :]/).map(Number)
+    return new Date(p[0], p[1] - 1, p[2], p[3] || 0, p[4] || 0)
+  }
+  function fecha(d) { return DIAS[d.getDay()] + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()] }
+  function hora(d) {
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    if (h === 12 && m === '00') return '12:00 m.'
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  function mayuscula(t) { return t.charAt(0).toUpperCase() + t.slice(1) }
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  function dia(d) { return new Date(d.getFullYear(), d.getMonth(), d.getDate()) }
+  function relativo(d) {
+    var dif = Math.round((dia(d) - HOY) / 86400000)
+    return dif === 0 ? 'Hoy' : dif === 1 ? 'Mañana' : dif === -1 ? 'Ayer' : ''
+  }
+  function porDia(r) { return TIPOS[r.tipo].unidad === 'POR_DIA' }
+  function dias(r) { return Math.round((leer(r.fin) - leer(r.inicio)) / 86400000) + 1 }
+  function horas(r) { return Math.round((leer(r.fin) - leer(r.inicio)) / 3600000) }
+
+  // Periodo que ocupa la reserva (AsignacionInmueble): las de día ocupan el día completo.
+  function periodo(r) {
+    var inicio = leer(r.inicio), fin = leer(r.fin)
+    if (porDia(r)) fin = new Date(fin.getFullYear(), fin.getMonth(), fin.getDate() + 1)
+    return [inicio, fin]
+  }
+  function cuando(r) {
+    var i = leer(r.inicio), f = leer(r.fin)
+    if (porDia(r)) {
+      var mismoMes = i.getMonth() === f.getMonth()
+      return 'Del ' + DIAS[i.getDay()] + ' ' + i.getDate() + (mismoMes ? '' : ' de ' + MESES[i.getMonth()]) + ' al ' + fecha(f)
+    }
+    return mayuscula(fecha(i)) + ', ' + hora(i) + ' a ' + hora(f)
+  }
+
+  // ---------- EstrategiaTarifa: la elige FabricaEstrategiaTarifa según la unidad del tipo ----------
+  var ESTRATEGIAS = {
+    // TarifaPorHora.calcular(valorTarifa, asignacionInmueble)
+    POR_HORA: function (valor, r) { var h = horas(r); return { total: valor * h, detalle: h + (h === 1 ? ' hora' : ' horas') + ' × ' + Convivir.pesos(valor) } },
+    // TarifaPorDia.calcular(valorTarifa, asignacionInmueble)
+    POR_DIA: function (valor, r) { var d = dias(r); return { total: valor * d, detalle: d + (d === 1 ? ' día' : ' días') + ' × ' + Convivir.pesos(valor) } },
+    // TarifaPorEvento.calcular(valorTarifa, asignacionInmueble)
+    POR_EVENTO: function (valor) { return { total: valor, detalle: 'Tarifa por evento' } },
+  }
+  function calcularTarifa(r) {
+    var tipo = TIPOS[r.tipo]
+    return ESTRATEGIAS[tipo.unidad](tipo.tarifa, r)
+  }
+
+  // Reserva.validarDisponibilidadDeLaZona(): ninguna confirmada de la misma zona se cruza (RN-38).
+  function choqueCon(r) {
+    var a = periodo(r)
+    return reservas.filter(function (o) {
+      if (o === r || o.estado !== 'CONFIRMADA' || o.tipo !== r.tipo) return false
+      var b = periodo(o)
+      return a[0] < b[1] && b[0] < a[1]
+    })[0]
+  }
+
+  // ---------- Pintar las tablas ----------
+  function grupo(r) { return CERRADOS.indexOf(r.estado) >= 0 ? 'CERRADA' : r.estado }
+
+  function celdas(r) {
+    var tipo = TIPOS[r.tipo]
+    var i = leer(r.inicio), f = leer(r.fin)
+    var t = calcularTarifa(r)
+    var fechaTexto, franja
+    if (porDia(r)) { fechaTexto = cuando(r); franja = dias(r) + ' días' }
+    else { fechaTexto = mayuscula(fecha(i)); franja = hora(i) + ' a ' + hora(f) }
+    var rel = relativo(i)
+    return '<td><span class="fuerte">' + esc(tipo.zona) + '</span><span class="sub">' + UNIDADES[tipo.unidad] + '</span></td>' +
+      '<td>' + esc(fechaTexto) + '<span class="sub">' + (rel ? rel + ' · ' : '') + esc(franja) + '</span></td>' +
+      '<td>' + esc(r.pidio) + '<span class="sub">Paga <span class="identificador">' + esc(r.paga) + '</span> · ' + esc(r.vinculo) + '</span></td>' +
+      '<td class="finalidad">' + esc(r.finalidad) + '</td>' +
+      '<td class="num">' + (t.total ? Convivir.pesos(t.total) : 'Sin costo') + '<span class="sub">' + esc(t.detalle) + '</span></td>'
+  }
+
+  function fila(r) {
+    var t = calcularTarifa(r)
+    if (r.estado === 'SOLICITADA') {
+      return celdas(r) +
+        '<td><span class="pildora p-al">Por confirmar</span></td>' +
+        '<td class="acciones-fila"><button class="btn chico" type="button" data-accion="confirmar" data-id="' + r.id + '">Confirmar</button> ' +
+        '<button class="btn segundo chico" type="button" data-accion="cancelar" data-id="' + r.id + '">Cancelar reserva</button></td>'
+    }
+    if (r.estado === 'CONFIRMADA') {
+      return celdas(r) +
+        '<td><span class="pildora p-ok">Confirmada</span><span class="sub">' + (t.total ? 'Alquiler cobrado a <span class="identificador">' + esc(r.paga) + '</span>' : 'Sin cobro') + '</span></td>' +
+        '<td class="acciones-fila"><button class="btn segundo chico" type="button" data-accion="finalizar" data-id="' + r.id + '">Finalizar</button> ' +
+        '<button class="btn segundo chico" type="button" data-accion="multa" data-id="' + r.id + '">Aplicar multa</button> ' +
+        '<button class="btn texto chico" type="button" data-accion="cancelar" data-id="' + r.id + '">Cancelar reserva</button></td>'
+    }
+    var estado = { CANCELADA: ['p-ne', 'Cancelada'], FINALIZADA: ['p-ne', 'Finalizada'], INCUMPLIDA: ['p-no', 'Incumplida'] }[r.estado]
+    var detalle = ''
+    if (r.estado === 'CANCELADA') detalle = 'Motivo: ' + esc(r.motivoCancelacion)
+    if (r.estado === 'INCUMPLIDA') {
+      var multa = TIPOS[r.tipo].multa
+      detalle = (multa ? 'Multa de ' + Convivir.pesos(multa) + ' a ' + esc(PROPIETARIOS[r.paga].split(',')[0]) + '. ' : 'Sin multa. ') + esc(r.motivoMulta)
+    }
+    if (r.estado === 'FINALIZADA') detalle = 'Se usó sin novedades'
+    return celdas(r) + '<td class="cierre"><span class="pildora ' + estado[0] + '">' + estado[1] + '</span><span class="sub">' + detalle + '</span></td>'
+  }
+
+  function pintar() {
+    var cuentas = { SOLICITADA: 0, CONFIRMADA: 0, CERRADA: 0 }
+    ;['SOLICITADA', 'CONFIRMADA', 'CERRADA'].forEach(function (g) {
+      var lista = reservas.filter(function (r) { return grupo(r) === g && (!zonaFiltro || r.tipo === zonaFiltro) })
+      lista.sort(function (a, b) { return g === 'CERRADA' ? leer(b.inicio) - leer(a.inicio) : leer(a.inicio) - leer(b.inicio) })
+      cuentas[g] = lista.length
+      var cuerpo = document.querySelector('tbody[data-estado="' + g + '"]')
+      cuerpo.innerHTML = lista.map(function (r) { return '<tr>' + fila(r) + '</tr>' }).join('')
+      cuerpo.closest('table').hidden = lista.length === 0
+      document.querySelector('[data-vacio="' + g + '"]').hidden = lista.length > 0
+    })
+    Object.keys(cuentas).forEach(function (g) { document.querySelector('[data-cuenta="' + g + '"]').textContent = cuentas[g] })
+    var pendientes = reservas.filter(function (r) { return r.estado === 'SOLICITADA' }).length
+    document.getElementById('resumen').textContent = (pendientes ? pendientes + (pendientes === 1 ? ' solicitud' : ' solicitudes') + ' por confirmar' : 'Sin solicitudes por confirmar') +
+      ' · la tarifa y la multa salen del tipo de cada zona'
+  }
+
+  // ---------- Diálogos ----------
+  function poner(dialogo, campo, html) {
+    var nodo = dialogo.querySelector('[data-campo="' + campo + '"]')
+    if (nodo) nodo.innerHTML = html
+  }
+  function limpiarErrores(formulario) {
+    formulario.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    formulario.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+  }
+  function pidio(r) { return esc(r.pidio) + ', ' + esc(r.vinculo) }
+  function paga(r) { return '<span class="identificador">' + esc(r.paga) + '</span>' }
+
+  function abrirConfirmar(r) {
+    var d = document.getElementById('dialogo-confirmar')
+    var t = calcularTarifa(r)
+    var tipo = TIPOS[r.tipo]
+    d.querySelector('#confirmar-error').hidden = true
+    poner(d, 'cuando', esc(tipo.zona + ' · ' + cuando(r)))
+    poner(d, 'pidio', pidio(r))
+    poner(d, 'paga', paga(r))
+    poner(d, 'finalidad', esc(r.finalidad))
+    poner(d, 'tarifa', (t.total ? '<span class="dato">' + Convivir.pesos(t.total) + '</span>' : 'Sin costo') +
+      '<span class="guia" style="display:block">' + esc(t.detalle) + ', ' + UNIDADES[tipo.unidad].toLowerCase() + ' según el tipo ' + esc(tipo.zona) + '</span>')
+    var vence = leer(r.inicio)
+    d.querySelector('#obligacion-alquiler').hidden = !t.total
+    d.querySelector('#sin-obligacion').hidden = !!t.total
+    poner(d, 'obligacion-valor', 'Se genera una obligación de <span class="dato">' + Convivir.pesos(t.total) + '</span>')
+    poner(d, 'obligacion-meta', 'Alquiler de zona común a cargo de ' + paga(r) + ' · vence el ' + fecha(vence) + ', el día de la reserva.')
+    poner(d, 'sin-costo', 'La ' + esc(tipo.zona.toLowerCase()) + ' no tiene tarifa, así que al confirmar no se genera ninguna obligación.')
+    Convivir.abrir('dialogo-confirmar')
+  }
+
+  function abrirCancelar(r, motivo) {
+    var d = document.getElementById('dialogo-cancelar')
+    var formulario = d.querySelector('form')
+    formulario.reset()
+    limpiarErrores(formulario)
+    var t = calcularTarifa(r)
+    poner(d, 'cuando', esc(TIPOS[r.tipo].zona + ' · ' + cuando(r)))
+    poner(d, 'quien', 'La pidió ' + pidio(r) + ', con cargo a ' + paga(r) + '.')
+    var conObligacion = r.estado === 'CONFIRMADA' && t.total > 0
+    d.querySelector('#cancelar-obligacion').hidden = !conObligacion
+    poner(d, 'obligacion', 'Al confirmarla se generó una obligación de alquiler por <span class="dato">' + Convivir.pesos(t.total) + '</span> a cargo de ' + paga(r) + '. Si no se va a cobrar, anúlala en Cartera.')
+    if (motivo) d.querySelector('#motivo-cancelacion').value = motivo
+    Convivir.abrir('dialogo-cancelar')
+  }
+
+  function abrirFinalizar(r) {
+    var d = document.getElementById('dialogo-finalizar')
+    var t = calcularTarifa(r)
+    poner(d, 'cuando', esc(TIPOS[r.tipo].zona + ' · ' + cuando(r)))
+    poner(d, 'pidio', pidio(r))
+    poner(d, 'paga', paga(r))
+    poner(d, 'tarifa', t.total ? '<span class="dato">' + Convivir.pesos(t.total) + '</span>' : 'Sin costo')
+    Convivir.abrir('dialogo-finalizar')
+  }
+
+  function abrirMulta(r) {
+    var d = document.getElementById('dialogo-multa')
+    var formulario = d.querySelector('form')
+    formulario.reset()
+    limpiarErrores(formulario)
+    var tipo = TIPOS[r.tipo]
+    poner(d, 'cuando', esc(tipo.zona + ' · ' + cuando(r)))
+    d.querySelector('#multa-con-valor').hidden = !tipo.multa
+    d.querySelector('#multa-sin-valor').hidden = !!tipo.multa
+    poner(d, 'multa-valor', '<span class="dato">' + Convivir.pesos(tipo.multa) + '</span>')
+    poner(d, 'multa-meta', 'Multa del tipo ' + esc(tipo.zona) + ' · vence el ' + fecha(VENCE_MULTA) + ', con la cuota del periodo.')
+    poner(d, 'multa-cero', 'El tipo ' + esc(tipo.zona) + ' tiene la multa en $ 0. La reserva queda incumplida y no se genera cobro.')
+    poner(d, 'propietario', esc(PROPIETARIOS[r.paga]) + ' · ' + paga(r))
+    poner(d, 'pidio', pidio(r))
+    d.querySelector('#boton-multa').textContent = tipo.multa ? 'Aplicar multa' : 'Marcar como incumplida'
+    Convivir.abrir('dialogo-multa')
+  }
+
+  function buscar(id) { return reservas.filter(function (r) { return r.id === Number(id) })[0] }
+
+  document.addEventListener('click', function (e) {
+    var boton = e.target.closest('[data-accion]')
+    if (!boton) return
+    actual = buscar(boton.getAttribute('data-id'))
+    var accion = boton.getAttribute('data-accion')
+    if (accion === 'confirmar') abrirConfirmar(actual)
+    if (accion === 'cancelar') abrirCancelar(actual)
+    if (accion === 'finalizar') abrirFinalizar(actual)
+    if (accion === 'multa') abrirMulta(actual)
+  })
+
+  // Confirmar: si la zona está ocupada, la reserva sigue SOLICITADA y se explica el choque (422, RN-38).
+  document.querySelector('#dialogo-confirmar form').addEventListener('confirmado', function (e) {
+    var choque = choqueCon(actual)
+    var error = document.getElementById('confirmar-error')
+    if (choque) {
+      e.preventDefault()
+      var c = leer(choque.inicio), f = leer(choque.fin)
+      error.querySelector('[data-campo="choque"]').innerHTML = 'Ya está confirmada para ' + paga(choque) + ' (' + esc(choque.pidio) + ') el ' + fecha(c) + ' de ' + hora(c) + ' a ' + hora(f) + '. ' +
+        'Dos reservas confirmadas no pueden cruzarse. Pídele a ' + esc(actual.pidio) + ' otra franja o cancela esta solicitud.'
+      error.hidden = false
+      return
+    }
+    var t = calcularTarifa(actual)
+    actual.estado = 'CONFIRMADA'
+    this.setAttribute('data-confirmar', t.total
+      ? 'Reserva confirmada. Se generó la obligación de alquiler por ' + Convivir.pesos(t.total) + ' a cargo de ' + actual.paga + '.'
+      : 'Reserva confirmada. Es sin costo, no se generó obligación.')
+    pintar()
+  })
+
+  document.getElementById('cancelar-por-choque').addEventListener('click', function () {
+    document.getElementById('dialogo-confirmar').close()
+    abrirCancelar(actual, 'La zona ya está reservada en esa franja. Te pedimos elegir otro horario.')
+  })
+
+  document.querySelector('#dialogo-cancelar form').addEventListener('confirmado', function () {
+    actual.estado = 'CANCELADA'
+    actual.motivoCancelacion = document.getElementById('motivo-cancelacion').value.trim()
+    this.setAttribute('data-confirmar', 'Reserva cancelada. ' + actual.pidio + ' ve el motivo en su historial.')
+    pintar()
+  })
+
+  document.querySelector('#dialogo-finalizar form').addEventListener('confirmado', function () {
+    actual.estado = 'FINALIZADA'
+    this.setAttribute('data-confirmar', 'Reserva finalizada. ' + TIPOS[actual.tipo].zona + ' queda libre.')
+    pintar()
+  })
+
+  document.querySelector('#dialogo-multa form').addEventListener('confirmado', function () {
+    var multa = TIPOS[actual.tipo].multa
+    actual.estado = 'INCUMPLIDA'
+    actual.motivoMulta = document.getElementById('motivo-multa').value.trim()
+    this.setAttribute('data-confirmar', multa
+      ? 'Multa aplicada: ' + Convivir.pesos(multa) + ' a cargo de ' + PROPIETARIOS[actual.paga] + ' de ' + actual.paga + '.'
+      : 'Reserva marcada como incumplida, sin cobro.')
+    pintar()
+  })
+
+  document.getElementById('filtro-zona').addEventListener('change', function () { zonaFiltro = this.value; pintar() })
+
+  pintar()
+})()
+</script>
+</body>
+</html>

@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dentro del conjunto · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* Tabla de presentes: escala de portería, fila en ámbar para quien sigue dentro con la autorización vencida,
+     y a 40rem cada fila pasa a ficha para que el vigilante no tenga que desplazarse de lado. */
+  .porteria .tabla-presentes { font-size: var(--t-base); }
+  .tabla-presentes .sub { font-size: var(--t-sm); }
+  .tabla-presentes td:first-child { position: relative; }
+  .tabla-presentes tbody tr.atencion,
+  .tabla-presentes tbody tr.atencion:hover { background: var(--al-f); }
+  .tabla-presentes tbody tr.atencion td:first-child::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--al);
+  }
+  .tabla-presentes .rotulo-movil { display: none; }
+
+  @media (max-width: 40rem) {
+    .tabla-presentes, .tabla-presentes tbody { display: block; }
+    .tabla-presentes thead { display: none; }
+    .tabla-presentes tbody tr {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: var(--e3) var(--e4);
+      padding: var(--e4);
+      border-bottom: 1px solid var(--borde-f);
+    }
+    .tabla-presentes tbody tr:last-child { border-bottom: 0; }
+    .tabla-presentes tbody tr.atencion { border-left: 4px solid var(--al); }
+    .tabla-presentes tbody tr.atencion td:first-child::before { display: none; }
+    .tabla.tabla-presentes td,
+    .tabla.tabla-presentes td:first-child,
+    .tabla.tabla-presentes td:last-child { display: block; padding: 0; border: 0; min-width: 0; }
+    .tabla-presentes .c-persona { grid-column: 1 / -1; }
+    .tabla-presentes .c-autorizacion, .tabla-presentes .c-accion { grid-column: 1 / -1; }
+    .tabla-presentes .c-accion { text-align: left; }
+    .tabla-presentes .c-accion .btn { width: 100%; min-height: 3rem; }
+    .tabla-presentes .rotulo-movil { display: block; font-size: var(--t-xs); color: var(--acero); font-weight: 500; }
+  }
+</style>
+</head>
+<!-- CU-07 Registrar ingreso y salida · Quiénes están dentro (RF-036)
+     MovimientoAcceso.consultarPersonasPresentesEnElConjunto(): ingresos sin su salida
+     AutorizacionAcceso.validarVigenciaDeLaAutorizacion(), validarDiaYHorarioPermitido(): vigencia de cada presente
+     MovimientoAcceso.registrarSalidaDelConjunto() (RF-034) y, si sale el vehículo, salida vehicular (RF-053) -->
+<body class="porteria" data-rol="vigilante" data-seccion="presentes">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Quién está dentro</h1>
+      <p class="guia">Visitas, autorizados y excepciones que entraron por portería y no han salido. Los residentes no aparecen aquí.</p>
+    </div>
+    <div class="acciones">
+      <a class="btn segundo" href="porteria.html">Registrar un ingreso</a>
+    </div>
+  </div>
+
+  <div class="rejilla r3" style="margin-bottom:var(--e5)">
+    <div class="superficie cifra">
+      <div class="guia">Personas dentro</div>
+      <div class="valor" id="cifra-dentro">23</div>
+      <div class="meta" id="cifra-tipos">18 visitas · 3 recurrentes · 2 excepciones</div>
+    </div>
+    <a class="superficie cifra enlazada" href="#tabla" id="cifra-revisar-enlace">
+      <div class="guia">Para revisar</div>
+      <div class="valor" id="cifra-revisar">2</div>
+      <div class="meta" id="cifra-revisar-meta"><span class="pildora p-al">Autorización vencida</span></div>
+    </a>
+    <a class="superficie cifra enlazada" href="vehiculos.html">
+      <div class="guia">Vehículos de visitantes</div>
+      <div class="valor" id="cifra-vehiculos">8</div>
+      <div class="meta"><span id="cifra-libres">4 de 12</span> parqueaderos de visitantes libres</div>
+    </a>
+  </div>
+
+  <div class="aviso al" id="aviso-revisar" style="margin-bottom:var(--e5)">
+    <p id="aviso-revisar-texto"><b>Fabián Quintero Díaz y Wilson Ardila Mora siguen dentro con la autorización vencida.</b></p>
+    <p>Llama al apartamento para confirmar si siguen ahí. Cuando salgan, registra su salida.</p>
+  </div>
+
+  <div class="filtros">
+    <label class="buscador">
+      <span class="solo-lectores">Buscar en quién está dentro</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+      <input id="buscar" type="search" placeholder="Nombre, documento, unidad o placa" autocomplete="off">
+    </label>
+    <div class="segmentos" data-grupo id="filtro-tipo" role="group" aria-label="Tipo de ingreso" style="flex-wrap:wrap">
+      <button type="button" data-valor="" aria-pressed="true">Todos <span class="dato" data-cuenta="">23</span></button>
+      <button type="button" data-valor="visita" aria-pressed="false">Visitas <span class="dato" data-cuenta="visita">18</span></button>
+      <button type="button" data-valor="recurrente" aria-pressed="false">Recurrentes <span class="dato" data-cuenta="recurrente">3</span></button>
+      <button type="button" data-valor="excepcion" aria-pressed="false">Excepciones <span class="dato" data-cuenta="excepcion">2</span></button>
+      <button type="button" data-valor="revisar" aria-pressed="false">Para revisar <span class="dato" data-cuenta="revisar">2</span></button>
+    </div>
+  </div>
+
+  <div class="superficie" id="tabla">
+    <div class="tabla-envoltura">
+      <table class="tabla tabla-presentes">
+        <caption class="solo-lectores">Personas dentro del conjunto, primero las que hay que revisar y luego de la más reciente a la más antigua</caption>
+        <thead>
+          <tr>
+            <th>Persona</th>
+            <th>Unidad</th>
+            <th>Tipo</th>
+            <th>Ingreso</th>
+            <th>Vehículo</th>
+            <th>Autorización</th>
+            <th><span class="solo-lectores">Acción</span></th>
+          </tr>
+        </thead>
+        <tbody id="filas"></tbody>
+      </table>
+    </div>
+
+    <div class="vacio" id="sin-resultados" hidden>
+      <svg class="simbolo" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="18" cy="18" r="10"/><path d="m26 26 8 8"/></svg>
+      <h3>Nadie dentro coincide con la búsqueda</h3>
+      <p>Busca por nombre, documento, unidad o placa, por ejemplo <span class="identificador">C-0705</span> o <span class="identificador">JKT 512</span>.</p>
+      <button class="btn segundo" type="button" id="limpiar">Quitar filtros</button>
+    </div>
+
+    <div class="vacio" id="nadie" hidden>
+      <svg class="simbolo" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="6" y="9" width="28" height="22" rx="3"/><circle cx="15" cy="19" r="4"/><path d="M10 27c1.5-3 3-4 5-4s3.5 1 5 4M24 17h6M24 22h6"/></svg>
+      <h3>No hay visitas dentro del conjunto</h3>
+      <p>Cuando registres un ingreso en Personas o en Vehículos, aparece aquí con su hora, su unidad y su parqueadero.</p>
+      <a class="btn segundo" href="porteria.html">Ir a Personas</a>
+    </div>
+
+    <div class="pie">
+      <span id="conteo">23 de 23 personas</span>
+      <span>Actualizado a las 10:00 p. m.</span>
+    </div>
+  </div>
+</main>
+
+<!-- Registrar salida: new MovimientoAcceso(SALIDA).registrarSalidaDelConjunto() -->
+<dialog class="dialogo" id="dialogo-salida" aria-labelledby="titulo-salida">
+  <form id="form-salida" data-confirmar="Salida registrada" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-salida">Registrar la salida de Fabián Quintero Díaz</h2>
+        <p class="guia" id="salida-guia">Visita de Gloria Ariza</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo pila">
+      <dl class="datos">
+        <div><dt>Unidad</dt><dd class="identificador" id="salida-unidad">A-0401</dd></div>
+        <div><dt>Entró</dt><dd id="salida-ingreso">Hoy a la 1:15 p. m.</dd></div>
+        <div><dt>Lleva dentro</dt><dd id="salida-lleva">8 h 45 min</dd></div>
+      </dl>
+      <p class="aviso al" id="salida-vencida" hidden></p>
+      <div id="salida-vehiculo" hidden>
+        <label class="opcion">
+          <input type="checkbox" id="sale-vehiculo">
+          <span>También sale el vehículo <span class="identificador" id="salida-placa">KZT 418</span>
+            <small id="salida-vehiculo-ayuda">V-01 queda libre.</small></span>
+        </label>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit">Registrar salida</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var AHORA = 22 * 60 // 10:00 p. m.
+
+  // Resultado de MovimientoAcceso.consultarPersonasPresentesEnElConjunto(), con la vigencia de cada autorización.
+  // tipo: visita (OCASIONAL), recurrente (RECURRENTE) o excepcion (sin autorización, con motivoExcepcion).
+  var PRESENTES = [
+    { n: 'Fabián Quintero Díaz', doc: '1020733418', u: 'A-0401', anf: 'Gloria Ariza', tipo: 'visita', ing: 13 * 60 + 15,
+      aut: { p: 'p-al', t: 'Vencida hace 4 h', s: 'Era hasta hoy a las 6:00 p. m.' }, revisar: 'su visita era hasta las 6:00 p. m.' },
+    { n: 'Wilson Ardila Mora', doc: '80455102', u: 'A-0902', anf: 'Marta Oviedo', tipo: 'recurrente', ing: 7 * 60 + 12,
+      aut: { p: 'p-al', t: 'Fuera de horario hace 5 h', s: 'Lunes a sábado, 7:00 a. m. a 5:00 p. m.' }, revisar: 'su horario terminó a las 5:00 p. m.' },
+    { n: 'Mauricio León Gaitán', doc: '79881230', u: 'C-0705', anf: 'Andrés Caicedo', tipo: 'visita', ing: 19 * 60 + 52, placa: 'JKT 512', pq: 'V-02',
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Sebastián Mora Uribe', doc: '1032455870', u: 'B-1105', anf: 'Carolina Uribe', tipo: 'visita', ing: 18 * 60 + 30, placa: 'EYK 754', pq: 'V-11',
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Paola Andrea Vélez', doc: '1037600912', u: 'C-0412', anf: 'Mónica Ríos', tipo: 'visita', ing: 18 * 60 + 20, placa: 'UFR 903', pq: 'V-05',
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Kevin Andrés Suárez', doc: '1001276554', u: 'B-0614', anf: 'Gabriel Suárez', tipo: 'visita', ing: 18 * 60 + 15,
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Valentina Suárez Mesa', doc: '1001276590', u: 'B-0614', anf: 'Gabriel Suárez', tipo: 'visita', ing: 18 * 60 + 15,
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Andrea Lozano Peña', doc: '1019076234', u: 'A-0603', anf: 'Ricardo Herrera', tipo: 'visita', ing: 18 * 60 + 10, placa: 'TPQ 380', pq: 'V-10',
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Felipe Herrera Lozano', doc: '1000394871', u: 'A-0603', anf: 'Ricardo Herrera', tipo: 'visita', ing: 18 * 60 + 10, placa: 'TPQ 380', pq: 'V-10',
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Gustavo Pinzón Arias', doc: '79230418', u: 'B-1003', anf: 'Mariana Téllez', tipo: 'recurrente', ing: 18 * 60 + 5,
+      aut: { p: 'p-al', t: 'Termina a las 10:30 p. m.', s: 'Sábados, 6:00 a 10:30 p. m.' } },
+    { n: 'Claudia Patricia Mejía', doc: '52880147', u: 'B-0807', anf: 'Inés Calderón', tipo: 'recurrente', ing: 18 * 60 + 2, placa: 'NWX 145', pq: 'V-08',
+      aut: { p: 'p-ok', t: 'Vigente hasta 6:00 a. m.', s: 'Todos los días, 6:00 p. m. a 6:00 a. m.' } },
+    { n: 'Julián Salcedo Pardo', doc: '1018442390', u: 'C-1201', anf: 'Diana Salcedo', tipo: 'visita', ing: 17 * 60 + 45, placa: 'KZT 418', pq: 'V-01',
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Natalia Gómez Rincón', doc: '1020815563', u: 'C-1201', anf: 'Diana Salcedo', tipo: 'visita', ing: 17 * 60 + 45, placa: 'KZT 418', pq: 'V-01',
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Juan Pablo Rincón', doc: '1026589334', u: 'B-0410', anf: 'Liliana Rincón', tipo: 'visita', ing: 17 * 60 + 35,
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'María Fernanda Ortiz', doc: '1015423988', u: 'A-0205', anf: 'Jaime Ortiz', tipo: 'visita', ing: 17 * 60 + 10,
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Laura Camila Pérez', doc: '1015467201', u: 'A-0205', anf: 'Jaime Ortiz', tipo: 'visita', ing: 17 * 60 + 10,
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Alejandra Niño Gil', doc: '1022380146', u: 'C-0908', anf: 'Rodrigo Niño', tipo: 'visita', ing: 16 * 60 + 50,
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Hernando Ariza Camacho', doc: '19334871', u: 'A-0401', anf: 'Gloria Ariza', tipo: 'visita', ing: 16 * 60 + 30, placa: 'GBM 227', pq: 'V-03',
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Luz Marina Ospina', doc: '41702559', u: 'A-0401', anf: 'Gloria Ariza', tipo: 'visita', ing: 16 * 60 + 30, placa: 'GBM 227', pq: 'V-03',
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Rocío Amaya Pérez', doc: '39778120', u: 'C-1201', anf: 'Diana Salcedo', tipo: 'excepcion', ing: 16 * 60 + 20,
+      aut: { t: 'Sin autorización previa', s: 'Acompaña a la mamá de Diana Salcedo. Ella lo confirmó por citófono.' } },
+    { n: 'Camilo Ernesto Rueda', doc: '1030566781', u: 'C-1006', anf: 'Beatriz Rueda', tipo: 'visita', ing: 15 * 60 + 40,
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } },
+    { n: 'Héctor Oviedo Lara', doc: '71655034', u: 'A-0902', anf: 'Marta Oviedo', tipo: 'excepcion', ing: 15 * 60 + 30, placa: 'MXR 518', pq: 'V-06',
+      aut: { t: 'Sin autorización previa', s: 'Hermano de Marta Oviedo. Ella lo confirmó por citófono.' } },
+    { n: 'Sara Lucía Montoya', doc: '1036658210', u: 'A-0710', anf: 'Felipe Montoya', tipo: 'visita', ing: 14 * 60 + 25,
+      aut: { p: 'p-ok', t: 'Vigente hasta 11:59 p. m.', s: 'Visita de hoy' } }
+  ]
+  var LIBRES_INICIALES = 4
+  var liberados = 0
+
+  var TIPOS = { visita: 'Visita', recurrente: 'Recurrente', excepcion: 'Excepción' }
+  var buscar = document.getElementById('buscar')
+  var tipo = ''
+  var seleccionada = null
+
+  function $(id) { return document.getElementById(id) }
+
+  function esc(t) {
+    return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] })
+  }
+  function sinTildes(t) { return t.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/\s+/g, '') }
+  function horaDe(min) {
+    var h = Math.floor(min / 60), m = String(min % 60).padStart(2, '0')
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  function duracion(min) {
+    var h = Math.floor(min / 60), m = min % 60
+    if (!h) return m + ' min'
+    return h + ' h' + (m ? ' ' + String(m).padStart(2, '0') + ' min' : '')
+  }
+  function hora() {
+    var d = new Date()
+    var h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0')
+    return ((h % 12) || 12) + ':' + m + (h < 12 ? ' a. m.' : ' p. m.')
+  }
+  function agrupar(numero) { return numero.replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
+  function articulo(min) { return Math.floor(min / 60) % 12 === 1 ? 'a la' : 'a las' }
+  function descripcion(p) {
+    if (p.tipo === 'excepcion') return 'Excepción confirmada por ' + p.anf
+    return (p.tipo === 'visita' ? 'Visita de ' : 'Autorización recurrente de ') + p.anf
+  }
+
+  function coincide(p, texto) {
+    if (tipo === 'revisar' && !p.revisar) return false
+    if (tipo && tipo !== 'revisar' && p.tipo !== tipo) return false
+    if (!texto) return true
+    return sinTildes([p.n, p.doc, p.u, p.anf, p.placa || '', p.pq || ''].join(' ')).indexOf(texto) >= 0
+  }
+
+  function ordenados() {
+    return PRESENTES.slice().sort(function (a, b) {
+      if (!!a.revisar !== !!b.revisar) return a.revisar ? -1 : 1
+      return b.ing - a.ing
+    })
+  }
+
+  function fila(p) {
+    var vehiculo = p.placa
+      ? '<span class="identificador">' + esc(p.placa) + '</span><span class="sub">en <span class="identificador">' + esc(p.pq) + '</span></span>'
+      : p.vehiculoSalio
+        ? '<span class="guia">Su vehículo ya salió</span>'
+        : '<span class="guia">A pie</span>'
+    var autorizacion = p.aut.p
+      ? '<span class="pildora ' + p.aut.p + '">' + esc(p.aut.t) + '</span><span class="sub">' + esc(p.aut.s) + '</span>'
+      : '<span class="fuerte">' + esc(p.aut.t) + '</span><span class="sub">' + esc(p.aut.s) + '</span>'
+    return '<tr' + (p.revisar ? ' class="atencion"' : '') + '>' +
+      '<td class="c-persona"><b>' + esc(p.n) + '</b><span class="sub identificador">CC ' + agrupar(p.doc) + '</span></td>' +
+      '<td class="c-unidad"><span class="rotulo-movil">Unidad</span><span class="identificador">' + esc(p.u) + '</span><span class="sub">' + esc(p.tipo === 'excepcion' ? 'Confirmó ' + p.anf : p.anf) + '</span></td>' +
+      '<td class="c-tipo"><span class="rotulo-movil">Tipo</span><span class="etiqueta">' + TIPOS[p.tipo] + '</span></td>' +
+      '<td class="c-ingreso"><span class="rotulo-movil">Ingreso</span><span class="num">' + horaDe(p.ing) + '</span><span class="sub">lleva ' + duracion(AHORA - p.ing) + '</span></td>' +
+      '<td class="c-vehiculo"><span class="rotulo-movil">Vehículo</span>' + vehiculo + '</td>' +
+      '<td class="c-autorizacion"><span class="rotulo-movil">Autorización</span>' + autorizacion + '</td>' +
+      '<td class="c-accion acciones-fila"><button class="btn segundo" type="button" data-salida="' + esc(p.doc) + '">Registrar salida</button></td>' +
+      '</tr>'
+  }
+
+  function contar() {
+    var cuentas = { '': PRESENTES.length, visita: 0, recurrente: 0, excepcion: 0, revisar: 0 }
+    var placas = {}
+    PRESENTES.forEach(function (p) {
+      cuentas[p.tipo]++
+      if (p.revisar) cuentas.revisar++
+      if (p.placa) placas[p.placa] = true
+    })
+    document.querySelectorAll('[data-cuenta]').forEach(function (s) { s.textContent = cuentas[s.dataset.cuenta] })
+    $('cifra-dentro').textContent = cuentas['']
+    $('cifra-tipos').textContent = cuentas.visita + (cuentas.visita === 1 ? ' visita' : ' visitas') + ' · ' +
+      cuentas.recurrente + (cuentas.recurrente === 1 ? ' recurrente' : ' recurrentes') + ' · ' +
+      cuentas.excepcion + (cuentas.excepcion === 1 ? ' excepción' : ' excepciones')
+    $('cifra-revisar').textContent = cuentas.revisar
+    $('cifra-revisar-meta').innerHTML = cuentas.revisar
+      ? '<span class="pildora p-al">Autorización vencida</span>'
+      : '<span class="pildora p-ok">Todos con autorización vigente</span>'
+    $('cifra-vehiculos').textContent = Object.keys(placas).length
+    $('cifra-libres').textContent = (LIBRES_INICIALES + liberados) + ' de 12'
+
+    var revisar = PRESENTES.filter(function (p) { return p.revisar })
+    $('aviso-revisar').hidden = !revisar.length
+    if (revisar.length) {
+      var nombres = revisar.map(function (p) { return p.n })
+      var lista = nombres.length > 1 ? nombres.slice(0, -1).join(', ') + ' y ' + nombres[nombres.length - 1] : nombres[0]
+      $('aviso-revisar-texto').innerHTML = '<b>' + esc(lista) + (nombres.length > 1 ? ' siguen' : ' sigue') + ' dentro con la autorización vencida.</b>'
+    }
+  }
+
+  function pintar() {
+    var texto = sinTildes(buscar.value.trim())
+    var visibles = ordenados().filter(function (p) { return coincide(p, texto) })
+    $('filas').innerHTML = visibles.map(fila).join('')
+    var nadie = PRESENTES.length === 0
+    $('nadie').hidden = !nadie
+    $('sin-resultados').hidden = nadie || visibles.length > 0
+    document.querySelector('.tabla-presentes thead').hidden = visibles.length === 0
+    $('conteo').textContent = visibles.length + ' de ' + PRESENTES.length + (PRESENTES.length === 1 ? ' persona' : ' personas')
+    contar()
+  }
+
+  function elegirTipo(valor) {
+    var boton = document.querySelector('#filtro-tipo [data-valor="' + valor + '"]')
+    if (boton) boton.click()
+  }
+
+  buscar.addEventListener('input', pintar)
+  $('filtro-tipo').addEventListener('cambio', function (e) { tipo = e.detail; pintar() })
+  $('limpiar').addEventListener('click', function () { buscar.value = ''; elegirTipo('') })
+  $('cifra-revisar-enlace').addEventListener('click', function () { buscar.value = ''; elegirTipo('revisar') })
+
+  // Abrir la confirmación de salida con los datos de la persona
+  $('filas').addEventListener('click', function (e) {
+    var boton = e.target.closest('[data-salida]')
+    if (!boton) return
+    seleccionada = PRESENTES.filter(function (p) { return p.doc === boton.dataset.salida })[0]
+    var p = seleccionada
+    $('titulo-salida').textContent = 'Registrar la salida de ' + p.n
+    $('salida-guia').textContent = descripcion(p) + ' · CC ' + agrupar(p.doc)
+    $('salida-unidad').textContent = p.u
+    $('salida-ingreso').textContent = 'Hoy ' + articulo(p.ing) + ' ' + horaDe(p.ing)
+    $('salida-lleva').textContent = duracion(AHORA - p.ing)
+    $('salida-vencida').hidden = !p.revisar
+    if (p.revisar) $('salida-vencida').textContent = 'Lleva ' + duracion(AHORA - p.ing) + ' dentro y ' + p.revisar + '.'
+
+    $('salida-vehiculo').hidden = !p.placa
+    if (p.placa) {
+      var acompanantes = PRESENTES.filter(function (o) { return o !== p && o.placa === p.placa })
+      $('salida-placa').textContent = p.placa
+      $('sale-vehiculo').checked = acompanantes.length === 0
+      $('salida-vehiculo-ayuda').textContent = acompanantes.length
+        ? acompanantes.map(function (o) { return o.n }).join(' y ') +
+          (acompanantes.length > 1 ? ' llegaron en el mismo vehículo y siguen dentro.' : ' llegó en el mismo vehículo y sigue dentro.') +
+          ' Márcalo solo si el vehículo sale ahora.'
+        : p.pq + ' queda libre.'
+    }
+    Convivir.abrir('dialogo-salida')
+  })
+
+  // Registrar salida: el texto de la confirmación conserva el verbo
+  $('form-salida').addEventListener('confirmado', function () {
+    var p = seleccionada
+    if (!p) return
+    var saleVehiculo = p.placa && $('sale-vehiculo').checked
+    var texto = 'Salida registrada: ' + p.n + ', ' + hora() + '.'
+    if (saleVehiculo) {
+      texto += ' Salió el vehículo ' + p.placa + ' y ' + p.pq + ' queda libre.'
+      liberados++
+      PRESENTES.forEach(function (o) {
+        if (o !== p && o.placa === p.placa) { o.placa = null; o.pq = null; o.vehiculoSalio = true }
+      })
+    }
+    this.setAttribute('data-confirmar', texto)
+    PRESENTES.splice(PRESENTES.indexOf(p), 1)
+    seleccionada = null
+    pintar()
+  })
+
+  pintar()
+})()
+</script>
+</body>
+</html>

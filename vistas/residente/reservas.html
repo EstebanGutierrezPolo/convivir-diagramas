@@ -1,0 +1,538 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Reservas · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* El resumen acompaña al formulario mientras se desplaza en pantallas anchas. */
+  @media (min-width: 64.01rem) { #resumen { position: sticky; top: calc(56px + var(--e4)); } }
+</style>
+</head>
+<!-- CU-20 Reservar zona común
+     Consultar disponibilidad: Inmueble.obtenerDisponibilidadEnPeriodo(), AsignacionInmueble.consultarPeriodosOcupadosDelInmueble() (RF-115)
+     Solicitar: AsignacionInmueble(fechaInicio, fechaFin), ProgramacionAsignacion(diaSemana, horaInicio, horaFin),
+       Reserva(asignacionInmueble, inmuebleQuePaga).registrarReservaDeZonaComun(), validarQueElIntegranteSeaResidente() (RN-43),
+       validarDisponibilidadDeLaZona() (RN-38), tipo sin permiteReserva (RN-37), FabricaEstrategiaTarifa.obtenerEstrategia() (RF-116)
+     Cancelar reserva propia: Reserva.cancelarReservaPorMotivo(motivo), según su ComportamientoReserva (RF-118)
+     Decisión abierta 8: la obligación ALQUILER_ZONA se genera al confirmar (RN-39); aquí solo se anuncia. -->
+<body data-rol="residente" data-seccion="reservas">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Reservas</h1>
+      <p class="guia">Zonas comunes de Villa Campestre. La administración revisa y confirma cada solicitud.</p>
+    </div>
+  </div>
+
+  <div class="pestanas" role="tablist" aria-label="Reservas">
+    <button type="button" role="tab" id="pestana-reservar" aria-selected="true" aria-controls="panel-reservar">Reservar zona común</button>
+    <button type="button" role="tab" id="pestana-mias" aria-selected="false" aria-controls="panel-mias">Mis reservas<span class="cuenta-pestana" id="cuenta-mias"></span></button>
+  </div>
+
+  <!-- Reservar -->
+  <section id="panel-reservar" role="tabpanel" aria-labelledby="pestana-reservar">
+    <form id="form-reserva" class="lado" novalidate>
+      <div class="pila" style="gap:var(--e5)">
+        <div class="superficie">
+          <div class="cabeza"><h2 id="titulo-zona">Zona</h2></div>
+          <div class="cuerpo">
+            <div class="elecciones" id="zonas" role="radiogroup" aria-labelledby="titulo-zona">
+              <label class="eleccion"><input type="radio" name="zona" value="salon"><span><b>Salón social</b><small>Por evento · <span class="num">$&nbsp;180&nbsp;000</span></small><small>Primer piso, Torre A</small></span></label>
+              <label class="eleccion"><input type="radio" name="zona" value="bbq"><span><b>Zona BBQ</b><small>Por hora · <span class="num">$&nbsp;25&nbsp;000</span> la hora</small><small>Terraza</small></span></label>
+              <label class="eleccion"><input type="radio" name="zona" value="cancha"><span><b>Cancha múltiple</b><small>Por hora · sin costo</small><small>Junto a la Torre C</small></span></label>
+              <label class="eleccion"><input type="radio" name="zona" value="piscina"><span><b>Piscina</b><small>No se reserva</small><small>Uso libre de los residentes</small></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- RN-37: el tipo de inmueble no permite reserva -->
+        <div class="aviso no" id="aviso-piscina" role="alert" hidden>
+          <p><b>La piscina no se reserva.</b></p>
+          <p>Es de uso libre para todos los residentes en su horario, así que nadie la puede apartar. Elige el salón social, la zona BBQ o la cancha si necesitas un espacio solo para ti.</p>
+        </div>
+
+        <div class="superficie" id="bloque-vacio">
+          <div class="vacio">
+            <svg class="simbolo" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="6" y="9" width="28" height="25" rx="3"/><path d="M6 16h28M13 5v7M27 5v7"/><circle cx="20" cy="25" r="2"/></svg>
+            <h3>Elige una zona para ver qué días tiene libres</h3>
+            <p>Verás el mes con la disponibilidad de cada día y luego las horas libres.</p>
+          </div>
+        </div>
+
+        <div class="superficie" id="bloque-dia" hidden>
+          <div class="cabeza">
+            <h2>Día</h2>
+            <div class="fila" style="gap:var(--e1)">
+              <button class="btn segundo chico" type="button" id="mes-anterior" aria-label="Mes anterior">‹</button>
+              <span class="fuerte" id="nombre-mes" style="min-width:9.5rem;text-align:center" aria-live="polite"></span>
+              <button class="btn segundo chico" type="button" id="mes-siguiente" aria-label="Mes siguiente">›</button>
+            </div>
+          </div>
+          <div class="cuerpo pila">
+            <div class="calendario" id="calendario" role="group" aria-label="Días del mes"></div>
+            <div class="fila" style="gap:var(--e2)">
+              <span class="pildora p-al">Algunas horas ocupadas</span>
+              <span class="pildora p-no">Sin horas libres</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="superficie" id="bloque-hora" hidden>
+          <div class="cabeza">
+            <h2 id="titulo-hora">Horario</h2>
+            <span class="guia" id="guia-hora"></span>
+          </div>
+          <div class="cuerpo pila">
+            <div class="aviso no" id="aviso-ocupado" role="alert" hidden></div>
+            <div class="franjas" id="franjas"></div>
+          </div>
+        </div>
+
+        <div class="superficie" id="bloque-datos" hidden>
+          <div class="cabeza"><h2>Datos de la reserva</h2></div>
+          <div class="cuerpo">
+            <div class="formulario">
+              <label class="campo">
+                <span>Finalidad</span>
+                <textarea name="finalidad" required placeholder="Cumpleaños de mi hermano, unas 20 personas."
+                          data-error="Cuéntale a la administración para qué es la reserva. La usa para confirmarla."></textarea>
+              </label>
+              <label class="campo">
+                <span>Inmueble al que se cobra</span>
+                <select name="inmuebleQuePaga" required data-error="Elige el inmueble al que llegará el cobro de la reserva.">
+                  <option value="B-0302" selected>Torre B · Apto 302</option>
+                </select>
+                <span class="ayuda">Solo aparecen los inmuebles en los que vives.</span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <aside class="superficie" id="resumen" aria-labelledby="titulo-resumen">
+        <div class="cabeza"><h2 id="titulo-resumen">Resumen</h2></div>
+        <div class="cuerpo pila">
+          <dl class="datos fila-unica">
+            <div><dt>Zona</dt><dd id="r-zona">Sin elegir</dd></div>
+            <div><dt>Día</dt><dd id="r-dia">Sin elegir</dd></div>
+            <div><dt>Horario</dt><dd id="r-hora">Sin elegir</dd></div>
+            <div><dt>Tarifa</dt><dd id="r-tarifa">—</dd></div>
+          </dl>
+          <div class="fila entre" style="border-top:1px solid var(--borde);padding-top:var(--e3)">
+            <span class="fuerte">Valor de la reserva</span>
+            <span class="fuerte num" style="font-size:var(--t-md)" id="r-total">—</span>
+          </div>
+          <p class="guia" id="r-cobro" hidden></p>
+          <div class="aviso no" id="error-solicitud" role="alert" hidden></div>
+          <button class="btn ancho" type="submit" id="solicitar" disabled>Solicitar reserva</button>
+          <p class="guia" id="r-falta">Te falta elegir la zona, el día y el horario.</p>
+        </div>
+      </aside>
+    </form>
+  </section>
+
+  <!-- Mis reservas (RF-117, RF-118) -->
+  <section id="panel-mias" role="tabpanel" aria-labelledby="pestana-mias" hidden>
+    <div class="superficie">
+      <ul class="lista" id="lista-reservas"></ul>
+      <div class="vacio" id="vacio-reservas" hidden>
+        <h3>Todavía no has reservado zonas comunes</h3>
+        <p>Reserva el salón social, la zona BBQ o la cancha y la administración te confirmará.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="pie-pagina no-imprimir">
+  Estados de esta vista:
+  <a href="reservas.html">residente vigente</a> ·
+  <a href="reservas.html?estado=no-residente">sin vinculación residente vigente (RN-43)</a>.
+  Para ver el periodo ocupado al solicitar (RN-38), pide el salón social el sábado 5 de diciembre en la tarde y noche.
+</footer>
+
+<!-- Cancelar reserva: Reserva.cancelarReservaPorMotivo(motivo) -->
+<dialog class="dialogo" id="dialogo-cancelar" aria-labelledby="titulo-cancelar">
+  <form id="form-cancelar" data-confirmar="Reserva cancelada. El horario queda libre para otros residentes." data-limpiar novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-cancelar">Cancelar reserva</h2>
+        <p class="guia" id="texto-cancelar"></p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <label class="campo">
+        <span>Motivo de la cancelación</span>
+        <textarea name="motivo" required placeholder="Se aplazó la reunión."
+                  data-error="Escribe por qué la cancelas. Queda en el registro de la reserva."></textarea>
+      </label>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Conservar reserva</button>
+      <button class="btn riesgo" type="submit">Cancelar reserva</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+(function () {
+  var HOY = '2026-11-14'
+  var noResidente = new URLSearchParams(location.search).get('estado') === 'no-residente'
+  var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre']
+  var SEMANA = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
+
+  // Zonas comunes: el tipo define si se reserva (permiteReserva), la unidad de tarifa y la multa.
+  var ZONAS = {
+    salon: { nombre: 'Salón social', frase: 'el salón social', unidad: 'EVENTO', tarifa: 180000, multa: 90000,
+      franjas: [{ clave: 'dia', nombre: 'Evento de día', desde: '09:00', hasta: '15:00' }, { clave: 'noche', nombre: 'Evento de tarde y noche', desde: '16:00', hasta: '23:00' }] },
+    bbq: { nombre: 'Zona BBQ', frase: 'la zona BBQ', unidad: 'HORA', tarifa: 25000, multa: 50000, abre: 10, cierra: 22 },
+    cancha: { nombre: 'Cancha múltiple', frase: 'la cancha múltiple', unidad: 'HORA', tarifa: 0, multa: 0, abre: 6, cierra: 21 },
+    piscina: { nombre: 'Piscina', permiteReserva: false },
+  }
+
+  // Periodos ocupados por reservas confirmadas de otros residentes.
+  var OCUPADAS = {
+    salon: { '2026-11-14': ['noche'], '2026-11-21': ['noche'], '2026-11-28': ['dia', 'noche'], '2026-12-12': ['noche'], '2026-12-19': ['dia', 'noche'], '2026-12-24': ['noche'], '2026-12-31': ['dia', 'noche'] },
+    bbq: { '2026-11-14': [12, 13, 14, 15, 16, 17], '2026-11-15': [11, 12, 13, 14], '2026-11-21': [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21],
+      '2026-11-22': [13, 14, 15], '2026-11-28': [11, 12, 13], '2026-12-05': [12, 13, 14, 15], '2026-12-08': [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21], '2026-12-25': [12, 13, 14, 15, 16] },
+    cancha: { '2026-11-15': [8, 9, 10], '2026-11-17': [18, 19, 20], '2026-11-19': [18, 19], '2026-11-22': [8, 9, 10, 11], '2026-11-29': [8, 9, 10] },
+  }
+  // Una reserva confirmada por otra persona mientras Lucía elegía: solo se descubre al solicitar (RN-38).
+  var CONFIRMADA_MIENTRAS = { zona: 'salon', fecha: '2026-12-05', franja: 'noche' }
+
+  var reservas = [
+    { id: 1, zona: 'cancha', fecha: '2026-11-15', desde: '07:00', hasta: '08:00', claves: [7], finalidad: 'Partido de microfútbol con amigos', valor: 0, estado: 'CONFIRMADA' },
+    { id: 2, zona: 'bbq', fecha: '2026-11-28', desde: '15:00', hasta: '18:00', claves: [15, 16, 17], finalidad: 'Asado de cumpleaños de mi hermano', valor: 75000, estado: 'SOLICITADA' },
+    { id: 3, zona: 'bbq', fecha: '2026-11-01', desde: '12:00', hasta: '15:00', claves: [12, 13, 14], finalidad: 'Almuerzo con compañeros de trabajo', valor: 75000, estado: 'CANCELADA', motivo: 'Se aplazó el almuerzo.' },
+    { id: 4, zona: 'salon', fecha: '2026-10-10', desde: '16:00', hasta: '23:00', claves: ['noche'], finalidad: 'Fiesta de cumpleaños', valor: 180000, estado: 'FINALIZADA' },
+  ]
+  var siguienteId = 5
+
+  var eleccion = { zona: null, fecha: null, claves: [] }
+  var mes = { anio: 2026, mes: 10 }
+  var $ = function (id) { return document.getElementById(id) }
+
+  // ---------- Formatos ----------
+  function esc(t) { return String(t).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] }) }
+  function iso(a, m, d) { return a + '-' + String(m + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0') }
+  function fecha(t) { var p = t.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]) }
+  function fechaLarga(t) {
+    var d = fecha(t)
+    var dia = SEMANA[d.getDay()]
+    return dia.charAt(0).toUpperCase() + dia.slice(1) + ' ' + d.getDate() + ' de ' + MESES[d.getMonth()]
+  }
+  function hora(h) {
+    var hh = typeof h === 'number' ? h : +h.split(':')[0]
+    var mm = typeof h === 'number' ? '00' : h.split(':')[1]
+    if (hh === 12 && mm === '00') return '12:00 m.'
+    return ((hh % 12) || 12) + ':' + mm + (hh < 12 || hh === 24 ? ' a. m.' : ' p. m.')
+  }
+  function dosDigitos(h) { return String(h).padStart(2, '0') + ':00' }
+
+  // ---------- Disponibilidad: Inmueble.obtenerDisponibilidadEnPeriodo() ----------
+  function clavesDe(zona) {
+    var z = ZONAS[zona]
+    if (z.unidad === 'EVENTO') return z.franjas.map(function (f) { return f.clave })
+    var lista = []
+    for (var h = z.abre; h < z.cierra; h++) lista.push(h)
+    return lista
+  }
+  function ocupacion(zona, dia) {
+    var deOtros = (OCUPADAS[zona] && OCUPADAS[zona][dia]) || []
+    var mias = []
+    reservas.forEach(function (r) {
+      if (r.zona === zona && r.fecha === dia && (r.estado === 'SOLICITADA' || r.estado === 'CONFIRMADA')) mias = mias.concat(r.claves)
+    })
+    return { otros: deOtros, mias: mias }
+  }
+
+  function pintarCalendario() {
+    var cal = $('calendario')
+    var primero = new Date(mes.anio, mes.mes, 1)
+    var diasMes = new Date(mes.anio, mes.mes + 1, 0).getDate()
+    var vacios = (primero.getDay() + 6) % 7
+    var html = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(function (d) { return '<span class="dia-semana" aria-hidden="true">' + d + '</span>' }).join('')
+    for (var i = 0; i < vacios; i++) html += '<button type="button" class="fuera" tabindex="-1" aria-hidden="true"></button>'
+    var todas = clavesDe(eleccion.zona).length
+    for (var d = 1; d <= diasMes; d++) {
+      var dia = iso(mes.anio, mes.mes, d)
+      var o = ocupacion(eleccion.zona, dia)
+      var usadas = o.otros.length + o.mias.length
+      var clases = []
+      var estado = 'libre'
+      if (usadas >= todas) { clases.push('lleno'); estado = 'sin horas libres' }
+      else if (usadas > 0) { clases.push('parcial'); estado = 'algunas horas ocupadas' }
+      if (dia === HOY) clases.push('hoy')
+      var pasado = dia < HOY
+      html += '<button type="button" data-dia="' + dia + '" class="' + clases.join(' ') + '"' + (pasado ? ' disabled' : '') +
+        ' aria-pressed="' + (eleccion.fecha === dia) + '" aria-label="' + d + ' de ' + MESES[mes.mes] + (dia === HOY ? ', hoy' : '') + ', ' + (pasado ? 'ya pasó' : estado) + '">' +
+        '<span>' + d + '</span><span class="marca-dia"></span></button>'
+    }
+    cal.innerHTML = html
+    $('nombre-mes').textContent = MESES[mes.mes].charAt(0).toUpperCase() + MESES[mes.mes].slice(1) + ' de ' + mes.anio
+    $('mes-anterior').disabled = mes.mes === 10
+    $('mes-siguiente').disabled = mes.mes === 11
+  }
+
+  function pintarFranjas() {
+    var z = ZONAS[eleccion.zona]
+    var o = ocupacion(eleccion.zona, eleccion.fecha)
+    $('titulo-hora').textContent = 'Horario del ' + fechaLarga(eleccion.fecha).toLowerCase()
+    $('guia-hora').textContent = z.unidad === 'EVENTO' ? 'Se reserva por evento: elige una franja.' : 'Se reserva por hora: elige una o varias horas seguidas.'
+    var lista = z.unidad === 'EVENTO'
+      ? z.franjas.map(function (f) { return { clave: f.clave, texto: hora(f.desde) + ' a ' + hora(f.hasta), nombre: f.nombre } })
+      : clavesDe(eleccion.zona).map(function (h) { return { clave: h, texto: hora(h) + ' a ' + hora(h + 1) } })
+    $('franjas').innerHTML = lista.map(function (f) {
+      var deOtro = o.otros.indexOf(f.clave) >= 0
+      var mia = o.mias.indexOf(f.clave) >= 0
+      var elegida = eleccion.claves.indexOf(f.clave) >= 0
+      var estado = mia ? 'Tu reserva' : deOtro ? 'Reservada' : elegida ? 'Elegida' : 'Libre'
+      return '<button type="button" class="franja' + (deOtro || mia ? ' ocupada' : '') + '" data-franja="' + f.clave + '"' +
+        (deOtro || mia ? ' aria-disabled="true"' : ' aria-pressed="' + elegida + '"') + '>' +
+        '<span>' + (f.nombre ? '<b class="fuerte">' + f.nombre + '</b> · ' : '') + '<span class="hora">' + f.texto + '</span></span>' +
+        '<span class="' + (elegida ? 'fuerte' : 'guia') + '">' + estado + '</span></button>'
+    }).join('')
+  }
+
+  // ---------- Tarifa: FabricaEstrategiaTarifa → TarifaPorEvento o TarifaPorHora ----------
+  function calcularTarifa() {
+    var z = ZONAS[eleccion.zona]
+    if (!eleccion.claves.length) return null
+    if (z.unidad === 'EVENTO') return { total: z.tarifa, detalle: Convivir.pesos(z.tarifa) + ' por evento' }
+    var horas = eleccion.claves.length
+    if (!z.tarifa) return { total: 0, detalle: 'Sin costo' }
+    return { total: z.tarifa * horas, detalle: Convivir.pesos(z.tarifa) + ' por hora × ' + horas + (horas === 1 ? ' hora' : ' horas') }
+  }
+
+  function rango() {
+    var z = ZONAS[eleccion.zona]
+    if (z.unidad === 'EVENTO') {
+      var f = z.franjas.filter(function (x) { return x.clave === eleccion.claves[0] })[0]
+      return { desde: f.desde, hasta: f.hasta }
+    }
+    var orden = eleccion.claves.slice().sort(function (a, b) { return a - b })
+    return { desde: dosDigitos(orden[0]), hasta: dosDigitos(orden[orden.length - 1] + 1) }
+  }
+
+  function pintarResumen() {
+    var z = eleccion.zona && ZONAS[eleccion.zona]
+    var reservable = z && z.permiteReserva !== false
+    $('r-zona').textContent = z ? z.nombre : 'Sin elegir'
+    $('r-dia').textContent = eleccion.fecha ? fechaLarga(eleccion.fecha) + (mes.anio !== 2026 ? ' de ' + mes.anio : '') : 'Sin elegir'
+    var t = reservable ? calcularTarifa() : null
+    if (t) {
+      var r = rango()
+      $('r-hora').textContent = hora(r.desde) + ' a ' + hora(r.hasta)
+      $('r-tarifa').textContent = t.detalle
+      $('r-total').textContent = t.total ? Convivir.pesos(t.total) : 'Sin costo'
+      var cobro = $('r-cobro')
+      cobro.hidden = false
+      cobro.textContent = t.total
+        ? 'Cuando la administración la confirme, se cobran ' + Convivir.pesos(t.total) + ' a Torre B · Apto 302. Como vives en arriendo, ese cobro y la multa por incumplir las condiciones de uso, de ' + Convivir.pesos(z.multa) + ', le corresponden al propietario, Ernesto Vargas.'
+        : 'La cancha no tiene costo. Si no vas a usarla, cancélala para que otro residente pueda reservar.'
+    } else {
+      $('r-hora').textContent = 'Sin elegir'
+      $('r-tarifa').textContent = '—'
+      $('r-total').textContent = '—'
+      $('r-cobro').hidden = true
+    }
+    var falta = []
+    if (!z) falta.push('la zona', 'el día', 'el horario')
+    else if (reservable) {
+      if (!eleccion.fecha) falta.push('el día')
+      if (!eleccion.claves.length) falta.push('el horario')
+    }
+    var guia = $('r-falta')
+    if (z && !reservable) guia.textContent = 'La piscina no se reserva. Elige otra zona.'
+    else if (falta.length) guia.textContent = 'Te falta elegir ' + (falta.length > 1 ? falta.slice(0, -1).join(', ') + ' y ' + falta[falta.length - 1] : falta[0]) + '.'
+    guia.hidden = !(z && !reservable) && !falta.length
+    $('solicitar').disabled = !reservable || !t
+  }
+
+  function mostrarBloques() {
+    var z = eleccion.zona && ZONAS[eleccion.zona]
+    var reservable = z && z.permiteReserva !== false
+    $('bloque-vacio').hidden = !!z
+    $('aviso-piscina').hidden = !z || reservable
+    $('bloque-dia').hidden = !reservable
+    $('bloque-hora').hidden = !reservable || !eleccion.fecha
+    $('bloque-datos').hidden = !reservable || !eleccion.claves.length
+    $('aviso-ocupado').hidden = true
+    $('error-solicitud').hidden = true
+  }
+
+  function refrescar() {
+    mostrarBloques()
+    if (eleccion.zona && ZONAS[eleccion.zona].permiteReserva !== false) {
+      pintarCalendario()
+      if (eleccion.fecha) pintarFranjas()
+    }
+    pintarResumen()
+  }
+
+  // ---------- Interacción ----------
+  $('zonas').addEventListener('change', function (e) {
+    eleccion = { zona: e.target.value, fecha: null, claves: [] }
+    refrescar()
+  })
+
+  $('mes-anterior').addEventListener('click', function () { mes.mes = 10; pintarCalendario() })
+  $('mes-siguiente').addEventListener('click', function () { mes.mes = 11; pintarCalendario() })
+
+  $('calendario').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-dia]')
+    if (!b || b.disabled) return
+    eleccion.fecha = b.dataset.dia
+    eleccion.claves = []
+    refrescar()
+    $('bloque-hora').scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+  })
+
+  $('franjas').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-franja]')
+    if (!b) return
+    var z = ZONAS[eleccion.zona]
+    var clave = z.unidad === 'EVENTO' ? b.dataset.franja : +b.dataset.franja
+    var aviso = $('aviso-ocupado')
+    if (b.getAttribute('aria-disabled') === 'true') {
+      // Periodo ocupado (RN-38): se dice cuál y qué hacer.
+      var o = ocupacion(eleccion.zona, eleccion.fecha)
+      var texto = b.querySelector('.hora').textContent
+      aviso.innerHTML = o.mias.indexOf(clave) >= 0
+        ? '<p><b>Ya tienes este horario.</b></p><p>Lo encuentras en Mis reservas. Elige otra hora si necesitas más tiempo.</p>'
+        : '<p><b>Ya hay una reserva de ' + esc(texto) + ' en ' + z.frase + '.</b></p><p>Elige otro horario libre o mira otro día en el calendario.</p>'
+      aviso.hidden = false
+      return
+    }
+    aviso.hidden = true
+    var c = eleccion.claves
+    if (z.unidad === 'EVENTO') {
+      eleccion.claves = c[0] === clave ? [] : [clave]
+    } else if (!c.length) {
+      eleccion.claves = [clave]
+    } else {
+      var min = Math.min.apply(null, c), max = Math.max.apply(null, c)
+      if (clave === min - 1 || clave === max + 1) eleccion.claves = c.concat(clave)
+      else if (clave === min && c.length > 1) eleccion.claves = c.filter(function (x) { return x !== min })
+      else if (clave === max && c.length > 1) eleccion.claves = c.filter(function (x) { return x !== max })
+      else if (clave === min && c.length === 1) eleccion.claves = []
+      else eleccion.claves = [clave]
+    }
+    pintarFranjas()
+    $('bloque-datos').hidden = !eleccion.claves.length
+    $('error-solicitud').hidden = true
+    pintarResumen()
+  })
+
+  // ---------- Solicitar: POST /api/reservas ----------
+  var formulario = $('form-reserva')
+  formulario.addEventListener('submit', function (e) {
+    e.preventDefault()
+    var error = $('error-solicitud')
+    error.hidden = true
+    if (!Convivir.validar(formulario)) return
+    var z = ZONAS[eleccion.zona]
+
+    // validarQueElIntegranteSeaResidente() (RN-43)
+    if (noResidente) {
+      error.innerHTML = '<p><b>No puedes reservar zonas comunes.</b></p><p>Solo reserva quien vive en la copropiedad con una vinculación vigente, y la tuya con Torre B · Apto 302 no aparece vigente. Si ya renovaste el contrato de arriendo, pídele a la administración que actualice tu vinculación.</p>'
+      error.hidden = false
+      error.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      return
+    }
+    // validarDisponibilidadDeLaZona() (RN-38): otra reserva se confirmó mientras elegías.
+    var m = CONFIRMADA_MIENTRAS
+    if (eleccion.zona === m.zona && eleccion.fecha === m.fecha && eleccion.claves.indexOf(m.franja) >= 0) {
+      OCUPADAS[m.zona][m.fecha] = (OCUPADAS[m.zona][m.fecha] || []).concat(m.franja)
+      var r0 = rango()
+      error.innerHTML = '<p><b>Ese horario se acaba de ocupar.</b></p><p>La administración confirmó otra reserva en ' + z.frase + ' para el ' + esc(fechaLarga(m.fecha).toLowerCase()) + ' de ' + hora(r0.desde) + ' a ' + hora(r0.hasta) + '. Elige otro horario u otro día; tus datos se conservan.</p>'
+      eleccion.claves = []
+      pintarCalendario()
+      pintarFranjas()
+      pintarResumen()
+      error.hidden = false
+      error.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      return
+    }
+
+    var t = calcularTarifa()
+    var r = rango()
+    reservas.unshift({
+      id: siguienteId++, zona: eleccion.zona, fecha: eleccion.fecha, desde: r.desde, hasta: r.hasta,
+      claves: eleccion.claves.slice(), finalidad: formulario.elements.finalidad.value.trim(), valor: t.total, estado: 'SOLICITADA',
+    })
+    Convivir.confirmar('Reserva solicitada. Queda por confirmar hasta que la administración la revise.')
+    formulario.reset()
+    eleccion = { zona: null, fecha: null, claves: [] }
+    refrescar()
+    pintarReservas()
+    $('pestana-mias').click()
+  })
+
+  // ---------- Mis reservas ----------
+  var ESTADOS = {
+    SOLICITADA: '<span class="pildora p-al">Por confirmar</span>',
+    CONFIRMADA: '<span class="pildora p-ok">Confirmada</span>',
+    CANCELADA: '<span class="pildora p-ne">Cancelada</span>',
+    FINALIZADA: '<span class="pildora p-ne">Finalizada</span>',
+    INCUMPLIDA: '<span class="pildora p-no">Incumplida</span>',
+  }
+
+  function pintarReservas() {
+    var orden = reservas.slice().sort(function (a, b) {
+      var activaA = a.estado === 'SOLICITADA' || a.estado === 'CONFIRMADA'
+      var activaB = b.estado === 'SOLICITADA' || b.estado === 'CONFIRMADA'
+      if (activaA !== activaB) return activaA ? -1 : 1
+      return activaA ? a.fecha.localeCompare(b.fecha) : b.fecha.localeCompare(a.fecha)
+    })
+    $('lista-reservas').innerHTML = orden.map(function (r) {
+      var cancelable = r.estado === 'SOLICITADA' || r.estado === 'CONFIRMADA'
+      var cobro = r.valor ? Convivir.pesos(r.valor) + ' · se cobra a Torre B · Apto 302' + (r.estado === 'SOLICITADA' ? ' al confirmarse' : '') : 'Sin costo'
+      return '<li>' +
+        '<div class="principal">' +
+          '<b>' + ZONAS[r.zona].nombre + '</b>' +
+          '<span>' + fechaLarga(r.fecha) + ', ' + hora(r.desde) + ' a ' + hora(r.hasta) + '</span>' +
+          '<span>' + esc(r.finalidad) + '</span>' +
+          '<span>' + (r.estado === 'CANCELADA' ? 'Motivo de la cancelación: ' + esc(r.motivo) : cobro) + '</span>' +
+        '</div>' +
+        '<div class="fila" style="gap:var(--e2)">' + ESTADOS[r.estado] +
+          (cancelable ? '<button class="btn riesgo chico" type="button" data-cancelar="' + r.id + '">Cancelar reserva</button>' : '') +
+        '</div>' +
+      '</li>'
+    }).join('')
+    $('vacio-reservas').hidden = reservas.length > 0
+    $('cuenta-mias').textContent = reservas.filter(function (r) { return r.estado === 'SOLICITADA' || r.estado === 'CONFIRMADA' }).length
+  }
+
+  // ---------- Cancelar reserva propia (RF-118) ----------
+  var porCancelar = null
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-cancelar]')
+    if (!b) return
+    porCancelar = reservas.filter(function (r) { return r.id === +b.dataset.cancelar })[0]
+    $('titulo-cancelar').textContent = 'Cancelar la reserva de ' + ZONAS[porCancelar.zona].frase
+    $('texto-cancelar').textContent = fechaLarga(porCancelar.fecha) + ', ' + hora(porCancelar.desde) + ' a ' + hora(porCancelar.hasta) +
+      '. El horario queda libre para otros residentes y no se puede deshacer.'
+    Convivir.abrir('dialogo-cancelar')
+  })
+  $('form-cancelar').addEventListener('confirmado', function () {
+    porCancelar.estado = 'CANCELADA'
+    porCancelar.motivo = this.elements.motivo.value.trim()
+    porCancelar = null
+    pintarReservas()
+    if (eleccion.fecha) { pintarCalendario(); pintarFranjas() }
+  })
+
+  pintarReservas()
+  refrescar()
+})()
+</script>
+</body>
+</html>

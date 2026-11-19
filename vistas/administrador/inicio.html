@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inicio · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+<style>
+  /* Cuatro cifras en una fila en escritorio, dos en tableta y una en el teléfono.
+     Las cifras en pesos no caben en las columnas de .r4 entre 52 y 75 rem. */
+  .cifras { display: grid; gap: var(--e4); grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  @media (max-width: 75rem) { .cifras { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 34rem) { .cifras { grid-template-columns: minmax(0, 1fr); } }
+  .cifras .cifra .valor { font-size: var(--t-xl); }
+
+  /* Renglón enlazado de la lista de pendientes */
+  .lista a.renglon:hover b { color: var(--convivir); text-decoration: underline; text-underline-offset: 2px; }
+  .lista a.renglon .flecha { color: var(--acero); flex: none; }
+</style>
+</head>
+<!-- Panel de la administradora · resume CU-11, CU-13, CU-14, CU-16 y CU-21.
+     Cifras: PeriodoFacturacion (facturado), Pago CONFIRMADO (recaudo), Obligacion.calcularDiasDeMora() (cartera vencida) -->
+<body data-rol="administrador" data-seccion="inicio">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Hola, Paula</h1>
+      <p class="guia">Sábado 14 de noviembre · la cuota de noviembre vence el 30, en 16 días</p>
+    </div>
+    <div class="acciones">
+      <a class="btn segundo" href="obligaciones.html">Ver obligaciones</a>
+      <a class="btn" href="pago-presencial.html">Registrar pago</a>
+    </div>
+  </div>
+
+  <div class="cifras">
+    <a class="superficie cifra enlazada" href="cartera.html">
+      <div class="etiqueta">Recaudo de noviembre</div>
+      <div class="valor">$&nbsp;61&nbsp;420&nbsp;000</div>
+      <div class="proporcion" role="img" aria-label="62 por ciento de lo facturado"><span style="width:62%"></span></div>
+      <div class="meta"><span>62 % de <span class="num">$&nbsp;99&nbsp;500&nbsp;000</span> facturados</span></div>
+    </a>
+    <a class="superficie cifra enlazada" href="cartera.html">
+      <div class="etiqueta">Cartera vencida</div>
+      <div class="valor">$&nbsp;12&nbsp;365&nbsp;000</div>
+      <div class="meta"><span class="pildora p-no">12 inmuebles en mora</span><span>2 con más de 90 días</span></div>
+    </a>
+    <a class="superficie cifra enlazada" href="reportes.html">
+      <div class="etiqueta">Reportes sin asignar</div>
+      <div class="valor">4</div>
+      <div class="meta"><span class="pildora p-al">El más antiguo, hace 3 días</span></div>
+    </a>
+    <a class="superficie cifra enlazada" href="reservas.html">
+      <div class="etiqueta">Reservas por confirmar</div>
+      <div class="valor">3</div>
+      <div class="meta"><span>La próxima: sábado 21 de noviembre</span></div>
+    </a>
+  </div>
+
+  <div class="lado" style="margin-top:var(--e5)">
+    <div class="pila" style="gap:var(--e5)">
+      <section class="superficie" aria-labelledby="titulo-pendientes">
+        <div class="cabeza">
+          <h2 id="titulo-pendientes">Pendientes de hoy</h2>
+          <span class="guia">5 cosas por resolver</span>
+        </div>
+        <ul class="lista">
+          <li>
+            <a class="renglon" href="reservas.html">
+              <div class="principal">
+                <b>Confirmar 3 reservas</b>
+                <span>La más próxima: Salón social, sábado 21 de noviembre, para <span class="identificador">B-0814</span></span>
+              </div>
+              <span class="pildora p-al">Por confirmar</span>
+              <span class="flecha" aria-hidden="true">›</span>
+            </a>
+          </li>
+          <li>
+            <a class="renglon" href="reportes.html">
+              <div class="principal">
+                <b>Asignar 4 reportes</b>
+                <span>El más antiguo: filtración en el sótano 2, junto a <span class="identificador">P-114</span>, desde el miércoles</span>
+              </div>
+              <span class="pildora p-al">Sin asignar</span>
+              <span class="flecha" aria-hidden="true">›</span>
+            </a>
+          </li>
+          <li>
+            <a class="renglon" href="cartera.html?inmueble=A-0401#paz-y-salvo">
+              <div class="principal">
+                <b>Expedir el paz y salvo de <span class="identificador">A-0401</span></b>
+                <span>Gloria Ariza lo pidió ayer para un trámite de crédito. Pagó noviembre hoy a las 8:05 a. m.</span>
+              </div>
+              <span class="pildora p-ok">Al día</span>
+              <span class="flecha" aria-hidden="true">›</span>
+            </a>
+          </li>
+          <li>
+            <a class="renglon" href="cartera.html">
+              <div class="principal">
+                <b>Revisar 2 inmuebles con más de 90 días en mora</b>
+                <span><span class="identificador">C-1201</span> debe <span class="num">$&nbsp;2&nbsp;105&nbsp;000</span> y <span class="identificador">A-0210</span> debe <span class="num">$&nbsp;1&nbsp;880&nbsp;000</span></span>
+              </div>
+              <span class="pildora p-no">Más de 90 días</span>
+              <span class="flecha" aria-hidden="true">›</span>
+            </a>
+          </li>
+          <li>
+            <a class="renglon" href="obligaciones.html?periodo=2026-12">
+              <div class="principal">
+                <b>Configurar el valor base de diciembre</b>
+                <span>Sin él no se pueden generar las cuotas de diciembre, que vencen el 31</span>
+              </div>
+              <span class="pildora p-al">Sin configurar</span>
+              <span class="flecha" aria-hidden="true">›</span>
+            </a>
+          </li>
+        </ul>
+      </section>
+
+      <section class="superficie" aria-labelledby="titulo-actividad">
+        <div class="cabeza">
+          <h2 id="titulo-actividad">Actividad reciente</h2>
+          <a class="btn texto chico" href="auditoria.html">Ver auditoría</a>
+        </div>
+        <div class="cuerpo">
+          <ol class="linea-tiempo">
+            <li class="az">
+              <div class="cuando">Hoy, 10:42 a. m. · Paula Ortega</div>
+              <div class="que">Pago presencial registrado</div>
+              <div class="detalle">Recibo <span class="identificador">RC-2026-0418</span> de <span class="identificador">B-1002</span> por <span class="num">$&nbsp;300&nbsp;000</span>, por transferencia. Abono a la cuota de octubre.</div>
+            </li>
+            <li>
+              <div class="cuando">Hoy, 9:30 a. m. · Lucía Mendoza, <span class="identificador">B-0302</span></div>
+              <div class="que">Reporte creado</div>
+              <div class="detalle">Luz dañada en el pasillo del piso 3 de la Torre B.</div>
+            </li>
+            <li>
+              <div class="cuando">Hoy, 8:05 a. m. · Gloria Ariza, <span class="identificador">A-0401</span></div>
+              <div class="que">Pago en línea confirmado</div>
+              <div class="detalle">Cuota de noviembre por <span class="num">$&nbsp;580&nbsp;000</span>.</div>
+            </li>
+            <li>
+              <div class="cuando">Hoy, 7:48 a. m. · Andrés Caicedo, <span class="identificador">C-0705</span></div>
+              <div class="que">Reserva solicitada</div>
+              <div class="detalle">Zona BBQ, domingo 22 de noviembre, de 2:00 a 5:00 p. m.</div>
+            </li>
+            <li>
+              <div class="cuando">Ayer, 4:30 p. m. · Paula Ortega</div>
+              <div class="que">Pago presencial registrado</div>
+              <div class="detalle">Recibo <span class="identificador">RC-2026-0417</span> de <span class="identificador">C-0512</span> por <span class="num">$&nbsp;300&nbsp;000</span>, en efectivo. Abono a la cuota de septiembre.</div>
+            </li>
+          </ol>
+        </div>
+      </section>
+    </div>
+
+    <aside class="superficie" aria-labelledby="titulo-pagos">
+      <div class="cabeza">
+        <h2 id="titulo-pagos">Últimos pagos</h2>
+        <a class="btn texto chico" href="pago-presencial.html">Registrar pago</a>
+      </div>
+      <ul class="lista">
+        <li>
+          <div class="principal"><b><span class="identificador">B-1002</span> · Ricardo Gómez</b><span>Presencial, transferencia · hoy 10:42 a. m.</span></div>
+          <span class="num fuerte">$&nbsp;300&nbsp;000</span>
+        </li>
+        <li>
+          <div class="principal"><b><span class="identificador">A-0401</span> · Gloria Ariza</b><span>En línea · hoy 8:05 a. m.</span></div>
+          <span class="num fuerte">$&nbsp;580&nbsp;000</span>
+        </li>
+        <li>
+          <div class="principal"><b><span class="identificador">C-0512</span> · Patricia Lozano</b><span>Presencial, efectivo · ayer 4:30 p. m.</span></div>
+          <span class="num fuerte">$&nbsp;300&nbsp;000</span>
+        </li>
+        <li>
+          <div class="principal"><b><span class="identificador">B-0814</span> · Camilo Ríos</b><span>En línea · ayer 11:20 a. m.</span></div>
+          <span class="num fuerte">$&nbsp;560&nbsp;000</span>
+        </li>
+        <li>
+          <div class="principal"><b><span class="identificador">A-0305</span> · Fabián Orozco</b><span>Presencial, cheque · 12 de noviembre</span></div>
+          <span class="num fuerte">$&nbsp;510&nbsp;000</span>
+        </li>
+      </ul>
+      <div class="pie">
+        <span>En noviembre: 86 en línea y 31 presenciales</span>
+        <a class="btn texto chico" href="cartera.html">Ver recaudo</a>
+      </div>
+    </aside>
+  </div>
+</main>
+
+</body>
+</html>

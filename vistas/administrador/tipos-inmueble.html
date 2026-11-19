@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tipos de inmueble · Convivir</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../convivir.css">
+<script src="../marco.js"></script>
+</head>
+<!-- CU-19 Gestionar tipos de inmueble · new TipoInmueble(nombre, esBienComun), TipoInmueble.registrarTipoDeInmueble(),
+     TipoInmueble.modificarParametrosDelTipoDeInmueble(), TipoInmueble.desactivarTipoDeInmueble() -->
+<body data-rol="administrador" data-seccion="inmuebles" data-sub="tipos">
+
+<main class="pagina">
+  <div class="encabezado">
+    <div>
+      <h1>Tipos de inmueble</h1>
+      <p class="guia" id="resumen">El tipo define si un inmueble paga cuota, si se puede ceder y si se reserva.</p>
+    </div>
+    <div class="acciones">
+      <button class="btn" type="button" id="abrir-registrar">Registrar tipo</button>
+    </div>
+  </div>
+
+  <div class="filtros">
+    <label class="buscador">
+      <span class="solo-lectores">Buscar tipo</span>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="7" cy="7" r="5"/><path d="m11 11 3.5 3.5"/></svg>
+      <input id="buscar" type="search" placeholder="Nombre del tipo" autocomplete="off">
+    </label>
+    <div class="segmentos" data-grupo id="filtro-estado" role="group" aria-label="Estado">
+      <button type="button" data-valor="ACTIVO" aria-pressed="true">Activos</button>
+      <button type="button" data-valor="INACTIVO" aria-pressed="false">Inactivos</button>
+      <button type="button" data-valor="" aria-pressed="false">Todos</button>
+    </div>
+  </div>
+
+  <div class="superficie">
+    <div class="tabla-envoltura">
+      <table class="tabla" id="tabla-tipos">
+        <thead>
+          <tr>
+            <th>Tipo</th>
+            <th>Bien común</th>
+            <th>Se cede</th>
+            <th>Se reserva</th>
+            <th>Paga cuota</th>
+            <th class="num">Tarifa</th>
+            <th class="num">Multa</th>
+            <th class="num">Inmuebles</th>
+            <th>Estado</th>
+            <th><span class="solo-lectores">Acciones</span></th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="vacio" id="sin-resultados" hidden>
+      <h3>Ningún tipo coincide con la búsqueda</h3>
+      <p>Revisa el nombre o mira también los tipos inactivos.</p>
+      <button class="btn segundo" type="button" id="limpiar">Quitar filtros</button>
+    </div>
+    <div class="pie">
+      <span id="conteo"></span>
+      <span>La tarifa y la multa solo aplican a los tipos que se reservan.</span>
+    </div>
+  </div>
+</main>
+
+<!-- Registrar y modificar: el mismo formulario. Al modificar, el nombre y esBienComun quedan fijos
+     porque los recibe el constructor TipoInmueble(nombre, esBienComun). -->
+<dialog class="dialogo" id="dialogo-tipo" aria-labelledby="titulo-tipo">
+  <form id="form-tipo" data-confirmar="Tipo registrado" novalidate>
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-tipo">Registrar tipo de inmueble</h2>
+        <p class="guia" id="guia-tipo">Después lo eliges al registrar cada inmueble.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="formulario">
+        <label class="campo">
+          <span>Nombre</span>
+          <input id="t-nombre" required autocomplete="off" placeholder="Gimnasio"
+                 data-error="Escribe el nombre del tipo, por ejemplo Gimnasio o Parqueadero.">
+          <span class="ayuda" id="ayuda-nombre">Así aparece en la lista de tipos al registrar un inmueble.</span>
+        </label>
+        <label class="campo">
+          <span>Descripción <span class="opcional">(opcional)</span></span>
+          <textarea id="t-descripcion" placeholder="Salón con máquinas de cardio y pesas, primer piso de la Torre C."></textarea>
+        </label>
+
+        <fieldset>
+          <legend class="rotulo">Condiciones</legend>
+          <div class="pila chica">
+            <label class="interruptor"><input type="checkbox" id="t-comun"><span>Es bien común</span></label>
+            <label class="interruptor"><input type="checkbox" id="t-cesion"><span>Se puede ceder a otro inmueble</span></label>
+            <label class="interruptor"><input type="checkbox" id="t-reserva"><span>Se puede reservar</span></label>
+            <label class="interruptor"><input type="checkbox" id="t-cuota"><span>Genera cuota de administración</span></label>
+          </div>
+          <p class="guia" style="margin-top:var(--e3)" id="ayuda-comun">Un bien común es de todos los copropietarios, como la piscina. Un bien privado tiene dueño, como un apartamento.</p>
+        </fieldset>
+
+        <div class="formulario dos" id="bloque-reserva" hidden>
+          <fieldset class="completo">
+            <legend class="rotulo">Cómo se cobra la reserva</legend>
+            <div class="elecciones">
+              <label class="eleccion"><input type="radio" name="unidad" value="POR_HORA" checked><span><b>Por hora</b><small>Zona BBQ, cancha</small></span></label>
+              <label class="eleccion"><input type="radio" name="unidad" value="POR_DIA"><span><b>Por día</b><small>Habitación de huéspedes</small></span></label>
+              <label class="eleccion"><input type="radio" name="unidad" value="POR_EVENTO"><span><b>Por evento</b><small>Salón social</small></span></label>
+            </div>
+          </fieldset>
+          <label class="campo">
+            <span>Tarifa</span>
+            <span class="con-prefijo"><span>$</span><input id="t-tarifa" class="num" inputmode="numeric" required placeholder="25 000"
+                 data-error="Escribe la tarifa. Si la zona no tiene costo, escribe 0."></span>
+            <span class="ayuda" id="ayuda-tarifa">Escribe 0 si no tiene costo.</span>
+          </label>
+          <label class="campo">
+            <span>Multa por incumplimiento</span>
+            <span class="con-prefijo"><span>$</span><input id="t-multa" class="num" inputmode="numeric" required placeholder="50 000"
+                 data-error="Escribe la multa. Si no se cobra multa, escribe 0."></span>
+            <span class="ayuda">Se cobra si no se entrega la zona como dice el reglamento. Escribe 0 si no hay multa.</span>
+          </label>
+        </div>
+      </div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn" type="submit" id="t-enviar">Registrar tipo</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Desactivar sin inmuebles activos: TipoInmueble.desactivarTipoDeInmueble() -->
+<dialog class="dialogo" id="dialogo-desactivar" aria-labelledby="titulo-desactivar">
+  <div class="contenido">
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-desactivar">¿Desactivar el tipo?</h2>
+        <p class="guia">No podrás elegirlo al registrar un inmueble nuevo.</p>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="aviso"><p id="texto-desactivar"></p></div>
+    </div>
+    <div class="pie">
+      <button class="btn segundo" type="button" data-cerrar>Cancelar</button>
+      <button class="btn riesgo" type="button" id="confirmar-desactivar">Desactivar tipo</button>
+    </div>
+  </div>
+</dialog>
+
+<!-- 409: hay inmuebles activos de este tipo -->
+<dialog class="dialogo" id="dialogo-no-desactivar" aria-labelledby="titulo-no-desactivar">
+  <div class="contenido">
+    <div class="cabeza">
+      <div>
+        <h2 id="titulo-no-desactivar">No puedes desactivar este tipo todavía</h2>
+      </div>
+      <button class="cerrar" type="button" data-cerrar aria-label="Cerrar">×</button>
+    </div>
+    <div class="cuerpo">
+      <div class="aviso no">
+        <p id="texto-no-desactivar"></p>
+        <p>Desactiva esos inmuebles o cámbiales el tipo desde su ficha, y vuelve a intentarlo.</p>
+      </div>
+    </div>
+    <div class="pie">
+      <a class="btn segundo" href="inmuebles.html" id="ver-inmuebles">Ver los inmuebles</a>
+      <button class="btn" type="button" data-cerrar>Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<script>
+(function () {
+  var UNIDADES = { POR_HORA: 'por hora', POR_DIA: 'por día', POR_EVENTO: 'por evento' }
+
+  // TipoInmueble: nombre, descripcion, esBienComun, permiteCesion, permiteReserva, generaCuota,
+  // valorTarifa, unidadTarifa, valorMulta, estado. "activos" e "inactivos" cuentan los inmuebles de cada tipo.
+  var tipos = [
+    { id: 1, nombre: 'Apartamento', descripcion: 'Unidad de vivienda de las torres A, B y C.', comun: false, cesion: false, reserva: false, cuota: true, estado: 'ACTIVO', activos: 143, inactivos: 1 },
+    { id: 2, nombre: 'Parqueadero', descripcion: 'Privados P-001 a P-180 y de uso exclusivo UE-01 a UE-08, sótanos 1 y 2.', comun: false, cesion: true, reserva: false, cuota: true, estado: 'ACTIVO', activos: 188, inactivos: 0 },
+    { id: 3, nombre: 'Depósito', descripcion: 'Cuartos de almacenamiento del sótano 2.', comun: false, cesion: false, reserva: false, cuota: true, estado: 'ACTIVO', activos: 40, inactivos: 0 },
+    { id: 4, nombre: 'Parqueadero de visitantes', descripcion: 'V-01 a V-12, junto a la portería principal.', comun: true, cesion: false, reserva: false, cuota: false, estado: 'ACTIVO', activos: 12, inactivos: 0 },
+    { id: 5, nombre: 'Torre', descripcion: 'Contiene los apartamentos. No se cobra ni se reserva.', comun: true, cesion: false, reserva: false, cuota: false, estado: 'ACTIVO', activos: 3, inactivos: 0 },
+    { id: 6, nombre: 'Sótano', descripcion: 'Contiene parqueaderos y depósitos.', comun: true, cesion: false, reserva: false, cuota: false, estado: 'ACTIVO', activos: 2, inactivos: 0 },
+    { id: 7, nombre: 'Salón social', descripcion: 'Primer piso de la Torre A, capacidad de 80 personas.', comun: true, cesion: false, reserva: true, cuota: false, tarifa: 180000, unidad: 'POR_EVENTO', multa: 90000, estado: 'ACTIVO', activos: 1, inactivos: 0 },
+    { id: 8, nombre: 'Zona BBQ', descripcion: 'Terraza con dos asadores.', comun: true, cesion: false, reserva: true, cuota: false, tarifa: 25000, unidad: 'POR_HORA', multa: 50000, estado: 'ACTIVO', activos: 1, inactivos: 0 },
+    { id: 9, nombre: 'Cancha múltiple', descripcion: 'Microfútbol y baloncesto.', comun: true, cesion: false, reserva: true, cuota: false, tarifa: 0, unidad: 'POR_HORA', multa: 0, estado: 'ACTIVO', activos: 1, inactivos: 0 },
+    { id: 10, nombre: 'Piscina', descripcion: 'Uso libre en el horario del reglamento.', comun: true, cesion: false, reserva: false, cuota: false, estado: 'ACTIVO', activos: 1, inactivos: 0 },
+    { id: 11, nombre: 'Cuarto útil', descripcion: 'Cuartos del piso 1 que se unieron a los depósitos en 2025.', comun: false, cesion: false, reserva: false, cuota: true, estado: 'ACTIVO', activos: 0, inactivos: 2 },
+    { id: 12, nombre: 'Local comercial', descripcion: 'Local de la entrada, hoy convertido en portería.', comun: false, cesion: false, reserva: false, cuota: true, estado: 'INACTIVO', activos: 0, inactivos: 1 },
+  ]
+
+  var cuerpo = document.querySelector('#tabla-tipos tbody')
+  var buscar = document.getElementById('buscar')
+  var estado = 'ACTIVO'
+  var editando = null
+  var desactivando = null
+
+  function esc(texto) {
+    return String(texto).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c] })
+  }
+  function siNo(valor) { return valor ? '<span class="fuerte">Sí</span>' : '<span class="guia">No</span>' }
+  function miles(n) { return String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ' ') }
+  function aNumero(texto) { var limpio = String(texto).replace(/\D/g, ''); return limpio === '' ? NaN : Number(limpio) }
+
+  function fila(t) {
+    var tarifa = '—', multa = '—'
+    if (t.reserva) {
+      tarifa = t.tarifa === 0 ? 'Sin costo' : miles(t.tarifa)
+      tarifa += '<span class="sub">' + UNIDADES[t.unidad] + '</span>'
+      multa = t.multa === 0 ? 'Sin multa' : miles(t.multa)
+    }
+    var inmuebles = miles(t.activos) + (t.inactivos ? '<span class="sub">' + t.inactivos + (t.inactivos === 1 ? ' desactivado' : ' desactivados') + '</span>' : '')
+    var pildora = t.estado === 'ACTIVO' ? '<span class="pildora p-ok">Activo</span>' : '<span class="pildora p-ne">Inactivo</span>'
+    var acciones = '<button class="btn texto chico" type="button" data-modificar="' + t.id + '">Modificar</button>'
+    if (t.estado === 'ACTIVO') acciones += '<button class="btn texto chico" type="button" data-desactivar="' + t.id + '">Desactivar</button>'
+    return '<tr data-id="' + t.id + '">' +
+      '<td><span class="fuerte">' + esc(t.nombre) + '</span>' + (t.descripcion ? '<span class="sub">' + esc(t.descripcion) + '</span>' : '') + '</td>' +
+      '<td>' + siNo(t.comun) + '</td><td>' + siNo(t.cesion) + '</td><td>' + siNo(t.reserva) + '</td><td>' + siNo(t.cuota) + '</td>' +
+      '<td class="num">' + tarifa + '</td><td class="num">' + multa + '</td><td class="num">' + inmuebles + '</td>' +
+      '<td>' + pildora + '</td><td class="acciones-fila">' + acciones + '</td></tr>'
+  }
+
+  function pintar() {
+    var texto = buscar.value.trim().toLowerCase()
+    var visibles = tipos.filter(function (t) {
+      return (!estado || t.estado === estado) && (!texto || (t.nombre + ' ' + (t.descripcion || '')).toLowerCase().indexOf(texto) >= 0)
+    })
+    cuerpo.innerHTML = visibles.map(fila).join('')
+    document.getElementById('sin-resultados').hidden = visibles.length > 0
+    document.querySelector('#tabla-tipos thead').hidden = visibles.length === 0
+    var activos = tipos.filter(function (t) { return t.estado === 'ACTIVO' }).length
+    document.getElementById('conteo').textContent = visibles.length + (visibles.length === 1 ? ' tipo' : ' tipos') + ' · ' + activos + ' activos de ' + tipos.length
+    var reservables = tipos.filter(function (t) { return t.estado === 'ACTIVO' && t.reserva }).length
+    document.getElementById('resumen').textContent = activos + ' tipos activos · ' + reservables + ' se reservan. El tipo define si un inmueble paga cuota, si se puede ceder y si se reserva.'
+  }
+
+  // ---------- Registrar y modificar ----------
+  var form = document.getElementById('form-tipo')
+  var campos = {
+    nombre: document.getElementById('t-nombre'), descripcion: document.getElementById('t-descripcion'),
+    comun: document.getElementById('t-comun'), cesion: document.getElementById('t-cesion'),
+    reserva: document.getElementById('t-reserva'), cuota: document.getElementById('t-cuota'),
+    tarifa: document.getElementById('t-tarifa'), multa: document.getElementById('t-multa'),
+  }
+
+  function limpiarErrores() {
+    form.querySelectorAll('.error[data-generado]').forEach(function (e) { e.remove() })
+    form.querySelectorAll('[aria-invalid]').forEach(function (c) { c.removeAttribute('aria-invalid') })
+  }
+  function marcarError(campo, mensaje) {
+    campo.setAttribute('aria-invalid', 'true')
+    var error = document.createElement('span')
+    error.className = 'error'
+    error.setAttribute('data-generado', '')
+    error.textContent = mensaje
+    campo.closest('.campo').appendChild(error)
+    campo.focus()
+  }
+
+  function mostrarReserva() { document.getElementById('bloque-reserva').hidden = !campos.reserva.checked }
+  campos.reserva.addEventListener('change', mostrarReserva)
+
+  function abrirFormulario(t) {
+    editando = t || null
+    form.reset()
+    limpiarErrores()
+    campos.nombre.disabled = !!t
+    campos.comun.disabled = !!t
+    document.getElementById('titulo-tipo').textContent = t ? 'Modificar ' + t.nombre : 'Registrar tipo de inmueble'
+    document.getElementById('guia-tipo').textContent = t
+      ? 'Los cambios aplican a los ' + miles(t.activos) + ' inmuebles de este tipo desde ahora. Lo ya cobrado no cambia.'
+      : 'Después lo eliges al registrar cada inmueble.'
+    document.getElementById('ayuda-nombre').textContent = t
+      ? 'El nombre y si es bien común se fijan al registrar el tipo y no cambian.'
+      : 'Así aparece en la lista de tipos al registrar un inmueble.'
+    document.getElementById('t-enviar').textContent = t ? 'Guardar cambios' : 'Registrar tipo'
+    form.setAttribute('data-confirmar', t ? 'Cambios guardados en ' + t.nombre : 'Tipo registrado')
+    if (t) {
+      campos.nombre.value = t.nombre
+      campos.descripcion.value = t.descripcion || ''
+      campos.comun.checked = t.comun; campos.cesion.checked = t.cesion
+      campos.reserva.checked = t.reserva; campos.cuota.checked = t.cuota
+      if (t.reserva) {
+        campos.tarifa.value = miles(t.tarifa); campos.multa.value = miles(t.multa)
+        form.querySelector('[name="unidad"][value="' + t.unidad + '"]').checked = true
+      }
+    }
+    mostrarReserva()
+    Convivir.abrir('dialogo-tipo')
+    ;(t ? campos.descripcion : campos.nombre).focus()
+  }
+
+  form.addEventListener('confirmado', function (e) {
+    limpiarErrores()
+    var nombre = campos.nombre.value.trim().replace(/\s+/g, ' ')
+
+    // 409: ya existe un tipo con ese nombre (TipoInmuebleRepositorio.existsByNombre)
+    if (!editando) {
+      var repetido = tipos.filter(function (t) { return t.nombre.toLowerCase() === nombre.toLowerCase() })[0]
+      if (repetido) {
+        e.preventDefault()
+        marcarError(campos.nombre, 'Ya existe un tipo llamado ' + repetido.nombre + (repetido.estado === 'INACTIVO' ? ', inactivo' : '') + '. Usa otro nombre o modifica el que ya existe.')
+        return
+      }
+    }
+
+    var tarifa = NaN, multa = NaN
+    if (campos.reserva.checked) {
+      tarifa = aNumero(campos.tarifa.value)
+      multa = aNumero(campos.multa.value)
+      if (isNaN(tarifa)) { e.preventDefault(); marcarError(campos.tarifa, 'Escribe la tarifa en pesos, solo números. Si no tiene costo, escribe 0.'); return }
+      if (isNaN(multa)) { e.preventDefault(); marcarError(campos.multa, 'Escribe la multa en pesos, solo números. Si no hay multa, escribe 0.'); return }
+    }
+
+    var datos = {
+      descripcion: campos.descripcion.value.trim(),
+      cesion: campos.cesion.checked, reserva: campos.reserva.checked, cuota: campos.cuota.checked,
+      tarifa: tarifa, multa: multa,
+      unidad: (form.querySelector('[name="unidad"]:checked') || {}).value,
+    }
+    if (editando) {
+      Object.keys(datos).forEach(function (k) { editando[k] = datos[k] })
+    } else {
+      datos.id = tipos.length + 1
+      datos.nombre = nombre
+      datos.comun = campos.comun.checked
+      datos.estado = 'ACTIVO'; datos.activos = 0; datos.inactivos = 0
+      tipos.push(datos)
+      form.setAttribute('data-confirmar', 'Tipo registrado: ' + nombre + '. Ya lo puedes elegir al registrar un inmueble.')
+    }
+    pintar()
+  })
+
+  // ---------- Desactivar ----------
+  function abrirDesactivar(t) {
+    desactivando = t
+    if (t.activos > 0) {
+      document.getElementById('titulo-no-desactivar').textContent = 'No puedes desactivar ' + t.nombre + ' todavía'
+      document.getElementById('texto-no-desactivar').textContent =
+        (t.activos === 1 ? '1 inmueble activo es' : miles(t.activos).replace(/ /g, ' ') + ' inmuebles activos son') + ' de tipo ' + t.nombre + '. Un tipo solo se desactiva cuando ningún inmueble activo depende de él.'
+      document.getElementById('ver-inmuebles').textContent = t.activos === 1 ? 'Ver el inmueble' : 'Ver los ' + miles(t.activos) + ' inmuebles'
+      Convivir.abrir('dialogo-no-desactivar')
+      return
+    }
+    document.getElementById('titulo-desactivar').textContent = '¿Desactivar el tipo ' + t.nombre + '?'
+    document.getElementById('texto-desactivar').textContent = 'Ningún inmueble activo es de tipo ' + t.nombre + '.' +
+      (t.inactivos ? ' ' + (t.inactivos === 1 ? 'El inmueble desactivado conserva' : 'Los ' + t.inactivos + ' inmuebles desactivados conservan') + ' su tipo y su historial.' : '')
+    Convivir.abrir('dialogo-desactivar')
+  }
+
+  document.getElementById('confirmar-desactivar').addEventListener('click', function () {
+    desactivando.estado = 'INACTIVO'
+    document.getElementById('dialogo-desactivar').close()
+    Convivir.confirmar('Tipo desactivado: ' + desactivando.nombre + '. Ya no aparece al registrar inmuebles.')
+    pintar()
+  })
+
+  // ---------- Eventos ----------
+  document.getElementById('abrir-registrar').addEventListener('click', function () { abrirFormulario(null) })
+  cuerpo.addEventListener('click', function (e) {
+    var boton = e.target.closest('[data-modificar], [data-desactivar]')
+    if (!boton) return
+    var id = Number(boton.dataset.modificar || boton.dataset.desactivar)
+    var tipo = tipos.filter(function (t) { return t.id === id })[0]
+    if (boton.dataset.modificar) abrirFormulario(tipo)
+    else abrirDesactivar(tipo)
+  })
+  buscar.addEventListener('input', pintar)
+  document.getElementById('filtro-estado').addEventListener('cambio', function (e) { estado = e.detail; pintar() })
+  document.getElementById('limpiar').addEventListener('click', function () {
+    buscar.value = ''
+    document.querySelector('#filtro-estado [data-valor=""]').click()
+  })
+
+  pintar()
+})()
+</script>
+</body>
+</html>
