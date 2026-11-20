@@ -1,0 +1,22 @@
+%% titulo: CU-15 Crear reporte
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_propietario_residente["👤<br/>Propietario residente"]:::actor
+    actor_ocupante["👤<br/>Ocupante"]:::actor
+
+    subgraph cu15["CU-15 — Crear reporte"]
+        direction TB
+        rf090(["RF-090<br/>Crear reporte"])
+        rf091(["RF-091<br/>Adjuntar evidencia"])
+        rf092(["RF-092<br/>Consultar estado de reportes creados"])
+        rf093(["RF-093<br/>Consultar historial de reportes del inmueble"])
+    end
+
+    actor_propietario_residente --- rf090
+    actor_propietario_residente --- rf092
+    actor_ocupante --- rf090
+    actor_ocupante --- rf092
+    rf091 -.->|«extend»| rf090
+    rf093 -.->|«extend»| rf092
+
+    classDef actor fill:none,stroke:none

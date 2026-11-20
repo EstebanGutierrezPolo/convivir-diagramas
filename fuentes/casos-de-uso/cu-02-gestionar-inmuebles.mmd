@@ -1,0 +1,30 @@
+%% titulo: CU-02 Gestionar inmuebles
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu02["CU-02 — Gestionar inmuebles"]
+        direction TB
+        rf006(["RF-006<br/>Registrar inmueble"])
+        rf007(["RF-007<br/>Consultar listado de inmuebles"])
+        rf008(["RF-008<br/>Filtrar listado por torre, estado u ocupación"])
+        rf009(["RF-009<br/>Consultar detalle de un inmueble"])
+        rf010(["RF-010<br/>Modificar datos de un inmueble"])
+        rf011(["RF-011<br/>Desactivar inmueble"])
+        rf012(["RF-012<br/>Reactivar inmueble"])
+        rf013(["RF-013<br/>Consultar historial del inmueble"])
+    end
+
+    actor_administrador --- rf006
+    actor_administrador --- rf007
+    actor_administrador --- rf009
+    actor_administrador --- rf010
+    actor_administrador --- rf011
+    actor_administrador --- rf012
+    rf012 -.->|«include»| rf007
+    rf010 -.->|«include»| rf009
+    rf011 -.->|«include»| rf009
+    rf008 -.->|«extend»| rf007
+    rf013 -.->|«extend»| rf009
+
+    classDef actor fill:none,stroke:none

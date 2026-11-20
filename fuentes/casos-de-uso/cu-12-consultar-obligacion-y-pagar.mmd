@@ -1,0 +1,35 @@
+%% titulo: CU-12 Consultar obligación y pagar
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+%% RF-123 vienen de la v1.2 y no estaban en el diagrama corregido.
+flowchart LR
+    actor_propietario["👤<br/>Propietario"]:::actor
+    actor_propietario_no_residente["👤<br/>Propietario no residente"]:::actor
+    actor_ocupante["👤<br/>Ocupante"]:::actor
+
+    subgraph cu12["CU-12 — Consultar obligación y pagar"]
+        direction TB
+        rf070(["RF-070<br/>Consultar obligación vigente del inmueble"])
+        rf071(["RF-071<br/>Consultar saldo total pendiente"])
+        rf072(["RF-072<br/>Consultar obligación del inmueble habitado"])
+        rf073(["RF-073<br/>Consultar obligaciones de varios inmuebles"])
+        rf074(["RF-074<br/>Seleccionar obligaciones a pagar"])
+        rf075(["RF-075<br/>Iniciar pago por pasarela"])
+        rf076(["RF-076<br/>Consultar resultado de la transacción"])
+        rf077(["RF-077<br/>Descargar comprobante"])
+        rf078(["RF-078<br/>Consultar historial de pagos del inmueble"])
+        rf123(["RF-123<br/>Indicar valor de un abono parcial"])
+    end
+
+    actor_propietario --- rf070
+    actor_propietario --- rf074
+    actor_propietario --- rf078
+    actor_propietario_no_residente --- rf073
+    actor_ocupante --- rf072
+    rf074 -.->|«include»| rf070
+    rf075 -.->|«include»| rf074
+    rf076 -.->|«include»| rf075
+    rf071 -.->|«extend»| rf070
+    rf077 -.->|«extend»| rf076
+    rf123 -.->|«extend»| rf074
+
+    classDef actor fill:none,stroke:none

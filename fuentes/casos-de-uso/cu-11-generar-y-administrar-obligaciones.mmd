@@ -1,0 +1,22 @@
+%% titulo: CU-11 Generar y administrar obligaciones
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu11["CU-11 — Generar y administrar obligaciones"]
+        direction TB
+        rf065(["RF-065<br/>Configurar valor base de la cuota del periodo"])
+        rf066(["RF-066<br/>Generar obligaciones del periodo"])
+        rf067(["RF-067<br/>Registrar obligación individual por otro concepto"])
+        rf068(["RF-068<br/>Consultar obligaciones generadas de un periodo"])
+        rf069(["RF-069<br/>Anular obligación generada por error"])
+    end
+
+    actor_administrador --- rf065
+    actor_administrador --- rf066
+    actor_administrador --- rf067
+    actor_administrador --- rf068
+    rf066 -.->|«include»| rf065
+    rf069 -.->|«extend»| rf068
+
+    classDef actor fill:none,stroke:none

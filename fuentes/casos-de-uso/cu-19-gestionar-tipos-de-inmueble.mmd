@@ -1,0 +1,17 @@
+%% titulo: CU-19 Gestionar tipos de inmueble
+%% Sin diagrama en el documento corregido: requisitos de la v1.2, dibujados con la misma forma que CU-01 a CU-18.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu19["CU-19 — Gestionar tipos de inmueble"]
+        direction TB
+        rf112(["RF-112<br/>Registrar tipo de inmueble"])
+        rf113(["RF-113<br/>Modificar datos y condiciones de un tipo de inmueble"])
+        rf114(["RF-114<br/>Desactivar tipo de inmueble sin inmuebles activos"])
+    end
+
+    actor_administrador --- rf112
+    actor_administrador --- rf113
+    actor_administrador --- rf114
+
+    classDef actor fill:none,stroke:none

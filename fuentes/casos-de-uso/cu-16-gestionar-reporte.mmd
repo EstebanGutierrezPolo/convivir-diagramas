@@ -1,0 +1,33 @@
+%% titulo: CU-16 Gestionar reporte
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+%% RF-110, RF-111 vienen de la v1.2 y no estaban en el diagrama corregido.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu16["CU-16 — Gestionar reporte"]
+        direction TB
+        rf094(["RF-094<br/>Consultar listado de reportes"])
+        rf095(["RF-095<br/>Consultar detalle de un reporte"])
+        rf096(["RF-096<br/>Asignar responsable"])
+        rf097(["RF-097<br/>Cambiar estado del reporte"])
+        rf098(["RF-098<br/>Registrar observación de seguimiento"])
+        rf099(["RF-099<br/>Cerrar reporte"])
+        rf100(["RF-100<br/>Administrar categorías de reportes"])
+        rf110(["RF-110<br/>Modificar categoría de reporte"])
+        rf111(["RF-111<br/>Desactivar categoría de reporte"])
+    end
+
+    actor_administrador --- rf094
+    actor_administrador --- rf095
+    actor_administrador --- rf096
+    actor_administrador --- rf097
+    actor_administrador --- rf099
+    actor_administrador --- rf100
+    rf096 -.->|«include»| rf095
+    rf097 -.->|«include»| rf095
+    rf099 -.->|«include»| rf097
+    rf098 -.->|«extend»| rf097
+    rf110 -.->|«extend»| rf100
+    rf111 -.->|«extend»| rf100
+
+    classDef actor fill:none,stroke:none

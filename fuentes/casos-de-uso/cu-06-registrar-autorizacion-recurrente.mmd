@@ -1,0 +1,24 @@
+%% titulo: CU-06 Registrar autorización recurrente
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_propietario_residente["👤<br/>Propietario residente"]:::actor
+    actor_ocupante["👤<br/>Ocupante"]:::actor
+
+    subgraph cu06["CU-06 — Registrar autorización recurrente"]
+        direction TB
+        rf038(["RF-038<br/>Registrar autorización recurrente"])
+        rf039(["RF-039<br/>Indicar vigencia"])
+        rf040(["RF-040<br/>Indicar días y franjas horarias"])
+        rf041(["RF-041<br/>Consultar autorizaciones recurrentes vigentes"])
+        rf042(["RF-042<br/>Revocar autorización antes del vencimiento"])
+    end
+
+    actor_propietario_residente --- rf038
+    actor_propietario_residente --- rf041
+    actor_ocupante --- rf038
+    actor_ocupante --- rf041
+    rf038 -.->|«include»| rf039
+    rf042 -.->|«include»| rf041
+    rf040 -.->|«extend»| rf038
+
+    classDef actor fill:none,stroke:none

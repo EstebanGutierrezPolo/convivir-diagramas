@@ -19,7 +19,7 @@ Versión 1.2 del documento de requisitos (23 de octubre de 2026):
 
 | Entregable | Estado | Dónde está |
 |---|---|---|
-| Diagramas de casos de uso | Borrador para revisar | Pestaña Casos de uso |
+| Diagramas de casos de uso | Uno por caso de uso (CU-01 a CU-21), más el general del sistema. CU-01 a CU-18 copian los diagramas del documento corregido (Grupo 1); CU-19 a CU-21 salen de la v1.2 con la misma forma. RF-110, RF-111, RF-120 y RF-123 se agregaron desde la v1.2 | Pestaña Casos de uso |
 | Diagrama de clases | Hecho por el equipo. Ajustado al programar el dominio; quedan 3 decisiones de negocio abiertas | Pestaña Clases y Proyecto, "Decisiones abiertas" |
 | Diagrama de componentes | Borrador para revisar | Pestaña Componentes |
 | Diagrama de despliegue | Refleja lo que ya corre en Docker | Pestaña Despliegue |

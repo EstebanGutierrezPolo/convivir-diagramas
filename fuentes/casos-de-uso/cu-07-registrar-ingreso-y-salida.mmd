@@ -1,0 +1,32 @@
+%% titulo: CU-07 Registrar ingreso y salida de personas
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_vigilante["👤<br/>Vigilante"]:::actor
+
+    subgraph cu07["CU-07 — Registrar ingreso y salida de personas"]
+        direction TB
+        rf031(["RF-031<br/>Buscar autorización de visita por documento"])
+        rf032(["RF-032<br/>Consultar autorizaciones vigentes de un inmueble"])
+        rf033(["RF-033<br/>Registrar ingreso de visitante autorizado"])
+        rf034(["RF-034<br/>Registrar salida de visitante"])
+        rf035(["RF-035<br/>Registrar ingreso sin autorización previa"])
+        rf036(["RF-036<br/>Consultar visitantes dentro del conjunto"])
+        rf037(["RF-037<br/>Consultar historial de ingresos y salidas"])
+        rf043(["RF-043<br/>Consultar autorizaciones recurrentes por documento"])
+        rf044(["RF-044<br/>Registrar ingreso y salida de autorizado recurrente"])
+    end
+
+    actor_vigilante --- rf031
+    actor_vigilante --- rf032
+    actor_vigilante --- rf033
+    actor_vigilante --- rf034
+    actor_vigilante --- rf036
+    actor_vigilante --- rf043
+    actor_vigilante --- rf044
+    rf033 -.->|«include»| rf031
+    rf034 -.->|«include»| rf036
+    rf044 -.->|«include»| rf043
+    rf035 -.->|«extend»| rf033
+    rf037 -.->|«extend»| rf036
+
+    classDef actor fill:none,stroke:none

@@ -1,0 +1,25 @@
+%% titulo: CU-04 Gestionar vinculación persona-inmueble
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu04["CU-04 — Gestionar vinculación persona-inmueble"]
+        direction TB
+        rf020(["RF-020<br/>Vincular persona a inmueble"])
+        rf021(["RF-021<br/>Registrar fecha de fin de una vinculación"])
+        rf022(["RF-022<br/>Consultar vinculaciones vigentes de un inmueble"])
+        rf023(["RF-023<br/>Consultar historial de vinculaciones"])
+        rf024(["RF-024<br/>Consultar inmuebles de una persona"])
+        rf025(["RF-025<br/>Corregir tipo de vínculo"])
+    end
+
+    actor_administrador --- rf020
+    actor_administrador --- rf021
+    actor_administrador --- rf022
+    actor_administrador --- rf024
+    actor_administrador --- rf025
+    rf021 -.->|«include»| rf022
+    rf025 -.->|«include»| rf022
+    rf023 -.->|«extend»| rf022
+
+    classDef actor fill:none,stroke:none

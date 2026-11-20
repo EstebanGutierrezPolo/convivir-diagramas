@@ -1,0 +1,30 @@
+%% titulo: CU-14 Consultar cartera e información financiera
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+%% RF-120 vienen de la v1.2 y no estaban en el diagrama corregido.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+    actor_miembro_del_consejo["👤<br/>Miembro del consejo"]:::actor
+
+    subgraph cu14["CU-14 — Consultar cartera e información financiera"]
+        direction TB
+        rf083(["RF-083<br/>Consultar inmuebles con saldo pendiente"])
+        rf084(["RF-084<br/>Consultar detalle de deuda por periodo"])
+        rf085(["RF-085<br/>Filtrar cartera por días de mora"])
+        rf086(["RF-086<br/>Exportar informe de cartera"])
+        rf087(["RF-087<br/>Consultar informe de cartera"])
+        rf088(["RF-088<br/>Consultar total recaudado en un periodo"])
+        rf089(["RF-089<br/>Consultar gastos de un periodo"])
+        rf120(["RF-120<br/>Expedir paz y salvo a una fecha de corte"])
+    end
+
+    actor_administrador --- rf083
+    actor_administrador --- rf084
+    actor_administrador --- rf120
+    actor_miembro_del_consejo --- rf087
+    actor_miembro_del_consejo --- rf088
+    actor_miembro_del_consejo --- rf089
+    rf084 -.->|«include»| rf083
+    rf085 -.->|«extend»| rf083
+    rf086 -.->|«extend»| rf083
+
+    classDef actor fill:none,stroke:none

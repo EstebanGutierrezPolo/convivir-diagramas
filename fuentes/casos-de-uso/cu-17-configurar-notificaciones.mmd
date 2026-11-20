@@ -1,0 +1,13 @@
+%% titulo: CU-17 Configurar notificaciones
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu17["CU-17 — Configurar notificaciones"]
+        direction TB
+        rf107(["RF-107<br/>Configurar eventos y destinatarios de notificación"])
+    end
+
+    actor_administrador --- rf107
+
+    classDef actor fill:none,stroke:none

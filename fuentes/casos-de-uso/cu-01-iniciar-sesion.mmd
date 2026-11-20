@@ -1,0 +1,17 @@
+%% titulo: CU-01 Iniciar sesión
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_usuario_registrado["👤<br/>Usuario registrado"]:::actor
+
+    subgraph cu01["CU-01 — Iniciar sesión"]
+        direction TB
+        rf001(["RF-001<br/>Iniciar sesión"])
+        rf002(["RF-002<br/>Solicitar restablecimiento de contraseña"])
+        rf004(["RF-004<br/>Cerrar sesión"])
+    end
+
+    actor_usuario_registrado --- rf001
+    actor_usuario_registrado --- rf002
+    actor_usuario_registrado --- rf004
+
+    classDef actor fill:none,stroke:none

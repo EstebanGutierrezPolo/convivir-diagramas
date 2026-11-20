@@ -1,0 +1,28 @@
+%% titulo: CU-09 Gestionar parqueaderos y cesiones de uso
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu09["CU-09 — Gestionar parqueaderos y cesiones de uso"]
+        direction TB
+        rf056(["RF-056<br/>Registrar parqueadero"])
+        rf057(["RF-057<br/>Asignar parqueadero a inmueble titular"])
+        rf058(["RF-058<br/>Consultar inventario de parqueaderos"])
+        rf059(["RF-059<br/>Modificar datos de un parqueadero"])
+        rf060(["RF-060<br/>Registrar cesión de uso"])
+        rf061(["RF-061<br/>Finalizar cesión de uso"])
+        rf062(["RF-062<br/>Consultar cesiones vigentes e históricas"])
+    end
+
+    actor_administrador --- rf056
+    actor_administrador --- rf058
+    actor_administrador --- rf059
+    actor_administrador --- rf060
+    actor_administrador --- rf061
+    actor_administrador --- rf062
+    rf059 -.->|«include»| rf058
+    rf060 -.->|«include»| rf058
+    rf061 -.->|«include»| rf062
+    rf057 -.->|«extend»| rf056
+
+    classDef actor fill:none,stroke:none

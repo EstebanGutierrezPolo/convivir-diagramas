@@ -1,0 +1,24 @@
+%% titulo: CU-20 Reservar zona común
+%% Sin diagrama en el documento corregido: requisitos de la v1.2, dibujados con la misma forma que CU-01 a CU-18.
+flowchart LR
+    actor_propietario_residente["👤<br/>Propietario residente"]:::actor
+    actor_ocupante["👤<br/>Ocupante"]:::actor
+
+    subgraph cu20["CU-20 — Reservar zona común"]
+        direction TB
+        rf115(["RF-115<br/>Consultar disponibilidad para el periodo"])
+        rf116(["RF-116<br/>Solicitar reserva"])
+        rf117(["RF-117<br/>Consultar reservas propias y su estado"])
+        rf118(["RF-118<br/>Cancelar reserva propia"])
+    end
+
+    actor_propietario_residente --- rf115
+    actor_propietario_residente --- rf116
+    actor_propietario_residente --- rf117
+    actor_ocupante --- rf115
+    actor_ocupante --- rf116
+    actor_ocupante --- rf117
+    rf116 -.->|«include»| rf115
+    rf118 -.->|«include»| rf117
+
+    classDef actor fill:none,stroke:none

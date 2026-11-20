@@ -1,0 +1,23 @@
+%% titulo: CU-10 Registrar movimiento vehicular
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_vigilante["👤<br/>Vigilante"]:::actor
+
+    subgraph cu10["CU-10 — Registrar movimiento vehicular"]
+        direction TB
+        rf051(["RF-051<br/>Consultar vehículo por placa"])
+        rf052(["RF-052<br/>Registrar ingreso de vehículo"])
+        rf053(["RF-053<br/>Registrar salida de vehículo"])
+        rf054(["RF-054<br/>Consultar vehículos dentro del conjunto"])
+        rf063(["RF-063<br/>Consultar uso vigente del parqueadero"])
+    end
+
+    actor_vigilante --- rf051
+    actor_vigilante --- rf052
+    actor_vigilante --- rf053
+    actor_vigilante --- rf054
+    rf052 -.->|«include»| rf063
+    rf052 -.->|«include»| rf051
+    rf053 -.->|«include»| rf054
+
+    classDef actor fill:none,stroke:none

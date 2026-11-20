@@ -1,0 +1,29 @@
+%% titulo: CU-18 Gestionar usuarios, roles y auditoría
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+    actor_miembro_del_consejo["👤<br/>Miembro del consejo"]:::actor
+
+    subgraph cu18["CU-18 — Gestionar usuarios, roles y auditoría"]
+        direction TB
+        rf101(["RF-101<br/>Crear cuenta de usuario"])
+        rf102(["RF-102<br/>Asignar rol a una cuenta"])
+        rf103(["RF-103<br/>Desactivar cuenta"])
+        rf104(["RF-104<br/>Restablecer contraseña"])
+        rf105(["RF-105<br/>Consultar listado de cuentas"])
+        rf106(["RF-106<br/>Configurar datos generales de la PH"])
+        rf108(["RF-108<br/>Consultar registro de auditoría"])
+        rf109(["RF-109<br/>Exportar registro de auditoría"])
+    end
+
+    actor_administrador --- rf101
+    actor_administrador --- rf105
+    actor_administrador --- rf106
+    actor_administrador --- rf108
+    actor_miembro_del_consejo --- rf108
+    rf102 -.->|«include»| rf101
+    rf103 -.->|«include»| rf105
+    rf109 -.->|«include»| rf108
+    rf104 -.->|«extend»| rf105
+
+    classDef actor fill:none,stroke:none

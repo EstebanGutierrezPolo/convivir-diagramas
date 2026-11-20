@@ -1,0 +1,33 @@
+%% titulo: CU-08 Gestionar vehículos
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+    actor_propietario["👤<br/>Propietario"]:::actor
+    actor_ocupante["👤<br/>Ocupante"]:::actor
+
+    subgraph cu08["CU-08 — Gestionar vehículos"]
+        direction TB
+        rf045(["RF-045<br/>Registrar vehículo"])
+        rf046(["RF-046<br/>Registrar vehículo del propio inmueble"])
+        rf047(["RF-047<br/>Indicar persona responsable"])
+        rf048(["RF-048<br/>Consultar vehículos de un inmueble"])
+        rf049(["RF-049<br/>Modificar datos de un vehículo"])
+        rf050(["RF-050<br/>Dar de baja un vehículo"])
+        rf055(["RF-055<br/>Consultar historial de movimientos del vehículo"])
+    end
+
+    actor_administrador --- rf045
+    actor_administrador --- rf048
+    actor_administrador --- rf049
+    actor_administrador --- rf050
+    actor_propietario --- rf046
+    actor_propietario --- rf048
+    actor_ocupante --- rf046
+    actor_ocupante --- rf048
+    rf049 -.->|«include»| rf048
+    rf050 -.->|«include»| rf048
+    rf047 -.->|«extend»| rf046
+    rf047 -.->|«extend»| rf045
+    rf055 -.->|«extend»| rf048
+
+    classDef actor fill:none,stroke:none

@@ -1,0 +1,25 @@
+%% titulo: CU-03 Gestionar personas
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu03["CU-03 — Gestionar personas"]
+        direction TB
+        rf014(["RF-014<br/>Registrar persona"])
+        rf015(["RF-015<br/>Consultar listado de personas"])
+        rf016(["RF-016<br/>Buscar persona por documento o apellido"])
+        rf017(["RF-017<br/>Consultar detalle de una persona"])
+        rf018(["RF-018<br/>Modificar datos de contacto"])
+        rf019(["RF-019<br/>Desactivar persona"])
+    end
+
+    actor_administrador --- rf014
+    actor_administrador --- rf015
+    actor_administrador --- rf017
+    actor_administrador --- rf018
+    actor_administrador --- rf019
+    rf018 -.->|«include»| rf017
+    rf019 -.->|«include»| rf017
+    rf016 -.->|«extend»| rf015
+
+    classDef actor fill:none,stroke:none

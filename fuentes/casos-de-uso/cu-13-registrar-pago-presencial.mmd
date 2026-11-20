@@ -1,0 +1,22 @@
+%% titulo: CU-13 Registrar pago presencial
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu13["CU-13 — Registrar pago presencial"]
+        direction TB
+        rf068(["RF-068<br/>Consultar obligaciones del inmueble"])
+        rf079(["RF-079<br/>Registrar pago presencial"])
+        rf080(["RF-080<br/>Generar recibo de caja"])
+        rf081(["RF-081<br/>Anular pago registrado por error"])
+        rf082(["RF-082<br/>Consultar pagos recibidos en un periodo"])
+    end
+
+    actor_administrador --- rf068
+    actor_administrador --- rf079
+    actor_administrador --- rf082
+    rf080 -.->|«include»| rf079
+    rf079 -.->|«include»| rf068
+    rf081 -.->|«extend»| rf079
+
+    classDef actor fill:none,stroke:none

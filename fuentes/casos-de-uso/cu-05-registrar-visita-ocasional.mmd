@@ -1,0 +1,24 @@
+%% titulo: CU-05 Registrar visita ocasional
+%% Copia del diagrama del documento corregido (Grupo 1): frontera = caso de uso, elipses = requisitos funcionales.
+flowchart LR
+    actor_propietario_residente["👤<br/>Propietario residente"]:::actor
+    actor_ocupante["👤<br/>Ocupante"]:::actor
+
+    subgraph cu05["CU-05 — Registrar visita ocasional"]
+        direction TB
+        rf027(["RF-027<br/>Registrar visita"])
+        rf028(["RF-028<br/>Indicar uso de parqueadero de visitantes"])
+        rf064(["RF-064<br/>Consultar disponibilidad de parqueaderos"])
+        rf029(["RF-029<br/>Consultar visitas registradas y su estado"])
+        rf030(["RF-030<br/>Cancelar visita no ingresada"])
+    end
+
+    actor_propietario_residente --- rf027
+    actor_propietario_residente --- rf029
+    actor_ocupante --- rf027
+    actor_ocupante --- rf029
+    rf028 -.->|«include»| rf064
+    rf030 -.->|«include»| rf029
+    rf028 -.->|«extend»| rf027
+
+    classDef actor fill:none,stroke:none

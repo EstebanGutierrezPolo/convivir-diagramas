@@ -1,0 +1,18 @@
+%% titulo: CU-21 Gestionar reservas
+%% Sin diagrama en el documento corregido: requisitos de la v1.2, dibujados con la misma forma que CU-01 a CU-18.
+flowchart LR
+    actor_administrador["👤<br/>Administrador"]:::actor
+
+    subgraph cu21["CU-21 — Gestionar reservas"]
+        direction TB
+        rf119(["RF-119<br/>Confirmar reserva disponible"])
+        rf121(["RF-121<br/>Finalizar reserva confirmada"])
+        rf122(["RF-122<br/>Registrar multa por incumplimiento"])
+    end
+
+    actor_administrador --- rf119
+    actor_administrador --- rf121
+    actor_administrador --- rf122
+    rf122 -.->|«extend»| rf121
+
+    classDef actor fill:none,stroke:none
